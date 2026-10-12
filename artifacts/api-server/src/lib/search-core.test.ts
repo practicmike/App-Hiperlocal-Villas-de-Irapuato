@@ -96,3 +96,30 @@ test("IDF: palabras de relleno no hunden una búsqueda válida", () => {
   const w = buildIdf([plomero, tacos, casa]);
   assert.ok(keywordScore("necesito plomero urgente porfa", plomero, w) >= MATCH_MIN);
 });
+
+// ---------------------------------------------------------------- match con IA
+import { parseMatchResponse, AI_MATCH_MIN } from "./ai-match";
+
+const cands = [
+  { id: "a", name: "Pizzas del Parque", category: "Pizzería", description: "a domicilio", zone: null, operation: null, priceLabel: null },
+  { id: "b", name: "Tortillería", category: "Tortillería", description: "", zone: null, operation: null, priceLabel: null },
+];
+
+test("match IA: ordena por % y descarta lo que no sirve", () => {
+  const out = parseMatchResponse(
+    JSON.stringify({ matches: [{ i: 1, score: 30, reason: "no" }, { i: 0, score: 92, reason: "Pizza a domicilio" }] }),
+    cands,
+  );
+  assert.deepEqual(out, [{ placeId: "a", score: 0.92, reason: "Pizza a domicilio" }]);
+});
+
+test("match IA: ignora índices inventados, repetidos y JSON roto", () => {
+  assert.equal(parseMatchResponse("no es json", cands), null);
+  const out = parseMatchResponse(
+    JSON.stringify({ matches: [{ i: 7, score: 99 }, { i: 0, score: 80, reason: "x" }, { i: 0, score: 95, reason: "dup" }] }),
+    cands,
+  );
+  assert.equal(out!.length, 1);
+  assert.equal(out![0]!.score, 0.8);
+  assert.ok(AI_MATCH_MIN === 50);
+});

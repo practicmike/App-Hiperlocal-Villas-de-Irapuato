@@ -31,4 +31,6 @@ export interface PlaceDetail {
   /** Solo vecinos que dieron permiso de mostrar su nombre */
   endorserNames: string[];
   endorsedByMe: boolean;
+  /** true para visitantes sin llave (sin contacto ni nombres de vecinos) */
+  locked: boolean;
 }

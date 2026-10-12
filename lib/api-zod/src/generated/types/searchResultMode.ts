@@ -10,6 +10,7 @@ export type SearchResultMode = typeof SearchResultMode[keyof typeof SearchResult
 
 
 export const SearchResultMode = {
+  ai: 'ai',
   semantic: 'semantic',
   keywords: 'keywords',
 } as const;

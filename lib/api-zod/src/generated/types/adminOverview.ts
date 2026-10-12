@@ -15,4 +15,5 @@ export interface AdminOverview {
   searchesWithContact30d: number;
   searchesNoResult30d: number;
   openComplaints: number;
+  guestSearches30d: number;
 }

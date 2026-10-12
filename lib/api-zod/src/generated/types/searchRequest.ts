@@ -9,7 +9,7 @@
 export interface SearchRequest {
   /**
      * @minLength 1
-     * @maxLength 200
+     * @maxLength 400
      */
   query: string;
   refine: boolean;

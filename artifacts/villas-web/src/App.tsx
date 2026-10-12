@@ -49,8 +49,12 @@ function Main() {
       <Route path="/panel">
         {me.data?.role === "admin" ? <AdminPage creator={creator.data} /> : <Redirect to="/" />}
       </Route>
+      <Route path="/unirme">
+        {me.data ? <Redirect to="/" /> : <LandingPage creator={creator.data} />}
+      </Route>
+      {/* Con llave: su universo. Sin llave: vista previa limitada del mismo universo. */}
       <Route>
-        {me.data ? <UniversePage me={me.data} creator={creator.data} /> : <LandingPage creator={creator.data} />}
+        <UniversePage me={me.data ?? null} creator={creator.data} />
       </Route>
     </Switch>
   );

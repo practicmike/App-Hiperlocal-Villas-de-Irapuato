@@ -21,6 +21,7 @@ import {
   AdminCreatePlaceBody,
   AdminUpdatePlaceParams,
   AdminUpdatePlaceBody,
+  AdminDeletePlaceParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
@@ -49,11 +50,13 @@ router.get("/admin/overview", async (_req, res) => {
     .select({ n: sql<number>`count(*)::int` })
     .from(placesTable)
     .where(eq(placesTable.active, true));
+  // Las métricas de vecinos excluyen a visitantes (no pueden contactar por WhatsApp).
   const [s] = await db
     .select({
-      total: sql<number>`count(*)::int`,
+      total: sql<number>`count(*) filter (where ${searchesTable.residentId} is not null)::int`,
       contacted: sql<number>`count(*) filter (where ${searchesTable.contactedPlaceId} is not null)::int`,
-      empty: sql<number>`count(*) filter (where ${searchesTable.resultCount} = 0)::int`,
+      empty: sql<number>`count(*) filter (where ${searchesTable.resultCount} = 0 and ${searchesTable.residentId} is not null)::int`,
+      guests: sql<number>`count(*) filter (where ${searchesTable.residentId} is null)::int`,
     })
     .from(searchesTable)
     .where(gte(searchesTable.createdAt, since));
@@ -71,6 +74,7 @@ router.get("/admin/overview", async (_req, res) => {
     searchesWithContact30d: s!.contacted,
     searchesNoResult30d: s!.empty,
     openComplaints: c!.n,
+    guestSearches30d: s!.guests,
   });
 });
 
@@ -262,6 +266,16 @@ router.put("/admin/places/:id", async (req, res) => {
   res.json(toAdminPlace(place, await endorsementCounts()));
 });
 
+router.delete("/admin/places/:id", async (req, res) => {
+  const { id } = AdminDeletePlaceParams.parse(req.params);
+  const [gone] = await db.delete(placesTable).where(eq(placesTable.id, id)).returning({ id: placesTable.id });
+  if (!gone) {
+    res.status(404).json({ message: "Lugar no encontrado." });
+    return;
+  }
+  res.status(204).end();
+});
+
 // --------------------------------------------------------- datos de ejemplo
 const isDemo = like(placesTable.whatsapp, `${DEMO_WHATSAPP_PREFIX}%`);
 
@@ -271,7 +285,18 @@ router.post("/admin/demo-places", async (_req, res) => {
     (await db.select({ whatsapp: placesTable.whatsapp }).from(placesTable).where(isDemo)).map((r) => r.whatsapp),
   );
   const missing = DEMO_PLACES.filter((p) => !existing.has(p.whatsapp));
-  const inserted = missing.length ? await db.insert(placesTable).values(missing).returning() : [];
+  const fresh = missing.length ? await db.insert(placesTable).values(missing).returning() : [];
+  // Los ejemplos ya cargados se actualizan con las descripciones más recientes.
+  const refreshed = await Promise.all(
+    DEMO_PLACES.filter((p) => existing.has(p.whatsapp)).map((p) =>
+      db
+        .update(placesTable)
+        .set({ name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, embedding: null, updatedAt: new Date() })
+        .where(eq(placesTable.whatsapp, p.whatsapp))
+        .returning(),
+    ),
+  );
+  const inserted = [...fresh, ...refreshed.flat()];
 
   // Embeddings en una sola llamada, sin hacer esperar al panel.
   if (inserted.length) {
@@ -288,7 +313,7 @@ router.post("/admin/demo-places", async (_req, res) => {
     })().catch((err) => logger.warn({ err }, "demo embedding failed"));
     waitUntil(job);
   }
-  res.json({ inserted: inserted.length, removed: 0 });
+  res.json({ inserted: fresh.length, removed: 0, updated: refreshed.flat().length });
 });
 
 /** Borra solo las estrellas de ejemplo; las reales no se tocan. */

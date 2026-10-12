@@ -175,7 +175,8 @@ export const GetPlaceResponse = zod.object({
   "sponsored": zod.boolean(),
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
-  "endorsedByMe": zod.boolean()
+  "endorsedByMe": zod.boolean(),
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
 })
 
 
@@ -206,7 +207,8 @@ export const EndorsePlaceResponse = zod.object({
   "sponsored": zod.boolean(),
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
-  "endorsedByMe": zod.boolean()
+  "endorsedByMe": zod.boolean(),
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
 })
 
 
@@ -230,7 +232,8 @@ export const RemoveEndorsementResponse = zod.object({
   "sponsored": zod.boolean(),
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
-  "endorsedByMe": zod.boolean()
+  "endorsedByMe": zod.boolean(),
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
 })
 
 
@@ -267,24 +270,7 @@ export const SendComplaintBody = zod.object({
 export const SendComplaintResponse = zod.void()
 
 
-/**
- * @summary La IA propone formas más claras de decir lo que el vecino busca
- */
-export const suggestPhrasingBodyQueryMax = 200;
-
-
-
-export const SuggestPhrasingBody = zod.object({
-  "query": zod.string().min(1).max(suggestPhrasingBodyQueryMax)
-})
-
-export const SuggestPhrasingResponse = zod.object({
-  "suggestions": zod.array(zod.string()),
-  "available": zod.boolean().describe('false si la IA no está configurada o falló')
-})
-
-
-export const searchBodyQueryMax = 200;
+export const searchBodyQueryMax = 400;
 
 
 
@@ -297,11 +283,12 @@ export const SearchResponse = zod.object({
   "searchId": zod.string(),
   "matches": zod.array(zod.object({
   "placeId": zod.string(),
-  "score": zod.number().describe('0 a 1, coincidencia con lo escrito')
+  "score": zod.number().describe('0 a 1, coincidencia con lo escrito'),
+  "reason": zod.string().nullable().describe('Por qué coincide (solo con match de IA)')
 })),
   "refinedQuery": zod.string().nullable(),
   "constellation": zod.union([zod.enum(['casas', 'confianza', 'comercios']),zod.null()]),
-  "mode": zod.enum(['semantic', 'keywords'])
+  "mode": zod.enum(['ai', 'semantic', 'keywords'])
 })
 
 
@@ -313,7 +300,8 @@ export const AdminOverviewResponse = zod.object({
   "searches30d": zod.number().int(),
   "searchesWithContact30d": zod.number().int(),
   "searchesNoResult30d": zod.number().int(),
-  "openComplaints": zod.number().int()
+  "openComplaints": zod.number().int(),
+  "guestSearches30d": zod.number().int()
 })
 
 
@@ -400,7 +388,7 @@ export const adminListPlacesResponseOneNameMax = 80;
 export const adminListPlacesResponseOneCategoryMin = 2;
 export const adminListPlacesResponseOneCategoryMax = 60;
 
-export const adminListPlacesResponseOneDescriptionMax = 600;
+export const adminListPlacesResponseOneDescriptionMax = 1500;
 
 export const adminListPlacesResponseOneContactNameMax = 80;
 
@@ -444,7 +432,7 @@ export const adminCreatePlaceBodyNameMax = 80;
 export const adminCreatePlaceBodyCategoryMin = 2;
 export const adminCreatePlaceBodyCategoryMax = 60;
 
-export const adminCreatePlaceBodyDescriptionMax = 600;
+export const adminCreatePlaceBodyDescriptionMax = 1500;
 
 export const adminCreatePlaceBodyContactNameMax = 80;
 
@@ -480,7 +468,7 @@ export const adminCreatePlaceResponseOneNameMax = 80;
 export const adminCreatePlaceResponseOneCategoryMin = 2;
 export const adminCreatePlaceResponseOneCategoryMax = 60;
 
-export const adminCreatePlaceResponseOneDescriptionMax = 600;
+export const adminCreatePlaceResponseOneDescriptionMax = 1500;
 
 export const adminCreatePlaceResponseOneContactNameMax = 80;
 
@@ -527,7 +515,7 @@ export const adminUpdatePlaceBodyNameMax = 80;
 export const adminUpdatePlaceBodyCategoryMin = 2;
 export const adminUpdatePlaceBodyCategoryMax = 60;
 
-export const adminUpdatePlaceBodyDescriptionMax = 600;
+export const adminUpdatePlaceBodyDescriptionMax = 1500;
 
 export const adminUpdatePlaceBodyContactNameMax = 80;
 
@@ -563,7 +551,7 @@ export const adminUpdatePlaceResponseOneNameMax = 80;
 export const adminUpdatePlaceResponseOneCategoryMin = 2;
 export const adminUpdatePlaceResponseOneCategoryMax = 60;
 
-export const adminUpdatePlaceResponseOneDescriptionMax = 600;
+export const adminUpdatePlaceResponseOneDescriptionMax = 1500;
 
 export const adminUpdatePlaceResponseOneContactNameMax = 80;
 
@@ -601,11 +589,22 @@ export const AdminUpdatePlaceResponse = zod.object({
 
 
 /**
+ * @summary Elimina una estrella para siempre (sus recomendaciones y quejas también)
+ */
+export const AdminDeletePlaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeletePlaceResponse = zod.void()
+
+
+/**
  * @summary Carga 30 estrellas de ejemplo (10 por constelación); no duplica
  */
 export const AdminLoadDemoPlacesResponse = zod.object({
   "inserted": zod.number().int(),
-  "removed": zod.number().int()
+  "removed": zod.number().int(),
+  "updated": zod.number().int().optional()
 })
 
 
@@ -614,7 +613,8 @@ export const AdminLoadDemoPlacesResponse = zod.object({
  */
 export const AdminRemoveDemoPlacesResponse = zod.object({
   "inserted": zod.number().int(),
-  "removed": zod.number().int()
+  "removed": zod.number().int(),
+  "updated": zod.number().int().optional()
 })
 
 

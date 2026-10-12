@@ -42,7 +42,5 @@ export * from './searchResult';
 export * from './searchResultMode';
 export * from './setupRequest';
 export * from './setupStatus';
-export * from './suggestRequest';
-export * from './suggestResult';
 export * from './universe';
 export * from './updateMeRequest';

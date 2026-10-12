@@ -20,7 +20,7 @@ export interface PlaceInput {
      * @maxLength 60
      */
   category: string;
-  /** @maxLength 600 */
+  /** @maxLength 1500 */
   description: string;
   /**
      * @maxLength 80

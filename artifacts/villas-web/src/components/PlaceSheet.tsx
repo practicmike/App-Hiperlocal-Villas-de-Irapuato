@@ -10,18 +10,27 @@ import {
   getGetUniverseQueryKey,
   type PlaceDetail,
 } from "@workspace/api-client-react";
-import { BadgeCheck, Heart, MessageCircle, ShieldAlert, X } from "lucide-react";
+import { Link } from "wouter";
+import { BadgeCheck, Heart, KeyRound, MessageCircle, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
 import { CONSTELLATIONS, whatsappLink } from "@/lib/constellations";
+
+interface Match {
+  score: number;
+  reason: string | null;
+}
 
 interface Props {
   placeId: string;
   searchId: string | null;
+  /** % de match con IA y por qué; null si la búsqueda no fue con IA. */
+  match: Match | null;
   creatorName: string;
   meName: string;
+  isAdmin: boolean;
   onClose: () => void;
 }
 
-export function PlaceSheet({ placeId, searchId, creatorName, meName, onClose }: Props) {
+export function PlaceSheet({ placeId, searchId, match, creatorName, meName, isAdmin, onClose }: Props) {
   const { data: place, isLoading } = useGetPlace(placeId);
 
   return (
@@ -40,7 +49,7 @@ export function PlaceSheet({ placeId, searchId, creatorName, meName, onClose }: 
       {isLoading || !place ? (
         <div className="h-40 animate-pulse" />
       ) : (
-        <Card place={place} searchId={searchId} creatorName={creatorName} meName={meName} />
+        <Card place={place} searchId={searchId} match={match} creatorName={creatorName} meName={meName} isAdmin={isAdmin} />
       )}
     </div>
   );
@@ -49,13 +58,17 @@ export function PlaceSheet({ placeId, searchId, creatorName, meName, onClose }: 
 function Card({
   place,
   searchId,
+  match,
   creatorName,
   meName,
+  isAdmin,
 }: {
   place: PlaceDetail;
   searchId: string | null;
+  match: Match | null;
   creatorName: string;
   meName: string;
+  isAdmin: boolean;
 }) {
   const qc = useQueryClient();
   const info = CONSTELLATIONS[place.constellation];
@@ -99,6 +112,15 @@ function Card({
           )}
         </div>
         <h2 className="text-2xl font-black leading-tight">{place.name}</h2>
+        {match && (
+          <p className="mt-1.5 flex items-start gap-1.5 text-sm text-ai">
+            <Sparkles size={15} className="mt-0.5 shrink-0" />
+            <span>
+              <b>{Math.round(match.score * 100)}% match</b>
+              {match.reason && <> · {match.reason}</>}
+            </span>
+          </p>
+        )}
         {place.contactName && <p className="text-sm text-muted">Te atiende {place.contactName}</p>}
       </div>
 
@@ -126,6 +148,21 @@ function Card({
         )}
       </div>
 
+      {place.locked ? (
+        // Visitante: ve el valor, pero el contacto y los nombres son para vecinos.
+        <div className="space-y-2">
+          <Link
+            href="/unirme"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-base font-black text-space active:scale-[0.98]"
+          >
+            <KeyRound size={20} /> Únete para ver el contacto
+          </Link>
+          <p className="pb-2 text-center text-xs text-muted">
+            Los vecinos de Villas ven el WhatsApp, quién atiende y quién lo recomienda.
+          </p>
+        </div>
+      ) : (
+        <>
       <a
         href={whatsappLink(place.whatsapp, message)}
         target="_blank"
@@ -166,6 +203,14 @@ function Card({
       </div>
 
       <Complaint placeId={place.id} creatorName={firstName ?? creatorName} />
+        </>
+      )}
+
+      {isAdmin && (
+        <Link href={`/panel?editar=${place.id}`} className="flex items-center gap-1.5 pb-2 text-xs text-primary">
+          <Pencil size={13} /> Editar esta estrella (solo tú lo ves)
+        </Link>
+      )}
     </div>
   );
 }

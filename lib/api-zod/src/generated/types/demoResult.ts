@@ -9,4 +9,5 @@
 export interface DemoResult {
   inserted: number;
   removed: number;
+  updated?: number;
 }

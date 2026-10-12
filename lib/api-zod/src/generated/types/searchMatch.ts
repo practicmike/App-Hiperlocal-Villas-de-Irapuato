@@ -10,4 +10,9 @@ export interface SearchMatch {
   placeId: string;
   /** 0 a 1, coincidencia con lo escrito */
   score: number;
+  /**
+     * Por qué coincide (solo con match de IA)
+     * @nullable
+     */
+  reason: string | null;
 }
