@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* Paleta de marca. Cada constelación tiene un color fijo para orientarse sin leer. */
+@theme {
+  --font-sans: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-space: #0b0d1f;
+  --color-space-2: #14173a;
+  --color-panel: #1a1d45;
+  --color-ink: #eef0ff;
+  --color-muted: #a6abd6;
+
+  --color-primary: #7d80d9; /* azul fuerte */
+  --color-casas: #e6c882; /* naranja */
+  --color-confianza: #50e3c2; /* verde */
+  --color-comercios: #e38fc1; /* rosa */
+  --color-ai: #c38cf3; /* morado */
+  --color-alert: #ffabab; /* rojo */
+  --color-me: #6eb5ff; /* azul claro: el vecino al centro */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-space);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Cielo: dos capas de estrellas fijas con un parallax muy leve (barato en GPU). */
+.sky {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #ffffff55 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 34%, #ffffff44 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 38% 76%, #ffffff40 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 82%, #ffffff3a 50%, transparent 51%),
+    radial-gradient(1px 1px at 52% 52%, #ffffff30 50%, transparent 51%),
+    radial-gradient(circle at 50% 45%, #1d2160 0%, var(--color-space) 60%);
+  background-size: 280px 280px, 340px 340px, 410px 410px, 230px 230px, 190px 190px, 100% 100%;
+  transform: translate3d(var(--sky-x, 0px), var(--sky-y, 0px), 0);
+  will-change: transform;
+}
+
+/* Estrellas. El zoom solo cambia dos variables CSS por cuadro (sin re-render de React):
+   --ks hace que el punto crezca poco al acercarse; --kl mantiene el texto del mismo tamaño en pantalla. */
+.star {
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 500ms ease;
+  cursor: pointer;
+  outline: none;
+}
+.star-body {
+  transform: scale(var(--ks, 1));
+}
+.label-wrap {
+  transform: scale(var(--kl, 1));
+  transition: opacity 300ms ease;
+}
+.star-label {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--color-ink);
+  paint-order: stroke;
+  stroke: var(--color-space);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.star-sub {
+  font-size: 10.5px;
+  fill: var(--color-muted);
+  paint-order: stroke;
+  stroke: var(--color-space);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.nebula-label {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--color-space);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+.nebula-sub {
+  font-size: 12px;
+  fill: var(--color-muted);
+  pointer-events: none;
+}
+.star:focus-visible .star-ring {
+  stroke: white;
+  stroke-width: 2;
+}
+.me-pulse {
+  animation: pulse 3s ease-out infinite;
+  transform-origin: 0 0;
+}
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star,
+  .label-wrap {
+    transition: none;
+  }
+  .me-pulse {
+    animation: none;
+  }
+}
+
+.sheet-enter {
+  animation: sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
