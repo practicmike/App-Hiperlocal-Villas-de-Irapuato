@@ -5,7 +5,7 @@
 
 export interface SearchablePlace {
   id: string;
-  constellation: "casas" | "confianza" | "comercios";
+  constellation: string;
   name: string;
   category: string;
   description: string;

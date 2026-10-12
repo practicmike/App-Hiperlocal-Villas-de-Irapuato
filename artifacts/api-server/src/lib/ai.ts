@@ -64,50 +64,52 @@ export async function embedMany(texts: string[]): Promise<Array<number[] | null>
   }
 }
 
-export interface Refinement {
-  query: string;
-  constellation: "casas" | "confianza" | "comercios" | null;
+export interface ConstellationSuggestion {
+  constellation: string | null;
+  category: string | null;
+  reason: string | null;
 }
 
 /**
- * "Refinar con IA": interpreta lo que el vecino escribió y lo convierte
- * en palabras de búsqueda más precisas y, si es obvio, en una constelación.
+ * Al dar de alta una estrella: sugiere a qué constelación pertenece y un giro
+ * corto. El creador siempre confirma; la IA nunca mueve estrellas sola.
  */
-export async function refineQuery(raw: string): Promise<Refinement | null> {
-  if (!aiEnabled()) return null;
+export async function suggestConstellation(
+  place: { name: string; category: string; description: string },
+  constellations: Array<{ id: string; name: string; hint: string }>,
+  existingCategories: string[],
+): Promise<ConstellationSuggestion | null> {
+  if (!aiEnabled() || constellations.length === 0) return null;
   try {
-    const data = await openai<{ choices: Array<{ message: { content: string } }> }>(
-      "/chat/completions",
-      {
-        model: config.openai.chatModel,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Eres el buscador de una guía vecinal de Villas de Irapuato (México). " +
-              "Hay tres grupos: 'casas' (inmuebles en venta o renta), 'confianza' (oficios y servicios: plomería, electricidad, jardinería, limpieza, etc.) " +
-              "y 'comercios' (restaurantes, comida a domicilio, colegios, tiendas). " +
-              "Convierte la petición en JSON {\"query\": string, \"constellation\": \"casas\"|\"confianza\"|\"comercios\"|null}. " +
-              "'query' son 3 a 8 palabras clave en español, sin acentos, incluyendo el oficio o giro probable y sinónimos. " +
-              "Usa constellation solo si es evidente.",
-          },
-          { role: "user", content: raw.slice(0, 200) },
-        ],
-      },
-    );
-    const parsed = JSON.parse(data.choices[0]?.message.content ?? "{}") as Partial<Refinement>;
-    const constellation =
-      parsed.constellation === "casas" ||
-      parsed.constellation === "confianza" ||
-      parsed.constellation === "comercios"
-        ? parsed.constellation
-        : null;
-    const query = typeof parsed.query === "string" && parsed.query.trim() ? parsed.query : raw;
-    return { query: query.slice(0, 200), constellation };
+    const data = await openai<{ choices: Array<{ message: { content: string } }> }>("/chat/completions", {
+      model: config.openai.chatModel,
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "Organizas una guía vecinal de Villas de Irapuato (México). Constelaciones disponibles:\n" +
+            constellations.map((c) => `- ${c.id}: ${c.name} (${c.hint})`).join("\n") +
+            "\nElige la constelación que mejor responde a la necesidad del vecino que buscaría esta estrella. " +
+            "Propón un giro corto (1 a 3 palabras), reutilizando de preferencia uno de estos si aplica: " +
+            existingCategories.slice(0, 80).join(", ") +
+            '. Responde JSON: {"constellation": "<id>", "category": "<giro>", "reason": "<máx 10 palabras>"}',
+        },
+        {
+          role: "user",
+          content: `Nombre: ${place.name}\nGiro escrito: ${place.category}\nDescripción: ${place.description.slice(0, 1000)}`,
+        },
+      ],
+    });
+    const parsed = JSON.parse(data.choices[0]?.message.content ?? "{}") as Partial<Record<keyof ConstellationSuggestion, unknown>>;
+    const ids = new Set(constellations.map((c) => c.id));
+    const constellation = typeof parsed.constellation === "string" && ids.has(parsed.constellation) ? parsed.constellation : null;
+    const category = typeof parsed.category === "string" && parsed.category.trim() ? parsed.category.trim().slice(0, 60) : null;
+    const reason = typeof parsed.reason === "string" ? parsed.reason.trim().slice(0, 100) : null;
+    return { constellation, category, reason };
   } catch (err) {
-    logger.warn({ err }, "refine failed");
+    logger.warn({ err }, "suggestConstellation failed");
     return null;
   }
 }

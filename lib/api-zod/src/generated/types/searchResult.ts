@@ -5,7 +5,6 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
-import type { Constellation } from './constellation';
 import type { SearchMatch } from './searchMatch';
 import type { SearchResultMode } from './searchResultMode';
 
@@ -14,6 +13,7 @@ export interface SearchResult {
   matches: SearchMatch[];
   /** @nullable */
   refinedQuery: string | null;
-  constellation: Constellation | null;
+  /** @nullable */
+  constellation: string | null;
   mode: SearchResultMode;
 }

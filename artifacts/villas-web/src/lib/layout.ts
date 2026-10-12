@@ -1,10 +1,19 @@
-import type { Constellation, PlaceSummary } from "@workspace/api-client-react";
-import { CONSTELLATIONS, ORDER } from "./constellations";
+import type { PlaceSummary } from "@workspace/api-client-react";
+import { FALLBACK, type Constellation } from "./constellations";
 
-/** Distancia del vecino (centro) a cada constelación, en unidades del mundo. */
-export const NEBULA_R = 300;
+/** Radio de cada nebulosa (zona de una constelación). */
+export const NEBULA_SIZE = 170;
+
+/**
+ * Distancia de "Tú" a cada constelación. Con más constelaciones el círculo
+ * crece lo justo para que dos nebulosas vecinas no se encimen.
+ */
+export function nebulaRadius(n: number) {
+  if (n <= 1) return 300;
+  return Math.max(300, (NEBULA_SIZE + 5) / Math.sin(Math.PI / n));
+}
 /** Radio del mundo completo; sirve para encuadrar la vista inicial. */
-export const WORLD_R = 470;
+export const worldRadius = (n: number) => nebulaRadius(n) + NEBULA_SIZE;
 
 export interface StarPos {
   x: number;
@@ -18,30 +27,40 @@ export interface StarPos {
 const rad = (deg: number) => (deg * Math.PI) / 180;
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 
-export function nebulaCenter(c: Constellation) {
-  const a = rad(CONSTELLATIONS[c].angle);
-  return { x: Math.cos(a) * NEBULA_R, y: Math.sin(a) * NEBULA_R };
+export function nebulaCenter(c: Constellation, n: number) {
+  const a = rad(c.angle);
+  const r = nebulaRadius(n);
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 
 /**
  * Posición "en casa" de cada estrella: espiral dorada dentro de su constelación.
  * Las más recomendadas quedan al centro de su grupo.
  */
-export function homeLayout(places: PlaceSummary[]): Map<string, { x: number; y: number }> {
+export function homeLayout(
+  places: PlaceSummary[],
+  constellations: Constellation[],
+): Map<string, { x: number; y: number }> {
   const out = new Map<string, { x: number; y: number }>();
-  for (const c of ORDER) {
-    const center = nebulaCenter(c);
+  const n = constellations.length;
+  const known = new Set(constellations.map((c) => c.id));
+  for (const c of constellations) {
+    const center = nebulaCenter(c, n);
     const group = places
-      .filter((p) => p.constellation === c)
+      .filter((p) => p.constellation === c.id)
       .sort((a, b) => b.endorsementCount - a.endorsementCount || a.name.localeCompare(b.name));
     // La espiral se compacta si hay muchas estrellas, para no invadir otra constelación.
     const step = Math.max(16, 40 - group.length * 0.4);
     group.forEach((p, i) => {
       const r = 22 + step * Math.sqrt(i + 0.5);
-      const a = i * GOLDEN + rad(CONSTELLATIONS[c].angle);
+      const a = i * GOLDEN + rad(c.angle);
       out.set(p.id, { x: center.x + Math.cos(a) * r, y: center.y + Math.sin(a) * r });
     });
   }
+  // Estrellas huérfanas (constelación borrada a mano): cerca del centro, para no perderlas.
+  places
+    .filter((p) => !known.has(p.constellation))
+    .forEach((p, i) => out.set(p.id, { x: Math.cos(i) * 60, y: Math.sin(i) * 60 }));
   return out;
 }
 
@@ -53,7 +72,9 @@ export function searchLayout(
   places: PlaceSummary[],
   home: Map<string, { x: number; y: number }>,
   scores: Map<string, number> | null,
+  constellations: Constellation[],
 ): Map<string, StarPos> {
+  const angleOf = new Map(constellations.map((c) => [c.id, c.angle]));
   const out = new Map<string, StarPos>();
   if (!scores) {
     for (const p of places) {
@@ -63,7 +84,7 @@ export function searchLayout(
     return out;
   }
 
-  const byConst = new Map<Constellation, Array<[PlaceSummary, number]>>();
+  const byConst = new Map<string, Array<[PlaceSummary, number]>>();
   for (const p of places) {
     const s = scores.get(p.id);
     if (s === undefined) continue;
@@ -74,7 +95,7 @@ export function searchLayout(
 
   for (const [c, list] of byConst) {
     list.sort((a, b) => b[1] - a[1]);
-    const baseAngle = rad(CONSTELLATIONS[c].angle);
+    const baseAngle = rad(angleOf.get(c) ?? FALLBACK.angle);
     list.forEach(([p, s], i) => {
       // Abanico alrededor de la dirección de la constelación.
       const spread = i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.32;

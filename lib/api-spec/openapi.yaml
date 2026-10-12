@@ -435,6 +435,109 @@ paths:
       responses:
         "204":
           description: Eliminada
+  /admin/constellations:
+    get:
+      operationId: adminListConstellations
+      tags: [admin]
+      responses:
+        "200":
+          description: Constelaciones con su número de estrellas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminConstellation"
+    post:
+      operationId: adminCreateConstellation
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConstellationInput"
+      responses:
+        "201":
+          description: Creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConstellation"
+  /admin/constellations/order:
+    put:
+      operationId: adminReorderConstellations
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "204":
+          description: Orden guardado
+  /admin/constellations/{cid}:
+    parameters:
+      - name: cid
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      operationId: adminUpdateConstellation
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConstellationInput"
+      responses:
+        "200":
+          description: Actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConstellation"
+  /admin/constellations/{cid}/remove:
+    parameters:
+      - name: cid
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: adminRemoveConstellation
+      tags: [admin]
+      summary: Elimina una constelación; si tiene estrellas, se mueven a moveTo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveConstellationRequest"
+      responses:
+        "204":
+          description: Eliminada
+  /admin/places/suggest:
+    post:
+      operationId: adminSuggestConstellation
+      tags: [admin]
+      summary: La IA sugiere constelación y giro para una estrella nueva
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestConstellationRequest"
+      responses:
+        "200":
+          description: Sugerencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestConstellationResult"
   /admin/demo-places:
     post:
       operationId: adminLoadDemoPlaces
@@ -561,7 +664,87 @@ components:
       required: [message]
     Constellation:
       type: string
-      enum: [casas, confianza, comercios]
+      description: Id de la constelación (hogar, resolver, …)
+    ConstellationInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        hint:
+          type: string
+        color:
+          type: string
+        isProperty:
+          type: boolean
+          description: Inmuebles (activa venta/renta y precio)
+        position:
+          type: integer
+      required: [id, name, hint, color, isProperty, position]
+    AdminConstellation:
+      allOf:
+        - $ref: "#/components/schemas/ConstellationInfo"
+        - type: object
+          properties:
+            starCount:
+              type: integer
+          required: [starCount]
+    ConstellationInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 24
+        hint:
+          type: string
+          maxLength: 60
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        isProperty:
+          type: boolean
+      required: [name, hint, color, isProperty]
+    RemoveConstellationRequest:
+      type: object
+      properties:
+        moveTo:
+          type: [string, "null"]
+      required: [moveTo]
+    ReorderRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+      required: [ids]
+    SuggestConstellationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        category:
+          type: string
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 1500
+      required: [name, category, description]
+    SuggestConstellationResult:
+      type: object
+      properties:
+        constellation:
+          type: [string, "null"]
+        category:
+          type: [string, "null"]
+        reason:
+          type: [string, "null"]
+        available:
+          type: boolean
+      required: [constellation, category, reason, available]
     Creator:
       type: object
       properties:
@@ -652,11 +835,15 @@ components:
     Universe:
       type: object
       properties:
+        constellations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConstellationInfo"
         places:
           type: array
           items:
             $ref: "#/components/schemas/PlaceSummary"
-      required: [places]
+      required: [constellations, places]
     PlaceDetail:
       type: object
       properties:
@@ -772,9 +959,7 @@ components:
         refinedQuery:
           type: [string, "null"]
         constellation:
-          oneOf:
-            - $ref: "#/components/schemas/Constellation"
-            - type: "null"
+          type: [string, "null"]
         mode:
           type: string
           enum: [ai, semantic, keywords]
