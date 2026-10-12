@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "framework": null,
+  "installCommand": "npm install -g pnpm@10.28.0 && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/villas-web run build && pnpm --filter @workspace/api-server run build",
+  "outputDirectory": "artifacts/villas-web/dist",
+  "functions": {
+    "api/index.mjs": {
+      "maxDuration": 30,
+      "includeFiles": "artifacts/api-server/dist/vercel.mjs"
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.mjs" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

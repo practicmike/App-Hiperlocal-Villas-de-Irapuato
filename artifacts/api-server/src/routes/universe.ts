@@ -122,7 +122,7 @@ router.post("/places/:id/contact", async (req, res) => {
 });
 
 /** Quejas privadas: nunca se publican. */
-router.post("/places/:id/complaints", rateLimit(10, 60 * 60_000), async (req, res) => {
+router.post("/places/:id/complaints", rateLimit("complaint", 10, 60 * 60_000), async (req, res) => {
   const { id } = SendComplaintParams.parse(req.params);
   const { message } = SendComplaintBody.parse(req.body);
   const place = await getActivePlace(id);
@@ -134,7 +134,7 @@ router.post("/places/:id/complaints", rateLimit(10, 60 * 60_000), async (req, re
   res.status(201).end();
 });
 
-router.post("/search", rateLimit(60, 60_000), async (req, res) => {
+router.post("/search", rateLimit("search", 60, 60_000), async (req, res) => {
   const body = SearchBody.parse(req.body);
   const raw = body.query.trim();
 

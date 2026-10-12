@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { waitUntil } from "@vercel/functions";
 import { db, placesTable, endorsementsTable, residentsTable, type Place } from "@workspace/db";
 import { embed } from "./ai";
 import { placeEmbeddingText } from "./search-core";
@@ -62,11 +63,15 @@ export async function getActivePlace(id: string) {
 /**
  * Recalcula el embedding en segundo plano. Si falla o no hay llave de OpenAI,
  * el lugar sigue siendo encontrable por palabras.
+ *
+ * waitUntil: en Vercel la función se congela al responder; esto le pide que
+ * espere a que termine el cálculo. En Replit (proceso fijo) no cambia nada.
  */
 export function refreshEmbedding(place: Place) {
-  void (async () => {
+  const job = (async () => {
     const vector = await embed(placeEmbeddingText(place));
     if (!vector) return;
     await db.update(placesTable).set({ embedding: vector }).where(eq(placesTable.id, place.id));
   })().catch((err) => logger.warn({ err, placeId: place.id }, "refreshEmbedding failed"));
+  waitUntil(job);
 }

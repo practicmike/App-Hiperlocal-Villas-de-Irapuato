@@ -31,6 +31,22 @@ Guía de confianza de Villas de Irapuato, hecha por los vecinos y navegable como
 
 No se necesita `SESSION_SECRET`: las sesiones y llaves son tokens aleatorios guardados como hash.
 
+## Despliegue en Vercel
+
+El mismo repo corre en Replit (desarrollo) y en Vercel (producción). `vercel.json` ya trae instalación, build, salida y rutas.
+
+1. **Base de datos:** crea un proyecto en [Neon](https://neon.tech) y copia la URL **pooled** (la que dice `-pooler` en el host).
+2. **Esquema y cuenta de creador** (una vez, desde tu máquina o Replit, apuntando a Neon):
+   ```
+   DATABASE_URL="<url de Neon>" pnpm --filter @workspace/db run push
+   DATABASE_URL="<url de Neon>" ADMIN_NAME="Tu nombre" ADMIN_PHONE=4621234567 pnpm --filter @workspace/scripts run crear-admin
+   ```
+3. **Vercel → Import Project** del repo de GitHub. Deja *Framework Preset* en *Other*; no cambies Build ni Output (los toma de `vercel.json`).
+4. **Variables de entorno en Vercel:** `DATABASE_URL` (la pooled), `CREATOR_WHATSAPP`, y opcionales `CREATOR_NAME`, `CREATOR_MESSAGE`, `CREATOR_PHOTO_URL`, `OPENAI_API_KEY`.
+5. Deploy. Abre `https://<tu-dominio>/llave/<token>` con el token que imprimió `crear-admin`.
+
+Cómo funciona: el build empaqueta la API en `artifacts/api-server/dist/vercel.mjs` y `api/index.mjs` la expone como una sola función para `/api/*`; la web es estática con fallback a `index.html`. En Vercel el pool de Postgres usa 1 conexión por instancia, el límite de intentos vive en la tabla `rate_limits` y el cálculo de embeddings usa `waitUntil` para no cortarse al responder.
+
 ## Stack
 
 pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle · Zod · Orval (OpenAPI → hooks) · React 19 + Vite + Tailwind 4 · d3-zoom.
@@ -63,7 +79,8 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 ## Gotchas
 
 - Tras editar `openapi.yaml`, corre codegen; si no, los tipos del frontend y la validación del backend quedan desfasados.
-- El limitador de intentos vive en memoria: si se escala a varias instancias, hay que moverlo a la base o a Redis.
+- El límite de intentos vive en la tabla `rate_limits` (sirve igual en Replit y en Vercel). Si pruebas muchas llaves falsas desde tu IP, te bloqueas 15 minutos.
+- Cambios al esquema: corre `db push` contra Neon **antes** de desplegar el código que los usa.
 - Al editar un lugar se borra su embedding y se recalcula en segundo plano; si OpenAI falla, el lugar sigue encontrándose por palabras.
 - Los sinónimos del buscador están en `search-core.ts` (`SYNONYMS`). Amplíalos con lo que aparezca en "Búsquedas sin resultado".
 
