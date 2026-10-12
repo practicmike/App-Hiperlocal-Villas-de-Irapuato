@@ -72,15 +72,19 @@ export async function endSession(req: Request, res: Response) {
 export async function loadSession(req: Request, _res: Response, next: NextFunction) {
   const token = req.cookies?.[SESSION_COOKIE];
   if (typeof token === "string" && token.length > 20) {
-    const [row] = await db
-      .select({ resident: residentsTable })
-      .from(sessionsTable)
-      .innerJoin(residentsTable, eq(sessionsTable.residentId, residentsTable.id))
-      .where(
-        and(eq(sessionsTable.tokenHash, hashToken(token)), gt(sessionsTable.expiresAt, new Date())),
-      )
-      .limit(1);
-    if (row) req.resident = row.resident;
+    try {
+      const [row] = await db
+        .select({ resident: residentsTable })
+        .from(sessionsTable)
+        .innerJoin(residentsTable, eq(sessionsTable.residentId, residentsTable.id))
+        .where(
+          and(eq(sessionsTable.tokenHash, hashToken(token)), gt(sessionsTable.expiresAt, new Date())),
+        )
+        .limit(1);
+      if (row) req.resident = row.resident;
+    } catch {
+      // Base caída o sin tablas: se sigue sin sesión; la ruta explicará qué falta.
+    }
   }
   next();
 }

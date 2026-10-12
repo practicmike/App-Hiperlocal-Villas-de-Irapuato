@@ -226,7 +226,7 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
         <div className="absolute inset-0 grid place-items-center text-sm text-muted">Encendiendo el cielo de Villas…</div>
       )}
       {!isLoading && places.length === 0 && (
-        <div className="absolute inset-x-6 top-1/2 text-center text-sm text-muted">
+        <div className="absolute inset-x-6 bottom-28 text-center text-sm text-muted">
           Aún no hay estrellas. {me.role === "admin" ? "Da de alta los primeros comercios desde el panel." : `${firstName} está sumando las primeras.`}
         </div>
       )}

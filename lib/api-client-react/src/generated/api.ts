@@ -42,6 +42,8 @@ import type {
   PlaceInput,
   SearchRequest,
   SearchResult,
+  SetupRequest,
+  SetupStatus,
   Universe,
   UpdateMeRequest
 } from './api.schemas';
@@ -149,6 +151,171 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getGetSetupStatusUrl = () => {
+
+
+
+
+  return `/api/setup/status`
+}
+
+/**
+ * @summary Qué falta configurar (sin revelar secretos)
+ */
+export const getSetupStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<SetupStatus> => {
+
+  return customFetch<SetupStatus>(getGetSetupStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSetupStatusQueryKey = () => {
+    return [
+    `/api/setup/status`
+    ] as const;
+    }
+
+
+export const getGetSetupStatusQueryOptions = <TData = Awaited<ReturnType<typeof getSetupStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSetupStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSetupStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSetupStatus>>> = ({ signal }) => getSetupStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSetupStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSetupStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getSetupStatus>>>
+export type GetSetupStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Qué falta configurar (sin revelar secretos)
+ */
+
+export function useGetSetupStatus<TData = Awaited<ReturnType<typeof getSetupStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSetupStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSetupStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRunSetupUrl = () => {
+
+
+
+
+  return `/api/setup`
+}
+
+/**
+ * @summary Crea o actualiza las tablas y la cuenta del creador; entrega su llave
+ */
+export const runSetup = async (setupRequest: SetupRequest, options?: Parameters<typeof customFetch>[1]): Promise<AccessKey> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AccessKey>(getRunSetupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setupRequest)
+  }
+);}
+
+
+
+
+
+export const getRunSetupMutationKey = () => ['runSetup'] as const;
+
+export const getRunSetupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSetup>>, TError,RunSetupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runSetup>>, TError,RunSetupMutationVariables, TContext> => {
+
+const mutationKey = getRunSetupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runSetup>>, RunSetupMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  runSetup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunSetupMutationResult = NonNullable<Awaited<ReturnType<typeof runSetup>>>
+    export type RunSetupMutationBody = BodyType<SetupRequest>
+    export type RunSetupMutationError = ErrorType<ErrorResponse>
+    export type RunSetupMutationVariables = {data: BodyType<SetupRequest>}
+
+    /**
+ * @summary Crea o actualiza las tablas y la cuenta del creador; entrega su llave
+ */
+export const useRunSetup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSetup>>, TError,RunSetupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runSetup>>,
+        TError,
+        RunSetupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRunSetupMutationOptions(options));
+    }
 
 export const getGetCreatorUrl = () => {
 

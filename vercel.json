@@ -7,13 +7,20 @@
   "outputDirectory": "artifacts/villas-web/dist",
   "functions": {
     "api/index.mjs": {
-      "maxDuration": 30,
-      "includeFiles": "artifacts/api-server/dist/vercel.mjs"
+      "maxDuration": 30
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.mjs" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.mjs"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

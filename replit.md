@@ -14,7 +14,7 @@ Guía de confianza de Villas de Irapuato, hecha por los vecinos y navegable como
 ### Primer arranque
 
 1. `pnpm --filter @workspace/db run push`
-2. `ADMIN_NAME="Tu nombre" ADMIN_PHONE=4621234567 pnpm --filter @workspace/scripts run crear-admin` → imprime `/llave/<token>`. Ábrelo en tu teléfono, en tu dominio. Si lo vuelves a correr, la llave anterior deja de servir.
+2. (Replit/local) `ADMIN_NAME="Tu nombre" ADMIN_PHONE=4621234567 pnpm --filter @workspace/scripts run crear-admin` → imprime `/llave/<token>`. Ábrelo en tu teléfono, en tu dominio. Si lo vuelves a correr, la llave anterior deja de servir.
 3. Opcional: `pnpm --filter @workspace/scripts run cargar-demo` (16 estrellas ficticias, solo si la tabla está vacía). Bórralas o desactívalas cuando cargues los comercios fundadores.
 
 ### Variables de entorno
@@ -33,19 +33,18 @@ No se necesita `SESSION_SECRET`: las sesiones y llaves son tokens aleatorios gua
 
 ## Despliegue en Vercel
 
-El mismo repo corre en Replit (desarrollo) y en Vercel (producción). `vercel.json` ya trae instalación, build, salida y rutas.
+El mismo repo corre en Replit (desarrollo) y en Vercel (producción). `vercel.json` ya trae instalación, build, salida y rutas. **No se necesita terminal.**
 
-1. **Base de datos:** crea un proyecto en [Neon](https://neon.tech) y copia la URL **pooled** (la que dice `-pooler` en el host).
-2. **Esquema y cuenta de creador** (una vez, desde tu máquina o Replit, apuntando a Neon):
-   ```
-   DATABASE_URL="<url de Neon>" pnpm --filter @workspace/db run push
-   DATABASE_URL="<url de Neon>" ADMIN_NAME="Tu nombre" ADMIN_PHONE=4621234567 pnpm --filter @workspace/scripts run crear-admin
-   ```
-3. **Vercel → Import Project** del repo de GitHub. Deja *Framework Preset* en *Other*; no cambies Build ni Output (los toma de `vercel.json`).
-4. **Variables de entorno en Vercel:** `DATABASE_URL` (la pooled), `CREATOR_WHATSAPP`, y opcionales `CREATOR_NAME`, `CREATOR_MESSAGE`, `CREATOR_PHOTO_URL`, `OPENAI_API_KEY`.
-5. Deploy. Abre `https://<tu-dominio>/llave/<token>` con el token que imprimió `crear-admin`.
+1. **Base de datos:** Vercel → proyecto → *Storage* → *Create Database* → **Neon** → conectar al proyecto. Esto crea `DATABASE_URL` solo.
+2. **Variables** (*Settings → Environment Variables*): `SETUP_TOKEN` (una clave larga que inventes, mínimo 16 caracteres), `CREATOR_WHATSAPP` y, si quieres, `CREATOR_NAME`, `CREATOR_MESSAGE`, `CREATOR_PHOTO_URL`, `OPENAI_API_KEY`.
+3. **Redeploy** (las variables nuevas solo aplican a despliegues nuevos).
+4. Abre `https://<tu-dominio>/setup`, escribe la clave, tu nombre y tu WhatsApp. Se crean las tablas y tu cuenta, y te entrega tu llave de creador.
 
-Cómo funciona: el build empaqueta la API en `artifacts/api-server/dist/vercel.mjs` y `api/index.mjs` la expone como una sola función para `/api/*`; la web es estática con fallback a `index.html`. En Vercel el pool de Postgres usa 1 conexión por instancia, el límite de intentos vive en la tabla `rate_limits` y el cálculo de embeddings usa `waitUntil` para no cortarse al responder.
+Si perdiste tu llave: vuelve a `/setup` con el mismo WhatsApp; la anterior deja de servir.
+
+**Cambios al esquema:** edita `lib/db/src/schema/`, corre `pnpm --filter @workspace/db run generate` (crea la migración SQL y la embebe en el código), despliega y vuelve a enviar `/setup`: solo aplica lo que falta.
+
+Cómo funciona: el build empaqueta la API en `artifacts/api-server/dist/vercel.mjs` y `api/index.mjs` la expone como una sola función para `/api/*`. Las migraciones viajan dentro de ese paquete (`lib/db/src/migrations.generated.ts`), así no dependen de que Vercel copie archivos sueltos. Sin `DATABASE_URL` o sin tablas, la API responde 503 con lo que falta, y la web lo muestra en lugar de un error genérico.
 
 ## Stack
 
