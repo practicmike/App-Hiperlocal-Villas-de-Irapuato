@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type Constellation = typeof Constellation[keyof typeof Constellation];
-
-
-export const Constellation = {
-  casas: 'casas',
-  confianza: 'confianza',
-  comercios: 'comercios',
-} as const;
+/**
+ * Id de la constelación (hogar, resolver, …)
+ */
+export type Constellation = string;

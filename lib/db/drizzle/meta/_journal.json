@@ -15,6 +15,13 @@
       "when": 1791830284995,
       "tag": "0001_llaves_un_uso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791835115772,
+      "tag": "0002_constelaciones",
+      "breakpoints": true
     }
   ]
 }

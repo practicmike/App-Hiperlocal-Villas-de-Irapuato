@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
+  constellationsTable,
   placesTable,
   endorsementsTable,
   searchesTable,
@@ -21,7 +22,7 @@ import {
 import { requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
-import { embed, refineQuery } from "../lib/ai";
+import { embed } from "../lib/ai";
 import { aiMatch, AI_MAX_CANDIDATES } from "../lib/ai-match";
 import {
   MATCH_MIN,
@@ -39,7 +40,18 @@ import {
 const router: IRouter = Router();
 
 router.get("/universe", async (_req, res) => {
-  const [places, counts] = await Promise.all([
+  const [constellations, places, counts] = await Promise.all([
+    db
+      .select({
+        id: constellationsTable.id,
+        name: constellationsTable.name,
+        hint: constellationsTable.hint,
+        color: constellationsTable.color,
+        isProperty: constellationsTable.isProperty,
+        position: constellationsTable.position,
+      })
+      .from(constellationsTable)
+      .orderBy(constellationsTable.position, constellationsTable.createdAt),
     db
       .select({
         id: placesTable.id,
@@ -55,6 +67,7 @@ router.get("/universe", async (_req, res) => {
     endorsementCounts(),
   ]);
   res.json({
+    constellations,
     places: places.map((p) => ({ ...p, endorsementCount: counts.get(p.id) ?? 0 })),
   });
 });
@@ -151,9 +164,7 @@ router.post(
     const raw = body.query.trim();
     const isResident = req.resident?.status === "approved";
 
-    const refinement = isResident && body.refine ? await refineQuery(raw) : null;
-    const effectiveQuery = refinement?.query ?? raw;
-    const constellation = refinement?.constellation ?? null;
+    const effectiveQuery = raw;
 
     const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
     const queryVector = await embed(effectiveQuery);
@@ -161,9 +172,8 @@ router.post(
     // 1) Búsqueda rápida: palabras (con peso por rareza) + significado (embeddings).
     const weightOf = buildIdf(places);
     const all = places
-      .filter((p) => !constellation || p.constellation === constellation)
       .map((p) => {
-        const kw = Math.max(keywordScore(effectiveQuery, p, weightOf), keywordScore(raw, p, weightOf));
+        const kw = keywordScore(effectiveQuery, p, weightOf);
         const sem =
           queryVector && p.embedding ? calibrateSimilarity(cosineSimilarity(queryVector, p.embedding)) : 0;
         return { place: p, placeId: p.id, score: Math.min(1, Math.max(kw, sem)), boost: p.boost };
@@ -202,7 +212,7 @@ router.post(
         residentId: isResident ? req.resident!.id : null,
         query: raw,
         refined: mode === "ai",
-        refinedQuery: refinement?.query ?? null,
+        refinedQuery: null,
         resultCount: matches.length,
         topScore: matches[0]?.score ?? null,
       })
@@ -211,8 +221,8 @@ router.post(
     res.json({
       searchId: logged!.id,
       matches,
-      refinedQuery: refinement?.query ?? null,
-      constellation,
+      refinedQuery: null,
+      constellation: null,
       mode,
     });
   },

@@ -37,5 +37,20 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"access_keys\" ADD COLUMN \"rejected_attempts\" integer DEFAULT 0 NOT NULL;",
       "-- Las llaves que ya se abrieron antes de este cambio cuentan como usadas.\nUPDATE \"access_keys\" SET \"first_used_at\" = \"last_used_at\", \"sessions_created\" = 2 WHERE \"last_used_at\" IS NOT NULL;"
     ]
+  },
+  {
+    "tag": "0002_constelaciones",
+    "statements": [
+      "CREATE TABLE \"constellations\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"hint\" text DEFAULT '' NOT NULL,\n\t\"color\" text NOT NULL,\n\t\"is_property\" boolean DEFAULT false NOT NULL,\n\t\"position\" integer DEFAULT 0 NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "-- Las 5 constelaciones iniciales (opción A: por necesidad).\nINSERT INTO \"constellations\" (\"id\", \"name\", \"hint\", \"color\", \"is_property\", \"position\") VALUES\n  ('hogar',    'Hogar',    'Casas en venta y renta',           '#E6C882', true,  0),\n  ('resolver', 'Resolver', 'Plomería, luz, jardín, limpieza',  '#50e3c2', false, 1),\n  ('antojos',  'Antojos',  'Comida, café y postres',           '#e38fc1', false, 2),\n  ('aprender', 'Aprender', 'Colegios, clases y cursos',        '#7d80d9', false, 3),\n  ('cuidar',   'Cuidar',   'Salud, farmacia y mascotas',       '#ffabab', false, 4)\nON CONFLICT (\"id\") DO NOTHING;",
+      "-- Reacomodar las estrellas que ya existen. Primero lo directo:\nUPDATE \"places\" SET \"constellation\" = 'hogar'    WHERE \"constellation\" = 'casas';",
+      "UPDATE \"places\" SET \"constellation\" = 'resolver' WHERE \"constellation\" = 'confianza';",
+      "-- \"Comercios\" se reparte por giro; lo que no encaje queda en Antojos.\nUPDATE \"places\" SET \"constellation\" = 'aprender' WHERE \"constellation\" = 'comercios'\n  AND (\"category\" ILIKE ANY (ARRAY['%colegio%','%escuela%','%kinder%','%primaria%','%clase%','%curso%','%academia%','%idioma%','%guarder%']));",
+      "UPDATE \"places\" SET \"constellation\" = 'cuidar' WHERE \"constellation\" = 'comercios'\n  AND (\"category\" ILIKE ANY (ARRAY['%veterin%','%farmac%','%medic%','%médic%','%dent%','%salud%','%doctor%','%clínic%','%clinic%','%consultorio%','%gimnasio%','%mascota%']));",
+      "UPDATE \"places\" SET \"constellation\" = 'resolver' WHERE \"constellation\" = 'comercios'\n  AND (\"category\" ILIKE ANY (ARRAY['%lavander%','%tintor%','%taller%','%ferreter%','%papeler%']));",
+      "UPDATE \"places\" SET \"constellation\" = 'antojos' WHERE \"constellation\" = 'comercios';",
+      "-- Red de seguridad: cualquier valor desconocido va a Antojos antes de la llave foránea.\nUPDATE \"places\" SET \"constellation\" = 'antojos' WHERE \"constellation\" NOT IN (SELECT \"id\" FROM \"constellations\");",
+      "ALTER TABLE \"places\" ADD CONSTRAINT \"places_constellation_constellations_id_fk\" FOREIGN KEY (\"constellation\") REFERENCES \"public\".\"constellations\"(\"id\") ON DELETE no action ON UPDATE cascade;"
+    ]
   }
 ];

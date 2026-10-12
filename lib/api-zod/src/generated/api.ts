@@ -143,9 +143,17 @@ export const UpdateMeResponse = zod.object({
  * @summary Todas las estrellas activas
  */
 export const GetUniverseResponse = zod.object({
+  "constellations": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "hint": zod.string(),
+  "color": zod.string(),
+  "isProperty": zod.boolean().describe('Inmuebles (activa venta/renta y precio)'),
+  "position": zod.number().int()
+})),
   "places": zod.array(zod.object({
   "id": zod.string(),
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string(),
   "category": zod.string(),
   "verified": zod.boolean(),
@@ -161,7 +169,7 @@ export const GetPlaceParams = zod.object({
 
 export const GetPlaceResponse = zod.object({
   "id": zod.string(),
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string(),
   "category": zod.string(),
   "description": zod.string(),
@@ -193,7 +201,7 @@ export const EndorsePlaceBody = zod.object({
 
 export const EndorsePlaceResponse = zod.object({
   "id": zod.string(),
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string(),
   "category": zod.string(),
   "description": zod.string(),
@@ -218,7 +226,7 @@ export const RemoveEndorsementParams = zod.object({
 
 export const RemoveEndorsementResponse = zod.object({
   "id": zod.string(),
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string(),
   "category": zod.string(),
   "description": zod.string(),
@@ -287,7 +295,7 @@ export const SearchResponse = zod.object({
   "reason": zod.string().nullable().describe('Por qué coincide (solo con match de IA)')
 })),
   "refinedQuery": zod.string().nullable(),
-  "constellation": zod.union([zod.enum(['casas', 'confianza', 'comercios']),zod.null()]),
+  "constellation": zod.string().nullable(),
   "mode": zod.enum(['ai', 'semantic', 'keywords'])
 })
 
@@ -404,7 +412,7 @@ export const adminListPlacesResponseOneImageUrlMax = 500;
 
 
 export const AdminListPlacesResponseItem = zod.object({
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string().min(adminListPlacesResponseOneNameMin).max(adminListPlacesResponseOneNameMax),
   "category": zod.string().min(adminListPlacesResponseOneCategoryMin).max(adminListPlacesResponseOneCategoryMax),
   "description": zod.string().max(adminListPlacesResponseOneDescriptionMax),
@@ -448,7 +456,7 @@ export const adminCreatePlaceBodyImageUrlMax = 500;
 
 
 export const AdminCreatePlaceBody = zod.object({
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string().min(adminCreatePlaceBodyNameMin).max(adminCreatePlaceBodyNameMax),
   "category": zod.string().min(adminCreatePlaceBodyCategoryMin).max(adminCreatePlaceBodyCategoryMax),
   "description": zod.string().max(adminCreatePlaceBodyDescriptionMax),
@@ -484,7 +492,7 @@ export const adminCreatePlaceResponseOneImageUrlMax = 500;
 
 
 export const AdminCreatePlaceResponse = zod.object({
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string().min(adminCreatePlaceResponseOneNameMin).max(adminCreatePlaceResponseOneNameMax),
   "category": zod.string().min(adminCreatePlaceResponseOneCategoryMin).max(adminCreatePlaceResponseOneCategoryMax),
   "description": zod.string().max(adminCreatePlaceResponseOneDescriptionMax),
@@ -531,7 +539,7 @@ export const adminUpdatePlaceBodyImageUrlMax = 500;
 
 
 export const AdminUpdatePlaceBody = zod.object({
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string().min(adminUpdatePlaceBodyNameMin).max(adminUpdatePlaceBodyNameMax),
   "category": zod.string().min(adminUpdatePlaceBodyCategoryMin).max(adminUpdatePlaceBodyCategoryMax),
   "description": zod.string().max(adminUpdatePlaceBodyDescriptionMax),
@@ -567,7 +575,7 @@ export const adminUpdatePlaceResponseOneImageUrlMax = 500;
 
 
 export const AdminUpdatePlaceResponse = zod.object({
-  "constellation": zod.enum(['casas', 'confianza', 'comercios']),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
   "name": zod.string().min(adminUpdatePlaceResponseOneNameMin).max(adminUpdatePlaceResponseOneNameMax),
   "category": zod.string().min(adminUpdatePlaceResponseOneCategoryMin).max(adminUpdatePlaceResponseOneCategoryMax),
   "description": zod.string().max(adminUpdatePlaceResponseOneDescriptionMax),
@@ -596,6 +604,123 @@ export const AdminDeletePlaceParams = zod.object({
 })
 
 export const AdminDeletePlaceResponse = zod.void()
+
+
+export const AdminListConstellationsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "hint": zod.string(),
+  "color": zod.string(),
+  "isProperty": zod.boolean().describe('Inmuebles (activa venta/renta y precio)'),
+  "position": zod.number().int()
+}).and(zod.object({
+  "starCount": zod.number().int()
+}))
+export const AdminListConstellationsResponse = zod.array(AdminListConstellationsResponseItem)
+
+
+export const adminCreateConstellationBodyNameMin = 2;
+export const adminCreateConstellationBodyNameMax = 24;
+
+export const adminCreateConstellationBodyHintMax = 60;
+
+export const adminCreateConstellationBodyColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const AdminCreateConstellationBody = zod.object({
+  "name": zod.string().min(adminCreateConstellationBodyNameMin).max(adminCreateConstellationBodyNameMax),
+  "hint": zod.string().max(adminCreateConstellationBodyHintMax),
+  "color": zod.string().regex(adminCreateConstellationBodyColorRegExp),
+  "isProperty": zod.boolean()
+})
+
+export const AdminCreateConstellationResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "hint": zod.string(),
+  "color": zod.string(),
+  "isProperty": zod.boolean().describe('Inmuebles (activa venta/renta y precio)'),
+  "position": zod.number().int()
+}).and(zod.object({
+  "starCount": zod.number().int()
+}))
+
+
+export const AdminReorderConstellationsBody = zod.object({
+  "ids": zod.array(zod.string())
+})
+
+export const AdminReorderConstellationsResponse = zod.void()
+
+
+export const AdminUpdateConstellationParams = zod.object({
+  "cid": zod.coerce.string()
+})
+
+export const adminUpdateConstellationBodyNameMin = 2;
+export const adminUpdateConstellationBodyNameMax = 24;
+
+export const adminUpdateConstellationBodyHintMax = 60;
+
+export const adminUpdateConstellationBodyColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const AdminUpdateConstellationBody = zod.object({
+  "name": zod.string().min(adminUpdateConstellationBodyNameMin).max(adminUpdateConstellationBodyNameMax),
+  "hint": zod.string().max(adminUpdateConstellationBodyHintMax),
+  "color": zod.string().regex(adminUpdateConstellationBodyColorRegExp),
+  "isProperty": zod.boolean()
+})
+
+export const AdminUpdateConstellationResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "hint": zod.string(),
+  "color": zod.string(),
+  "isProperty": zod.boolean().describe('Inmuebles (activa venta/renta y precio)'),
+  "position": zod.number().int()
+}).and(zod.object({
+  "starCount": zod.number().int()
+}))
+
+
+/**
+ * @summary Elimina una constelación; si tiene estrellas, se mueven a moveTo
+ */
+export const AdminRemoveConstellationParams = zod.object({
+  "cid": zod.coerce.string()
+})
+
+export const AdminRemoveConstellationBody = zod.object({
+  "moveTo": zod.string().nullable()
+})
+
+export const AdminRemoveConstellationResponse = zod.void()
+
+
+/**
+ * @summary La IA sugiere constelación y giro para una estrella nueva
+ */
+export const adminSuggestConstellationBodyNameMax = 80;
+
+export const adminSuggestConstellationBodyCategoryMax = 60;
+
+export const adminSuggestConstellationBodyDescriptionMax = 1500;
+
+
+
+export const AdminSuggestConstellationBody = zod.object({
+  "name": zod.string().max(adminSuggestConstellationBodyNameMax),
+  "category": zod.string().max(adminSuggestConstellationBodyCategoryMax),
+  "description": zod.string().max(adminSuggestConstellationBodyDescriptionMax)
+})
+
+export const AdminSuggestConstellationResponse = zod.object({
+  "constellation": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "reason": zod.string().nullable(),
+  "available": zod.boolean()
+})
 
 
 /**

@@ -22,11 +22,13 @@ import type {
 import type {
   AccessKey,
   AdminComplaint,
+  AdminConstellation,
   AdminOverview,
   AdminPlace,
   AdminResident,
   AdminSearch,
   ComplaintRequest,
+  ConstellationInput,
   ContactRequest,
   CreateInviteRequest,
   Creator,
@@ -41,10 +43,14 @@ import type {
   Me,
   PlaceDetail,
   PlaceInput,
+  RemoveConstellationRequest,
+  ReorderRequest,
   SearchRequest,
   SearchResult,
   SetupRequest,
   SetupStatus,
+  SuggestConstellationRequest,
+  SuggestConstellationResult,
   Universe,
   UpdateMeRequest
 } from './api.schemas';
@@ -2176,6 +2182,501 @@ export const useAdminDeletePlace = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminDeletePlaceMutationOptions(options));
+    }
+
+export const getAdminListConstellationsUrl = () => {
+
+
+
+
+  return `/api/admin/constellations`
+}
+
+export const adminListConstellations = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminConstellation[]> => {
+
+  return customFetch<AdminConstellation[]>(getAdminListConstellationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListConstellationsQueryKey = () => {
+    return [
+    `/api/admin/constellations`
+    ] as const;
+    }
+
+
+export const getAdminListConstellationsQueryOptions = <TData = Awaited<ReturnType<typeof adminListConstellations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListConstellations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListConstellationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListConstellations>>> = ({ signal }) => adminListConstellations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListConstellations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListConstellationsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListConstellations>>>
+export type AdminListConstellationsQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListConstellations<TData = Awaited<ReturnType<typeof adminListConstellations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListConstellations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListConstellationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateConstellationUrl = () => {
+
+
+
+
+  return `/api/admin/constellations`
+}
+
+export const adminCreateConstellation = async (constellationInput: ConstellationInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminConstellation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminConstellation>(getAdminCreateConstellationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(constellationInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateConstellationMutationKey = () => ['adminCreateConstellation'] as const;
+
+export const getAdminCreateConstellationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateConstellation>>, TError,AdminCreateConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateConstellation>>, TError,AdminCreateConstellationMutationVariables, TContext> => {
+
+const mutationKey = getAdminCreateConstellationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateConstellation>>, AdminCreateConstellationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateConstellation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateConstellationMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateConstellation>>>
+    export type AdminCreateConstellationMutationBody = BodyType<ConstellationInput>
+    export type AdminCreateConstellationMutationError = ErrorType<unknown>
+    export type AdminCreateConstellationMutationVariables = {data: BodyType<ConstellationInput>}
+
+    export const useAdminCreateConstellation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateConstellation>>, TError,AdminCreateConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateConstellation>>,
+        TError,
+        AdminCreateConstellationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminCreateConstellationMutationOptions(options));
+    }
+
+export const getAdminReorderConstellationsUrl = () => {
+
+
+
+
+  return `/api/admin/constellations/order`
+}
+
+export const adminReorderConstellations = async (reorderRequest: ReorderRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminReorderConstellationsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reorderRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminReorderConstellationsMutationKey = () => ['adminReorderConstellations'] as const;
+
+export const getAdminReorderConstellationsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReorderConstellations>>, TError,AdminReorderConstellationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminReorderConstellations>>, TError,AdminReorderConstellationsMutationVariables, TContext> => {
+
+const mutationKey = getAdminReorderConstellationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminReorderConstellations>>, AdminReorderConstellationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminReorderConstellations(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminReorderConstellationsMutationResult = NonNullable<Awaited<ReturnType<typeof adminReorderConstellations>>>
+    export type AdminReorderConstellationsMutationBody = BodyType<ReorderRequest>
+    export type AdminReorderConstellationsMutationError = ErrorType<unknown>
+    export type AdminReorderConstellationsMutationVariables = {data: BodyType<ReorderRequest>}
+
+    export const useAdminReorderConstellations = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReorderConstellations>>, TError,AdminReorderConstellationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminReorderConstellations>>,
+        TError,
+        AdminReorderConstellationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminReorderConstellationsMutationOptions(options));
+    }
+
+export const getAdminUpdateConstellationUrl = (cid: string,) => {
+
+
+
+
+  return `/api/admin/constellations/${cid}`
+}
+
+export const adminUpdateConstellation = async (cid: string,
+    constellationInput: ConstellationInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminConstellation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminConstellation>(getAdminUpdateConstellationUrl(cid),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(constellationInput)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateConstellationMutationKey = () => ['adminUpdateConstellation'] as const;
+
+export const getAdminUpdateConstellationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateConstellation>>, TError,AdminUpdateConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateConstellation>>, TError,AdminUpdateConstellationMutationVariables, TContext> => {
+
+const mutationKey = getAdminUpdateConstellationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateConstellation>>, AdminUpdateConstellationMutationVariables> = (props) => {
+          const {cid,data} = props ?? {};
+
+          return  adminUpdateConstellation(cid,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateConstellationMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateConstellation>>>
+    export type AdminUpdateConstellationMutationBody = BodyType<ConstellationInput>
+    export type AdminUpdateConstellationMutationError = ErrorType<unknown>
+    export type AdminUpdateConstellationMutationVariables = {cid: string;data: BodyType<ConstellationInput>}
+
+    export const useAdminUpdateConstellation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateConstellation>>, TError,AdminUpdateConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateConstellation>>,
+        TError,
+        AdminUpdateConstellationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminUpdateConstellationMutationOptions(options));
+    }
+
+export const getAdminRemoveConstellationUrl = (cid: string,) => {
+
+
+
+
+  return `/api/admin/constellations/${cid}/remove`
+}
+
+/**
+ * @summary Elimina una constelación; si tiene estrellas, se mueven a moveTo
+ */
+export const adminRemoveConstellation = async (cid: string,
+    removeConstellationRequest: RemoveConstellationRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminRemoveConstellationUrl(cid),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(removeConstellationRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminRemoveConstellationMutationKey = () => ['adminRemoveConstellation'] as const;
+
+export const getAdminRemoveConstellationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRemoveConstellation>>, TError,AdminRemoveConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRemoveConstellation>>, TError,AdminRemoveConstellationMutationVariables, TContext> => {
+
+const mutationKey = getAdminRemoveConstellationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRemoveConstellation>>, AdminRemoveConstellationMutationVariables> = (props) => {
+          const {cid,data} = props ?? {};
+
+          return  adminRemoveConstellation(cid,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRemoveConstellationMutationResult = NonNullable<Awaited<ReturnType<typeof adminRemoveConstellation>>>
+    export type AdminRemoveConstellationMutationBody = BodyType<RemoveConstellationRequest>
+    export type AdminRemoveConstellationMutationError = ErrorType<unknown>
+    export type AdminRemoveConstellationMutationVariables = {cid: string;data: BodyType<RemoveConstellationRequest>}
+
+    /**
+ * @summary Elimina una constelación; si tiene estrellas, se mueven a moveTo
+ */
+export const useAdminRemoveConstellation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRemoveConstellation>>, TError,AdminRemoveConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRemoveConstellation>>,
+        TError,
+        AdminRemoveConstellationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminRemoveConstellationMutationOptions(options));
+    }
+
+export const getAdminSuggestConstellationUrl = () => {
+
+
+
+
+  return `/api/admin/places/suggest`
+}
+
+/**
+ * @summary La IA sugiere constelación y giro para una estrella nueva
+ */
+export const adminSuggestConstellation = async (suggestConstellationRequest: SuggestConstellationRequest, options?: Parameters<typeof customFetch>[1]): Promise<SuggestConstellationResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuggestConstellationResult>(getAdminSuggestConstellationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suggestConstellationRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminSuggestConstellationMutationKey = () => ['adminSuggestConstellation'] as const;
+
+export const getAdminSuggestConstellationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSuggestConstellation>>, TError,AdminSuggestConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSuggestConstellation>>, TError,AdminSuggestConstellationMutationVariables, TContext> => {
+
+const mutationKey = getAdminSuggestConstellationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSuggestConstellation>>, AdminSuggestConstellationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminSuggestConstellation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSuggestConstellationMutationResult = NonNullable<Awaited<ReturnType<typeof adminSuggestConstellation>>>
+    export type AdminSuggestConstellationMutationBody = BodyType<SuggestConstellationRequest>
+    export type AdminSuggestConstellationMutationError = ErrorType<unknown>
+    export type AdminSuggestConstellationMutationVariables = {data: BodyType<SuggestConstellationRequest>}
+
+    /**
+ * @summary La IA sugiere constelación y giro para una estrella nueva
+ */
+export const useAdminSuggestConstellation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSuggestConstellation>>, TError,AdminSuggestConstellationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSuggestConstellation>>,
+        TError,
+        AdminSuggestConstellationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminSuggestConstellationMutationOptions(options));
     }
 
 export const getAdminLoadDemoPlacesUrl = () => {

@@ -11,8 +11,26 @@ import {
 } from "drizzle-orm/pg-core";
 import { residentsTable } from "./residents";
 
-export const CONSTELLATIONS = ["casas", "confianza", "comercios"] as const;
-export type Constellation = (typeof CONSTELLATIONS)[number];
+/**
+ * Constelaciones: los grandes grupos del universo. Las decide el creador
+ * (no la IA) para que el mapa sea estable y los vecinos lo aprendan de memoria.
+ */
+export const constellationsTable = pgTable("constellations", {
+  /** Identificador corto y estable (hogar, resolver…); no cambia al renombrar. */
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** Frase corta bajo el nombre: "casas en venta y renta". */
+  hint: text("hint").notNull().default(""),
+  color: text("color").notNull(),
+  /** Inmuebles: activa venta/renta y precio en sus estrellas. */
+  isProperty: boolean("is_property").notNull().default(false),
+  /** Orden alrededor de "Tú", empezando arriba y en sentido del reloj. */
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Máximo recomendado: más de 6 alrededor de "Tú" se enciman en un celular. */
+export const MAX_CONSTELLATIONS = 6;
 
 /**
  * Cada estrella del universo: una casa, una persona de confianza o un comercio.
@@ -22,7 +40,9 @@ export const placesTable = pgTable(
   "places",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    constellation: text("constellation", { enum: CONSTELLATIONS }).notNull(),
+    constellation: text("constellation")
+      .notNull()
+      .references(() => constellationsTable.id, { onUpdate: "cascade" }),
     name: text("name").notNull(),
     /** Giro u oficio: "Plomería", "Tacos", "Casa en renta". */
     category: text("category").notNull(),
@@ -74,3 +94,4 @@ export const endorsementsTable = pgTable(
 
 export type Place = typeof placesTable.$inferSelect;
 export type NewPlace = typeof placesTable.$inferInsert;
+export type ConstellationRow = typeof constellationsTable.$inferSelect;

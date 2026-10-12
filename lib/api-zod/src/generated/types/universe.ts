@@ -5,8 +5,10 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { ConstellationInfo } from './constellationInfo';
 import type { PlaceSummary } from './placeSummary';
 
 export interface Universe {
+  constellations: ConstellationInfo[];
   places: PlaceSummary[];
 }

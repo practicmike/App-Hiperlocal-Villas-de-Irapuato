@@ -10,9 +10,9 @@ import {
 import { select } from "d3-selection";
 import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import "d3-transition";
-import type { Constellation, PlaceSummary } from "@workspace/api-client-react";
-import { CONSTELLATIONS, ORDER } from "@/lib/constellations";
-import { WORLD_R, matchBounds, nebulaCenter, type StarPos } from "@/lib/layout";
+import type { PlaceSummary } from "@workspace/api-client-react";
+import { FALLBACK, byId, type Constellation } from "@/lib/constellations";
+import { NEBULA_SIZE, matchBounds, nebulaCenter, worldRadius, type StarPos } from "@/lib/layout";
 
 /** Nivel de zoom relativo a la vista completa: decide qué se muestra. */
 export type Level = "far" | "mid" | "near";
@@ -25,6 +25,8 @@ export interface UniverseHandle {
 }
 
 interface Props {
+  /** Ya ordenadas y con su ángulo (placeConstellations). */
+  constellations: Constellation[];
   places: PlaceSummary[];
   positions: Map<string, StarPos>;
   searching: boolean;
@@ -44,7 +46,7 @@ const STAR_R = 7;
 const DURATION = 750;
 
 export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function UniverseCanvas(
-  { places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
+  { constellations, places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -61,8 +63,12 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
   const levelCbRef = useRef(onLevelChange);
   levelCbRef.current = onLevelChange;
 
+  const cById = useMemo(() => byId(constellations), [constellations]);
+  const n = constellations.length;
+  const nRef = useRef(n);
+  nRef.current = n;
   const counts = useMemo(() => {
-    const m = new Map<Constellation, number>();
+    const m = new Map<string, number>();
     for (const p of places) m.set(p.constellation, (m.get(p.constellation) ?? 0) + 1);
     return m;
   }, [places]);
@@ -165,7 +171,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
 
     const resize = () => {
       const r = svg.getBoundingClientRect();
-      const k0 = (Math.min(r.width, r.height - 140) / (2 * WORLD_R)) * 1.05;
+      const k0 = (Math.min(r.width, r.height - 140) / (2 * worldRadius(nRef.current))) * 1.05;
       const first = sizeRef.current.w === 0;
       sizeRef.current = { w: r.width, h: r.height, k0: Math.max(k0, 0.2) };
       z.scaleExtent([k0 * 0.6, k0 * 10]);
@@ -180,9 +186,22 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     };
   }, [apply, checkApproach, homeTransform]);
 
+  // Si cambia el número de constelaciones, se reencuadra el mundo completo.
+  useEffect(() => {
+    const svg = svgRef.current;
+    const z = zoomRef.current;
+    if (!svg || !z || sizeRef.current.w === 0) return;
+    const r = svg.getBoundingClientRect();
+    const k0 = Math.max((Math.min(r.width, r.height - 140) / (2 * worldRadius(n))) * 1.05, 0.2);
+    sizeRef.current = { ...sizeRef.current, k0 };
+    z.scaleExtent([k0 * 0.6, k0 * 10]);
+    if (!searching) select(svg).call(z.transform, homeTransform());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n]);
+
   const zoomToNebula = (c: Constellation) => {
     const { w, h, k0 } = sizeRef.current;
-    const n = nebulaCenter(c);
+    const n = nebulaCenter(c, constellations.length);
     const k = k0 * 3.1;
     transformTo(zoomIdentity.translate(w / 2 - n.x * k, h / 2 - n.y * k).scale(k));
   };
@@ -198,17 +217,17 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
       aria-label="Universo de Villas. Usa la vista en lista para navegar con lector de pantalla."
     >
       <defs>
-        {ORDER.map((c) => (
-          <radialGradient key={c} id={`halo-${c}`}>
-            <stop offset="0%" stopColor={CONSTELLATIONS[c].color} stopOpacity="0.55" />
-            <stop offset="100%" stopColor={CONSTELLATIONS[c].color} stopOpacity="0" />
+        {[...constellations, FALLBACK].map((c) => (
+          <radialGradient key={c.id} id={`halo-${c.id}`}>
+            <stop offset="0%" stopColor={c.color} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={c.color} stopOpacity="0" />
           </radialGradient>
         ))}
-        {ORDER.map((c) => (
-          <radialGradient key={`n-${c}`} id={`nebula-${c}`}>
-            <stop offset="0%" stopColor={CONSTELLATIONS[c].color} stopOpacity="0.16" />
-            <stop offset="70%" stopColor={CONSTELLATIONS[c].color} stopOpacity="0.04" />
-            <stop offset="100%" stopColor={CONSTELLATIONS[c].color} stopOpacity="0" />
+        {constellations.map((c) => (
+          <radialGradient key={`n-${c.id}`} id={`nebula-${c.id}`}>
+            <stop offset="0%" stopColor={c.color} stopOpacity="0.16" />
+            <stop offset="70%" stopColor={c.color} stopOpacity="0.04" />
+            <stop offset="100%" stopColor={c.color} stopOpacity="0" />
           </radialGradient>
         ))}
         <radialGradient id="halo-me">
@@ -218,30 +237,35 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
       </defs>
 
       <g ref={worldRef}>
-        {/* Nebulosas: el nivel "lejos" muestra Villas completo en tres grupos. */}
-        {ORDER.map((c) => {
-          const n = nebulaCenter(c);
-          const info = CONSTELLATIONS[c];
+        {/* Nebulosas: el nivel "lejos" muestra Villas completo, una por constelación. */}
+        {constellations.map((info) => {
+          const c = info.id;
+          const n = nebulaCenter(info, constellations.length);
+          // Las de arriba llevan su nombre arriba y las de abajo, debajo: nunca chocan con "Tú".
+          const labelAbove = Math.sin((info.angle * Math.PI) / 180) < -0.05;
           return (
             <g key={c} transform={`translate(${n.x},${n.y})`}>
               <circle
-                r={170}
+                r={NEBULA_SIZE}
                 fill={`url(#nebula-${c})`}
-                onClick={() => level === "far" && zoomToNebula(c)}
+                onClick={() => level === "far" && zoomToNebula(info)}
                 style={{ cursor: level === "far" ? "zoom-in" : "default" }}
               />
               {/* Posición en unidades del mundo; tamaño de texto constante en pantalla. */}
-              {/* Casas lleva su nombre arriba; las de abajo, debajo: así nunca chocan con "Tú". */}
-              <g transform={`translate(0,${info.angle < 0 ? -158 : 150})`}>
+              <g transform={`translate(0,${labelAbove ? -158 : 150})`}>
                 <g
                   className="label-wrap"
                   style={{ opacity: searching ? 0.3 : level === "near" ? 0 : 1 }}
                 >
-                  <text className="nebula-label" textAnchor="middle" fill={info.color}>
-                    {info.label}
+                  {/* Arriba: el texto crece hacia afuera para no tapar sus estrellas. */}
+                  <text className="nebula-label" textAnchor="middle" fill={info.color} y={labelAbove ? -16 : 0}>
+                    {info.name}
                   </text>
-                  <text className="nebula-sub" textAnchor="middle" y={17}>
-                    {counts.get(c) ?? 0} · {info.hint}
+                  <text className="nebula-sub" textAnchor="middle" y={labelAbove ? 0 : 17}>
+                    {/* Con 5+ constelaciones la pista no cabe lejos; aparece al acercarte. */}
+                    {constellations.length <= 4 || level === "mid"
+                      ? `${counts.get(c) ?? 0} · ${info.hint}`
+                      : `${counts.get(c) ?? 0} estrellas`}
                   </text>
                 </g>
               </g>
@@ -281,7 +305,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
         {places.map((p) => {
           const pos = positions.get(p.id);
           if (!pos) return null;
-          const color = CONSTELLATIONS[p.constellation].color;
+          const color = (cById.get(p.constellation) ?? FALLBACK).color;
           const selected = p.id === selectedId;
           const core = STAR_R * (0.75 + pos.glow * 0.55) + Math.min(p.endorsementCount, 6) * 0.35;
           const labelOn = showNames && !pos.dimmed;
@@ -310,7 +334,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
               <g className="star-body">
                 {/* Área táctil generosa: dedos, no cursores. */}
                 <circle r={22} fill="transparent" />
-                <circle r={core * 2.8} fill={`url(#halo-${p.constellation})`} opacity={0.35 + pos.glow * 0.65} />
+                <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={0.35 + pos.glow * 0.65} />
                 <circle r={core} fill={color} />
                 <circle r={core * 0.38} fill="white" opacity={0.75} />
                 <circle

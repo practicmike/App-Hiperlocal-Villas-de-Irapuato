@@ -14,7 +14,7 @@ import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { ListView } from "@/components/ListView";
 import { MeSheet } from "@/components/MeSheet";
 import { homeLayout, searchLayout } from "@/lib/layout";
-import { CONSTELLATIONS, whatsappLink } from "@/lib/constellations";
+import { byId, placeConstellations, whatsappLink } from "@/lib/constellations";
 
 /**
  * Pantalla principal. me = null es un visitante sin llave: ve y busca en el
@@ -25,6 +25,8 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
   const guest = me === null;
   const { data, isLoading } = useGetUniverse();
   const places = data?.places ?? [];
+  const constellations = useMemo(() => placeConstellations(data?.constellations ?? []), [data]);
+  const cById = useMemo(() => byId(constellations), [constellations]);
 
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -45,8 +47,11 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
     () => new Map((result?.matches ?? []).map((m) => [m.placeId, m.reason])),
     [result],
   );
-  const home = useMemo(() => homeLayout(places), [places]);
-  const positions = useMemo(() => searchLayout(places, home, scores), [places, home, scores]);
+  const home = useMemo(() => homeLayout(places, constellations), [places, constellations]);
+  const positions = useMemo(
+    () => searchLayout(places, home, scores, constellations),
+    [places, home, scores, constellations],
+  );
 
   const search = useSearch({
     mutation: {
@@ -106,6 +111,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
       {view === "universe" ? (
         <UniverseCanvas
           ref={canvas}
+          constellations={constellations}
           places={places}
           positions={positions}
           searching={Boolean(result)}
@@ -126,7 +132,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           }}
         />
       ) : (
-        <ListView places={places} scores={scores} reasons={reasons} showPercent={result?.mode === "ai"} onSelect={select} />
+        <ListView constellations={constellations} places={places} scores={scores} reasons={reasons} showPercent={result?.mode === "ai"} onSelect={select} />
       )}
 
       {/* Lo único fijo: la búsqueda (y la cara del creador). */}
@@ -267,6 +273,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
               ? { score: scores.get(selectedId)!, reason: reasons.get(selectedId) ?? null }
               : null
           }
+          constellations={cById}
           creatorName={creator.name}
           meName={me?.name ?? ""}
           isAdmin={me?.role === "admin"}

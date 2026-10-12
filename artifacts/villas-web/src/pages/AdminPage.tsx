@@ -19,6 +19,15 @@ import {
   useAdminMarkSearchHandled,
   useAdminListComplaints,
   useAdminResolveComplaint,
+  useAdminListConstellations,
+  useAdminCreateConstellation,
+  useAdminUpdateConstellation,
+  useAdminRemoveConstellation,
+  useAdminReorderConstellations,
+  useAdminSuggestConstellation,
+  getAdminListConstellationsQueryKey,
+  type AdminConstellation,
+  type ConstellationInput,
   getAdminListResidentsQueryKey,
   getAdminListInvitesQueryKey,
   getAdminListPlacesQueryKey,
@@ -33,13 +42,14 @@ import {
   type Creator,
 } from "@workspace/api-client-react";
 import { ArrowLeft, Copy, MessageCircle } from "lucide-react";
-import { CONSTELLATIONS, ORDER, whatsappLink } from "@/lib/constellations";
+import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 
-type Tab = "resumen" | "vecinos" | "lugares" | "busquedas" | "quejas";
+type Tab = "resumen" | "vecinos" | "lugares" | "constelaciones" | "busquedas" | "quejas";
 const TABS: Array<[Tab, string]> = [
   ["resumen", "Resumen"],
   ["vecinos", "Vecinos"],
-  ["lugares", "Lugares"],
+  ["lugares", "Estrellas"],
+  ["constelaciones", "Constelaciones"],
   ["busquedas", "Búsquedas"],
   ["quejas", "Quejas"],
 ];
@@ -80,6 +90,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
         {tab === "resumen" && <Overview />}
         {tab === "vecinos" && <Residents me={me} />}
         {tab === "lugares" && <Places editId={editId} />}
+        {tab === "constelaciones" && <Constellations />}
         {tab === "busquedas" && <Searches />}
         {tab === "quejas" && <Complaints />}
       </main>
@@ -319,7 +330,7 @@ function StatusPill({ status }: { status: "pending" | "approved" | "blocked" }) 
 
 // ------------------------------------------------------------------ lugares
 const EMPTY: PlaceInput = {
-  constellation: "confianza",
+  constellation: "",
   name: "",
   category: "",
   description: "",
@@ -336,6 +347,8 @@ const EMPTY: PlaceInput = {
 function Places({ editId }: { editId: string | null }) {
   const qc = useQueryClient();
   const { data: places } = useAdminListPlaces();
+  const { data: cons } = useAdminListConstellations();
+  const consMap = new Map((cons ?? []).map((c) => [c.id, c]));
   const [editing, setEditing] = useState<{ id: string | null; form: PlaceInput } | null>(null);
   const openedFromCard = useRef(false);
   useEffect(() => {
@@ -359,6 +372,7 @@ function Places({ editId }: { editId: string | null }) {
 
   if (editing) {
     const f = editing.form;
+    const current = cons?.find((c) => c.id === f.constellation);
     const set = <K extends keyof PlaceInput>(k: K, v: PlaceInput[K]) =>
       setEditing({ ...editing, form: { ...f, [k]: v } });
     const txt = (k: "name" | "category" | "description" | "whatsapp") => ({
@@ -374,27 +388,12 @@ function Places({ editId }: { editId: string | null }) {
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!f.constellation) return alert("Elige una constelación.");
           if (editing.id) update.mutate({ id: editing.id, data: f });
           else create.mutate({ data: f });
         }}
       >
         <h2 className="text-lg font-black">{editing.id ? "Editar estrella" : "Nueva estrella"}</h2>
-        <div className="flex gap-2">
-          {ORDER.map((c) => (
-            <button
-              type="button"
-              key={c}
-              onClick={() => set("constellation", c)}
-              className="flex-1 rounded-xl border px-2 py-2 text-xs font-bold"
-              style={{
-                borderColor: f.constellation === c ? CONSTELLATIONS[c].color : "rgba(255,255,255,.15)",
-                color: f.constellation === c ? CONSTELLATIONS[c].color : undefined,
-              }}
-            >
-              {CONSTELLATIONS[c].label}
-            </button>
-          ))}
-        </div>
         <AdminField label="Nombre" required minLength={2} maxLength={80} {...txt("name")} />
         <AdminField label="Giro u oficio (Plomería, Tacos, Casa en renta…)" required minLength={2} maxLength={60} {...txt("category")} />
         <label className="block">
@@ -407,12 +406,24 @@ function Places({ editId }: { editId: string | null }) {
             {f.description.length < 120 ? `Corta para un buen match (${f.description.length}/120 mínimo sugerido)` : `${f.description.length}/1500`}
           </span>
         </label>
+        <ConstellationPicker
+          list={cons ?? []}
+          value={f.constellation}
+          onChange={(c) => set("constellation", c)}
+        />
+        <SuggestBox
+          place={{ name: f.name, category: f.category, description: f.description }}
+          list={cons ?? []}
+          onApply={(c, cat) =>
+            setEditing({ ...editing, form: { ...f, constellation: c, category: cat ?? f.category } })
+          }
+        />
         <div className="grid grid-cols-2 gap-3">
           <AdminField label="WhatsApp (10 dígitos)" required inputMode="tel" {...txt("whatsapp")} />
           <AdminField label="Quién atiende" maxLength={80} {...opt("contactName")} />
         </div>
         <AdminField label="Zona o privada" maxLength={80} {...opt("zone")} />
-        {f.constellation === "casas" && (
+        {current?.isProperty && (
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-muted">Operación</span>
@@ -477,7 +488,7 @@ function Places({ editId }: { editId: string | null }) {
           placeholder="Filtrar"
           className="min-w-0 flex-1 rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none"
         />
-        <button onClick={() => setEditing({ id: null, form: EMPTY })} className="rounded-xl bg-primary px-4 text-sm font-bold text-space">
+        <button onClick={() => setEditing({ id: null, form: { ...EMPTY, constellation: cons?.[0]?.id ?? "" } })} className="rounded-xl bg-primary px-4 text-sm font-bold text-space">
           + Nueva
         </button>
       </div>
@@ -487,7 +498,7 @@ function Places({ editId }: { editId: string | null }) {
       ) : (
         <ul className="space-y-2">
           {shown.map((p) => (
-            <PlaceRow key={p.id} p={p} onEdit={() => setEditing({ id: p.id, form: toInput(p) })} />
+            <PlaceRow key={p.id} p={p} color={consMap.get(p.constellation)?.color ?? FALLBACK.color} onEdit={() => setEditing({ id: p.id, form: toInput(p) })} />
           ))}
         </ul>
       )}
@@ -510,7 +521,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   active: p.active,
 });
 
-/** Cargar o borrar las 30 estrellas de ejemplo; las reales nunca se tocan. */
+/** Cargar o borrar las estrellas de ejemplo; las reales nunca se tocan. */
 function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const load = useAdminLoadDemoPlaces({
@@ -537,7 +548,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   return (
     <div className="rounded-2xl border border-casas/30 bg-casas/5 p-3 text-sm">
       <p className="mb-2 text-xs text-muted">
-        Datos de ejemplo para probar: 10 casas, 10 de gente de confianza y 10 comercios, con WhatsApp ficticio (no le escriben a nadie real).
+        Datos de ejemplo para probar (casas, oficios, comida, clases y salud) con WhatsApp ficticio: no le escriben a nadie real. Solo se cargan en constelaciones que existan.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -545,7 +556,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
           onClick={() => load.mutate()}
           className="rounded-full bg-casas px-4 py-1.5 text-xs font-bold text-space disabled:opacity-50"
         >
-          {load.isPending ? "Cargando…" : demoCount > 0 ? "Actualizar ejemplos" : "Cargar 30 ejemplos"}
+          {load.isPending ? "Cargando…" : demoCount > 0 ? "Actualizar ejemplos" : "Cargar ejemplos"}
         </button>
         {demoCount > 0 && (
           <button
@@ -562,12 +573,11 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   );
 }
 
-function PlaceRow({ p, onEdit }: { p: AdminPlace; onEdit: () => void }) {
-  const info = CONSTELLATIONS[p.constellation];
+function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: () => void }) {
   return (
     <li>
       <button onClick={onEdit} className={`flex w-full items-center gap-3 rounded-2xl bg-panel p-3 text-left ${p.active ? "" : "opacity-50"}`}>
-        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: info.color }} />
+        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{p.name}</span>
           <span className="block truncate text-xs text-muted">
@@ -671,6 +681,262 @@ function Complaints() {
         </li>
       ))}
     </ul>
+  );
+}
+
+// ------------------------------------------------------------ constelaciones
+function ConstellationPicker({
+  list,
+  value,
+  onChange,
+}: {
+  list: AdminConstellation[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-bold text-muted">Constelación</span>
+      <div className="flex flex-wrap gap-2">
+        {list.map((c) => (
+          <button
+            type="button"
+            key={c.id}
+            onClick={() => onChange(c.id)}
+            className="rounded-xl border px-3 py-2 text-xs font-bold"
+            style={{
+              borderColor: value === c.id ? c.color : "rgba(255,255,255,.15)",
+              color: value === c.id ? c.color : undefined,
+              background: value === c.id ? `${c.color}1a` : undefined,
+            }}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** La IA propone constelación y giro; el creador decide si lo aplica. */
+function SuggestBox({
+  place,
+  list,
+  onApply,
+}: {
+  place: { name: string; category: string; description: string };
+  list: AdminConstellation[];
+  onApply: (constellation: string, category: string | null) => void;
+}) {
+  const suggest = useAdminSuggestConstellation();
+  const r = suggest.data;
+  const target = r?.constellation ? list.find((c) => c.id === r.constellation) : undefined;
+  const ready = place.name.trim().length >= 2 && (place.description.trim().length >= 10 || place.category.trim().length >= 2);
+  return (
+    <div className="rounded-2xl border border-ai/30 bg-ai/5 p-3 text-sm">
+      <button
+        type="button"
+        disabled={!ready || suggest.isPending}
+        onClick={() => suggest.mutate({ data: place })}
+        className="rounded-full bg-ai px-4 py-1.5 text-xs font-bold text-space disabled:opacity-40"
+      >
+        {suggest.isPending ? "Pensando…" : "✨ Sugerir constelación"}
+      </button>
+      {!ready && <span className="ml-2 text-xs text-muted">Escribe nombre y giro o descripción primero.</span>}
+      {r && !r.available && <p className="mt-2 text-xs text-muted">La IA no está disponible ahora. Elige tú la constelación.</p>}
+      {r?.available && !target && <p className="mt-2 text-xs text-muted">La IA no supo dónde va. Elige tú la constelación.</p>}
+      {r?.available && target && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs">
+            <span className="font-bold" style={{ color: target.color }}>
+              {target.name}
+            </span>
+            {r.category && <> · giro «{r.category}»</>}
+            {r.reason && <span className="text-muted"> — {r.reason}</span>}
+          </p>
+          <button
+            type="button"
+            onClick={() => (onApply(target.id, r.category), suggest.reset())}
+            className="rounded-full border border-ai/60 px-3 py-1 text-xs font-bold text-ai"
+          >
+            Aplicar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const EMPTY_CONS: ConstellationInput = { name: "", hint: "", color: PALETTE[0]!.hex, isProperty: false };
+const MAX_CONS = 6;
+
+function Constellations() {
+  const qc = useQueryClient();
+  const { data: list } = useAdminListConstellations();
+  const [editing, setEditing] = useState<{ id: string | null; form: ConstellationInput } | null>(null);
+  const [removing, setRemoving] = useState<AdminConstellation | null>(null);
+  const [moveTo, setMoveTo] = useState<string>("");
+  const refresh = () => {
+    setEditing(null);
+    setRemoving(null);
+    void qc.invalidateQueries({ queryKey: getAdminListConstellationsQueryKey() });
+    void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+    void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
+  };
+  const create = useAdminCreateConstellation({ mutation: { onSuccess: refresh } });
+  const update = useAdminUpdateConstellation({ mutation: { onSuccess: refresh } });
+  const remove = useAdminRemoveConstellation({ mutation: { onSuccess: refresh } });
+  const reorder = useAdminReorderConstellations({ mutation: { onSuccess: refresh } });
+  const error = create.error ?? update.error ?? remove.error ?? reorder.error;
+
+  if (!list) return <Loading />;
+
+  if (editing) {
+    const f = editing.form;
+    const set = <K extends keyof ConstellationInput>(k: K, v: ConstellationInput[K]) =>
+      setEditing({ ...editing, form: { ...f, [k]: v } });
+    return (
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (editing.id) update.mutate({ cid: editing.id, data: f });
+          else create.mutate({ data: f });
+        }}
+      >
+        <h2 className="text-lg font-black">{editing.id ? "Editar constelación" : "Nueva constelación"}</h2>
+        <AdminField label="Nombre (corto: se lee en el mapa)" required minLength={2} maxLength={24} value={f.name} onChange={(e) => set("name", e.target.value)} />
+        <AdminField label="Pista (qué hay adentro)" maxLength={60} placeholder="Plomería, luz, jardín…" value={f.hint} onChange={(e) => set("hint", e.target.value)} />
+        <div>
+          <span className="mb-1 block text-xs font-bold text-muted">Color</span>
+          <div className="flex flex-wrap gap-2">
+            {PALETTE.map((c) => (
+              <button
+                type="button"
+                key={c.hex}
+                onClick={() => set("color", c.hex)}
+                aria-label={c.name}
+                title={c.name}
+                className="h-9 w-9 rounded-full border-2"
+                style={{ background: c.hex, borderColor: f.color.toLowerCase() === c.hex.toLowerCase() ? "#eef0ff" : "transparent" }}
+              />
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-muted">Azul claro (tú) y morado (IA) están reservados.</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" className="accent-[#7d80d9]" checked={f.isProperty} onChange={(e) => set("isProperty", e.target.checked)} />
+          Son inmuebles (activa venta/renta y precio)
+        </label>
+        {error && <p className="text-sm text-alert">No se pudo: {(error as Error).message}</p>}
+        <div className="flex gap-2 pt-2">
+          <button disabled={create.isPending || update.isPending} className="rounded-xl bg-primary px-5 py-2.5 font-bold text-space">
+            Guardar
+          </button>
+          <button type="button" onClick={() => setEditing(null)} className="px-4 text-muted">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  const move = (i: number, d: -1 | 1) => {
+    const ids = list.map((c) => c.id);
+    const j = i + d;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    reorder.mutate({ data: { ids } });
+  };
+  const full = list.length >= MAX_CONS;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted">
+        Las constelaciones son los grupos grandes del universo. Tú las decides; la IA solo te sugiere en cuál va cada estrella.
+        Máximo {MAX_CONS}: más se enciman en un celular. La primera queda arriba y las demás siguen el reloj.
+      </p>
+      <button
+        disabled={full}
+        onClick={() => setEditing({ id: null, form: { ...EMPTY_CONS, color: PALETTE[list.length % PALETTE.length]!.hex } })}
+        className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-space disabled:opacity-40"
+      >
+        {full ? `Tienes ${MAX_CONS} (máximo)` : "+ Nueva constelación"}
+      </button>
+      {error && !editing && <p className="text-sm text-alert">No se pudo: {(error as Error).message}</p>}
+      <ul className="space-y-2">
+        {list.map((c, i) => (
+          <li key={c.id} className="flex items-center gap-3 rounded-2xl bg-panel p-3">
+            <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: c.color }} />
+            <button
+              className="min-w-0 flex-1 text-left"
+              onClick={() => setEditing({ id: c.id, form: { name: c.name, hint: c.hint, color: c.color, isProperty: c.isProperty } })}
+            >
+              <span className="block truncate font-bold">{c.name}</span>
+              <span className="block truncate text-xs text-muted">
+                {c.starCount} estrellas{c.hint && ` · ${c.hint}`}{c.isProperty && " · inmuebles"}
+              </span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1 text-muted">
+              <button aria-label="Subir" disabled={i === 0 || reorder.isPending} onClick={() => move(i, -1)} className="rounded-full px-2 py-1 hover:bg-white/10 disabled:opacity-30">
+                ↑
+              </button>
+              <button aria-label="Bajar" disabled={i === list.length - 1 || reorder.isPending} onClick={() => move(i, 1)} className="rounded-full px-2 py-1 hover:bg-white/10 disabled:opacity-30">
+                ↓
+              </button>
+              <button
+                aria-label="Eliminar"
+                disabled={list.length <= 1}
+                onClick={() => {
+                  setRemoving(c);
+                  setMoveTo(list.find((x) => x.id !== c.id)?.id ?? "");
+                }}
+                className="rounded-full px-2 py-1 text-alert hover:bg-white/10 disabled:opacity-30"
+              >
+                ✕
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {removing && (
+        <div className="rounded-2xl border border-alert/40 bg-alert/5 p-3 text-sm">
+          <p className="font-bold">¿Eliminar «{removing.name}»?</p>
+          {removing.starCount > 0 ? (
+            <label className="mt-2 block text-xs">
+              Sus {removing.starCount} estrellas se mueven a:
+              <select
+                value={moveTo}
+                onChange={(e) => setMoveTo(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm"
+              >
+                {list
+                  .filter((x) => x.id !== removing.id)
+                  .map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : (
+            <p className="mt-1 text-xs text-muted">No tiene estrellas; se borra sin mover nada.</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              disabled={remove.isPending}
+              onClick={() => remove.mutate({ cid: removing.id, data: { moveTo: removing.starCount > 0 ? moveTo : null } })}
+              className="rounded-xl bg-alert px-4 py-2 text-xs font-bold text-space"
+            >
+              Eliminar
+            </button>
+            <button onClick={() => setRemoving(null)} className="px-3 text-xs text-muted">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

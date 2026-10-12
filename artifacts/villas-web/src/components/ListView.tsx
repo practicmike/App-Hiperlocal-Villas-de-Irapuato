@@ -1,15 +1,17 @@
 import type { PlaceSummary } from "@workspace/api-client-react";
 import { Heart, BadgeCheck } from "lucide-react";
-import { CONSTELLATIONS, ORDER } from "@/lib/constellations";
+import type { Constellation } from "@/lib/constellations";
 
 /** Vista en lista: misma información, sin 3D ni gestos. Accesible por teclado y lector. */
 export function ListView({
+  constellations,
   places,
   scores,
   reasons,
   showPercent = false,
   onSelect,
 }: {
+  constellations: Constellation[];
   places: PlaceSummary[];
   scores: Map<string, number> | null;
   reasons?: Map<string, string | null>;
@@ -24,14 +26,14 @@ export function ListView({
   return (
     <div className="absolute inset-0 overflow-y-auto px-4 pb-28 pt-24">
       <div className="mx-auto max-w-lg space-y-6">
-        {ORDER.map((c) => {
+        {constellations.map((info) => {
+          const c = info.id;
           const group = sorted.filter((p) => p.constellation === c);
           if (group.length === 0) return null;
-          const info = CONSTELLATIONS[c];
           return (
-            <section key={c} aria-label={info.label}>
+            <section key={c} aria-label={info.name}>
               <h2 className="mb-2 text-sm font-black uppercase tracking-wide" style={{ color: info.color }}>
-                {info.label}
+                {info.name}
               </h2>
               <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl bg-panel/70">
                 {group.map((p) => (

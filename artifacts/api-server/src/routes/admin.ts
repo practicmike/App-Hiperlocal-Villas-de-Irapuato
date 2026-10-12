@@ -5,6 +5,8 @@ import { desc, eq, gte, isNull, like, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import {
   db,
+  constellationsTable,
+  MAX_CONSTELLATIONS,
   accessKeysTable,
   residentsTable,
   invitesTable,
@@ -22,13 +24,20 @@ import {
   AdminUpdatePlaceParams,
   AdminUpdatePlaceBody,
   AdminDeletePlaceParams,
+  AdminCreateConstellationBody,
+  AdminReorderConstellationsBody,
+  AdminUpdateConstellationParams,
+  AdminUpdateConstellationBody,
+  AdminRemoveConstellationParams,
+  AdminRemoveConstellationBody,
+  AdminSuggestConstellationBody,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
 import { requireAdmin, issueAccessKey, normalizePhone } from "../lib/auth";
 import { endorsementCounts, refreshEmbedding } from "../lib/places";
 import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
-import { embedMany } from "../lib/ai";
+import { embedMany, suggestConstellation } from "../lib/ai";
 import { placeEmbeddingText } from "../lib/search-core";
 import { logger } from "../lib/logger";
 
@@ -216,7 +225,12 @@ const toAdminPlace = (p: Place, counts: Map<string, number>) => ({
   isDemo: p.whatsapp.startsWith(DEMO_WHATSAPP_PREFIX),
 });
 
-function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>) {
+async function constellationById(id: string) {
+  const [c] = await db.select().from(constellationsTable).where(eq(constellationsTable.id, id)).limit(1);
+  return c;
+}
+
+function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, isProperty: boolean) {
   const blank = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
   return {
     constellation: body.constellation,
@@ -226,9 +240,9 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>) {
     contactName: blank(body.contactName),
     whatsapp: normalizePhone(body.whatsapp),
     zone: blank(body.zone),
-    // Operación y precio solo aplican a casas.
-    operation: body.constellation === "casas" ? (body.operation ?? null) : null,
-    priceLabel: body.constellation === "casas" ? blank(body.priceLabel) : null,
+    // Operación y precio solo aplican a constelaciones de inmuebles.
+    operation: isProperty ? (body.operation ?? null) : null,
+    priceLabel: isProperty ? blank(body.priceLabel) : null,
     imageUrl: blank(body.imageUrl),
     verified: body.verified,
     active: body.active,
@@ -245,7 +259,12 @@ router.get("/admin/places", async (_req, res) => {
 
 router.post("/admin/places", async (req, res) => {
   const body = AdminCreatePlaceBody.parse(req.body);
-  const [place] = await db.insert(placesTable).values(cleanPlaceInput(body)).returning();
+  const c = await constellationById(body.constellation);
+  if (!c) {
+    res.status(400).json({ message: "Esa constelación no existe." });
+    return;
+  }
+  const [place] = await db.insert(placesTable).values(cleanPlaceInput(body, c.isProperty)).returning();
   refreshEmbedding(place!);
   res.status(201).json(toAdminPlace(place!, new Map()));
 });
@@ -253,9 +272,14 @@ router.post("/admin/places", async (req, res) => {
 router.put("/admin/places/:id", async (req, res) => {
   const { id } = AdminUpdatePlaceParams.parse(req.params);
   const body = AdminUpdatePlaceBody.parse(req.body);
+  const c = await constellationById(body.constellation);
+  if (!c) {
+    res.status(400).json({ message: "Esa constelación no existe." });
+    return;
+  }
   const [place] = await db
     .update(placesTable)
-    .set({ ...cleanPlaceInput(body), embedding: null, updatedAt: new Date() })
+    .set({ ...cleanPlaceInput(body, c.isProperty), embedding: null, updatedAt: new Date() })
     .where(eq(placesTable.id, id))
     .returning();
   if (!place) {
@@ -276,6 +300,132 @@ router.delete("/admin/places/:id", async (req, res) => {
   res.status(204).end();
 });
 
+// ----------------------------------------------------------- constelaciones
+async function listConstellations() {
+  const rows = await db
+    .select({
+      c: constellationsTable,
+      starCount: sql<number>`(select count(*)::int from "places" p where p."constellation" = "constellations"."id")`,
+    })
+    .from(constellationsTable)
+    .orderBy(constellationsTable.position, constellationsTable.createdAt);
+  return rows.map(({ c, starCount }) => ({
+    id: c.id,
+    name: c.name,
+    hint: c.hint,
+    color: c.color,
+    isProperty: c.isProperty,
+    position: c.position,
+    starCount,
+  }));
+}
+
+/** "Mi Constelación Nueva" → "mi-constelacion-nueva"; estable aunque se renombre después. */
+function slugify(name: string) {
+  return (
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 30) || "constelacion"
+  );
+}
+
+router.get("/admin/constellations", async (_req, res) => {
+  res.json(await listConstellations());
+});
+
+router.post("/admin/constellations", async (req, res) => {
+  const body = AdminCreateConstellationBody.parse(req.body);
+  const current = await listConstellations();
+  if (current.length >= MAX_CONSTELLATIONS) {
+    res.status(400).json({
+      message: `Ya tienes ${MAX_CONSTELLATIONS} constelaciones, el máximo para que se lean bien en un celular. Junta o elimina una antes de crear otra.`,
+    });
+    return;
+  }
+  const taken = new Set(current.map((c) => c.id));
+  const base = slugify(body.name);
+  let id = base;
+  for (let i = 2; taken.has(id); i++) id = `${base}-${i}`;
+  await db.insert(constellationsTable).values({
+    id,
+    name: body.name.trim(),
+    hint: body.hint.trim(),
+    color: body.color,
+    isProperty: body.isProperty,
+    position: Math.max(-1, ...current.map((c) => c.position)) + 1,
+  });
+  res.status(201).json((await listConstellations()).find((c) => c.id === id));
+});
+
+router.put("/admin/constellations/order", async (req, res) => {
+  const { ids } = AdminReorderConstellationsBody.parse(req.body);
+  await db.transaction(async (tx) => {
+    for (const [position, id] of ids.entries()) {
+      await tx.update(constellationsTable).set({ position }).where(eq(constellationsTable.id, id));
+    }
+  });
+  res.status(204).end();
+});
+
+router.put("/admin/constellations/:cid", async (req, res) => {
+  const { cid } = AdminUpdateConstellationParams.parse(req.params);
+  const body = AdminUpdateConstellationBody.parse(req.body);
+  const [updated] = await db
+    .update(constellationsTable)
+    .set({ name: body.name.trim(), hint: body.hint.trim(), color: body.color, isProperty: body.isProperty })
+    .where(eq(constellationsTable.id, cid))
+    .returning({ id: constellationsTable.id });
+  if (!updated) {
+    res.status(404).json({ message: "Constelación no encontrada." });
+    return;
+  }
+  res.json((await listConstellations()).find((c) => c.id === cid));
+});
+
+/** Eliminar: si tiene estrellas, primero se mueven a otra; ninguna se pierde. */
+router.post("/admin/constellations/:cid/remove", async (req, res) => {
+  const { cid } = AdminRemoveConstellationParams.parse(req.params);
+  const { moveTo } = AdminRemoveConstellationBody.parse(req.body);
+  const all = await listConstellations();
+  const target = all.find((c) => c.id === cid);
+  if (!target) {
+    res.status(404).json({ message: "Constelación no encontrada." });
+    return;
+  }
+  if (all.length <= 1) {
+    res.status(400).json({ message: "El universo necesita al menos una constelación." });
+    return;
+  }
+  if (target.starCount > 0) {
+    if (!moveTo || moveTo === cid || !all.some((c) => c.id === moveTo)) {
+      res.status(400).json({ message: `Tiene ${target.starCount} estrellas. Elige a qué constelación moverlas.` });
+      return;
+    }
+  }
+  await db.transaction(async (tx) => {
+    if (target.starCount > 0 && moveTo) {
+      await tx.update(placesTable).set({ constellation: moveTo, updatedAt: new Date() }).where(eq(placesTable.constellation, cid));
+    }
+    await tx.delete(constellationsTable).where(eq(constellationsTable.id, cid));
+  });
+  res.status(204).end();
+});
+
+/** La IA sugiere constelación y giro; el creador decide. */
+router.post("/admin/places/suggest", async (req, res) => {
+  const body = AdminSuggestConstellationBody.parse(req.body);
+  const [cs, cats] = await Promise.all([
+    listConstellations(),
+    db.selectDistinct({ category: placesTable.category }).from(placesTable),
+  ]);
+  const s = await suggestConstellation(body, cs, cats.map((c) => c.category));
+  res.json(s ? { ...s, available: true } : { constellation: null, category: null, reason: null, available: false });
+});
+
 // --------------------------------------------------------- datos de ejemplo
 const isDemo = like(placesTable.whatsapp, `${DEMO_WHATSAPP_PREFIX}%`);
 
@@ -284,14 +434,17 @@ router.post("/admin/demo-places", async (_req, res) => {
   const existing = new Set(
     (await db.select({ whatsapp: placesTable.whatsapp }).from(placesTable).where(isDemo)).map((r) => r.whatsapp),
   );
-  const missing = DEMO_PLACES.filter((p) => !existing.has(p.whatsapp));
+  // Si borraste una constelación, sus ejemplos simplemente no se cargan.
+  const ids = new Set((await db.select({ id: constellationsTable.id }).from(constellationsTable)).map((c) => c.id));
+  const demos = DEMO_PLACES.filter((p) => ids.has(p.constellation));
+  const missing = demos.filter((p) => !existing.has(p.whatsapp));
   const fresh = missing.length ? await db.insert(placesTable).values(missing).returning() : [];
   // Los ejemplos ya cargados se actualizan con las descripciones más recientes.
   const refreshed = await Promise.all(
-    DEMO_PLACES.filter((p) => existing.has(p.whatsapp)).map((p) =>
+    demos.filter((p) => existing.has(p.whatsapp)).map((p) =>
       db
         .update(placesTable)
-        .set({ name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, embedding: null, updatedAt: new Date() })
+        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, embedding: null, updatedAt: new Date() })
         .where(eq(placesTable.whatsapp, p.whatsapp))
         .returning(),
     ),

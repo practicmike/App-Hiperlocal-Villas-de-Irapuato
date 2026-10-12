@@ -12,7 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { BadgeCheck, Heart, KeyRound, MessageCircle, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
-import { CONSTELLATIONS, whatsappLink } from "@/lib/constellations";
+import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
 
 interface Match {
   score: number;
@@ -24,13 +24,15 @@ interface Props {
   searchId: string | null;
   /** % de match con IA y por qué; null si la búsqueda no fue con IA. */
   match: Match | null;
+  /** Constelaciones por id, para color y nombre. */
+  constellations: Map<string, Constellation>;
   creatorName: string;
   meName: string;
   isAdmin: boolean;
   onClose: () => void;
 }
 
-export function PlaceSheet({ placeId, searchId, match, creatorName, meName, isAdmin, onClose }: Props) {
+export function PlaceSheet({ placeId, searchId, match, constellations, creatorName, meName, isAdmin, onClose }: Props) {
   const { data: place, isLoading } = useGetPlace(placeId);
 
   return (
@@ -49,7 +51,7 @@ export function PlaceSheet({ placeId, searchId, match, creatorName, meName, isAd
       {isLoading || !place ? (
         <div className="h-40 animate-pulse" />
       ) : (
-        <Card place={place} searchId={searchId} match={match} creatorName={creatorName} meName={meName} isAdmin={isAdmin} />
+        <Card place={place} searchId={searchId} match={match} info={constellations.get(place.constellation) ?? FALLBACK} creatorName={creatorName} meName={meName} isAdmin={isAdmin} />
       )}
     </div>
   );
@@ -59,6 +61,7 @@ function Card({
   place,
   searchId,
   match,
+  info,
   creatorName,
   meName,
   isAdmin,
@@ -66,12 +69,12 @@ function Card({
   place: PlaceDetail;
   searchId: string | null;
   match: Match | null;
+  info: Constellation;
   creatorName: string;
   meName: string;
   isAdmin: boolean;
 }) {
   const qc = useQueryClient();
-  const info = CONSTELLATIONS[place.constellation];
   const contact = useRecordContact();
   const onSaved = (data: PlaceDetail) => {
     qc.setQueryData(getGetPlaceQueryKey(place.id), data);
@@ -106,7 +109,7 @@ function Card({
       <div>
         <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide" style={{ color: info.color }}>
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: info.color }} />
-          {info.label} · {place.category}
+          {info.name} · {place.category}
           {place.sponsored && (
             <span className="rounded-full border border-current px-2 py-0.5 text-[10px]">Patrocinado</span>
           )}

@@ -45,14 +45,65 @@ export interface ErrorResponse {
   message: string;
 }
 
-export type Constellation = typeof Constellation[keyof typeof Constellation];
+/**
+ * Id de la constelación (hogar, resolver, …)
+ */
+export type Constellation = string;
 
+export interface ConstellationInfo {
+  id: string;
+  name: string;
+  hint: string;
+  color: string;
+  /** Inmuebles (activa venta/renta y precio) */
+  isProperty: boolean;
+  position: number;
+}
 
-export const Constellation = {
-  casas: 'casas',
-  confianza: 'confianza',
-  comercios: 'comercios',
-} as const;
+export type AdminConstellation = ConstellationInfo & {
+  starCount: number;
+};
+
+export interface ConstellationInput {
+  /**
+     * @minLength 2
+     * @maxLength 24
+     */
+  name: string;
+  /** @maxLength 60 */
+  hint: string;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  color: string;
+  isProperty: boolean;
+}
+
+export interface RemoveConstellationRequest {
+  /** @nullable */
+  moveTo: string | null;
+}
+
+export interface ReorderRequest {
+  ids: string[];
+}
+
+export interface SuggestConstellationRequest {
+  /** @maxLength 80 */
+  name: string;
+  /** @maxLength 60 */
+  category: string;
+  /** @maxLength 1500 */
+  description: string;
+}
+
+export interface SuggestConstellationResult {
+  /** @nullable */
+  constellation: string | null;
+  /** @nullable */
+  category: string | null;
+  /** @nullable */
+  reason: string | null;
+  available: boolean;
+}
 
 export interface Creator {
   name: string;
@@ -133,6 +184,7 @@ export interface PlaceSummary {
 }
 
 export interface Universe {
+  constellations: ConstellationInfo[];
   places: PlaceSummary[];
 }
 
@@ -225,7 +277,8 @@ export interface SearchResult {
   matches: SearchMatch[];
   /** @nullable */
   refinedQuery: string | null;
-  constellation: Constellation | null;
+  /** @nullable */
+  constellation: string | null;
   mode: SearchResultMode;
 }
 
