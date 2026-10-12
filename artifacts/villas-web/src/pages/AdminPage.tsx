@@ -12,6 +12,8 @@ import {
   useAdminListPlaces,
   useAdminCreatePlace,
   useAdminUpdatePlace,
+  useAdminLoadDemoPlaces,
+  useAdminRemoveDemoPlaces,
   useAdminListSearches,
   useAdminMarkSearchHandled,
   useAdminListComplaints,
@@ -417,6 +419,7 @@ function Places() {
           + Nueva
         </button>
       </div>
+      <DemoTools places={places ?? []} onChange={done} />
       {!places ? (
         <Loading />
       ) : (
@@ -445,6 +448,54 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   active: p.active,
 });
 
+/** Cargar o borrar las 30 estrellas de ejemplo; las reales nunca se tocan. */
+function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = useAdminLoadDemoPlaces({
+    mutation: {
+      onSuccess: (r) => {
+        setMsg(r.inserted ? `Listo: ${r.inserted} estrellas de ejemplo. La marca "IA" aparece en unos segundos si OpenAI responde.` : "Los ejemplos ya estaban cargados.");
+        onChange();
+      },
+    },
+  });
+  const remove = useAdminRemoveDemoPlaces({
+    mutation: {
+      onSuccess: (r) => {
+        setMsg(`Borradas ${r.removed} estrellas de ejemplo.`);
+        onChange();
+      },
+    },
+  });
+  const demoCount = places.filter((p) => p.isDemo).length;
+  return (
+    <div className="rounded-2xl border border-casas/30 bg-casas/5 p-3 text-sm">
+      <p className="mb-2 text-xs text-muted">
+        Datos de ejemplo para probar: 10 casas, 10 de gente de confianza y 10 comercios, con WhatsApp ficticio (no le escriben a nadie real).
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          disabled={load.isPending}
+          onClick={() => load.mutate()}
+          className="rounded-full bg-casas px-4 py-1.5 text-xs font-bold text-space disabled:opacity-50"
+        >
+          {load.isPending ? "Cargando…" : "Cargar 30 ejemplos"}
+        </button>
+        {demoCount > 0 && (
+          <button
+            disabled={remove.isPending}
+            onClick={() => confirm(`¿Borrar las ${demoCount} estrellas de ejemplo? Las reales no se tocan.`) && remove.mutate()}
+            className="rounded-full border border-alert/50 px-4 py-1.5 text-xs font-bold text-alert"
+          >
+            Borrar ejemplos ({demoCount})
+          </button>
+        )}
+      </div>
+      {msg && <p className="mt-2 text-xs text-ink/85">{msg}</p>}
+    </div>
+  );
+}
+
 function PlaceRow({ p, onEdit }: { p: AdminPlace; onEdit: () => void }) {
   const info = CONSTELLATIONS[p.constellation];
   return (
@@ -454,7 +505,9 @@ function PlaceRow({ p, onEdit }: { p: AdminPlace; onEdit: () => void }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{p.name}</span>
           <span className="block truncate text-xs text-muted">
+            {p.isDemo && <span className="font-bold text-casas">Ejemplo · </span>}
             {p.category} · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
+            {p.hasEmbedding && <span className="text-ai"> · IA</span>}
           </span>
         </span>
       </button>

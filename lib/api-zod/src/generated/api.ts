@@ -412,7 +412,8 @@ export const AdminListPlacesResponseItem = zod.object({
   "id": zod.string(),
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
-  "hasEmbedding": zod.boolean()
+  "hasEmbedding": zod.boolean(),
+  "isDemo": zod.boolean()
 }))
 export const AdminListPlacesResponse = zod.array(AdminListPlacesResponseItem)
 
@@ -491,7 +492,8 @@ export const AdminCreatePlaceResponse = zod.object({
   "id": zod.string(),
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
-  "hasEmbedding": zod.boolean()
+  "hasEmbedding": zod.boolean(),
+  "isDemo": zod.boolean()
 }))
 
 
@@ -573,8 +575,27 @@ export const AdminUpdatePlaceResponse = zod.object({
   "id": zod.string(),
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
-  "hasEmbedding": zod.boolean()
+  "hasEmbedding": zod.boolean(),
+  "isDemo": zod.boolean()
 }))
+
+
+/**
+ * @summary Carga 30 estrellas de ejemplo (10 por constelación); no duplica
+ */
+export const AdminLoadDemoPlacesResponse = zod.object({
+  "inserted": zod.number().int(),
+  "removed": zod.number().int()
+})
+
+
+/**
+ * @summary Borra solo las estrellas de ejemplo
+ */
+export const AdminRemoveDemoPlacesResponse = zod.object({
+  "inserted": zod.number().int(),
+  "removed": zod.number().int()
+})
 
 
 export const AdminListSearchesResponseItem = zod.object({

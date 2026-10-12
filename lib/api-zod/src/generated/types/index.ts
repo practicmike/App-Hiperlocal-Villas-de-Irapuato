@@ -19,6 +19,7 @@ export * from './constellation';
 export * from './contactRequest';
 export * from './createInviteRequest';
 export * from './creator';
+export * from './demoResult';
 export * from './endorseRequest';
 export * from './errorResponse';
 export * from './healthStatus';

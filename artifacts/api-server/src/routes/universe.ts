@@ -26,6 +26,7 @@ import {
   MATCH_MIN,
   calibrateSimilarity,
   cosineSimilarity,
+  buildIdf,
   keywordScore,
   rankMatches,
 } from "../lib/search-core";
@@ -145,10 +146,12 @@ router.post("/search", rateLimit("search", 60, 60_000), async (req, res) => {
   const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
   const queryVector = await embed(effectiveQuery);
 
+  // Pesos por palabra según qué tan comunes son en TODO el universo actual.
+  const weightOf = buildIdf(places);
   const scored = places
     .filter((p) => !constellation || p.constellation === constellation)
     .map((p) => {
-      const kw = Math.max(keywordScore(effectiveQuery, p), keywordScore(raw, p));
+      const kw = Math.max(keywordScore(effectiveQuery, p, weightOf), keywordScore(raw, p, weightOf));
       const sem =
         queryVector && p.embedding
           ? calibrateSimilarity(cosineSimilarity(queryVector, p.embedding))
@@ -157,7 +160,12 @@ router.post("/search", rateLimit("search", 60, 60_000), async (req, res) => {
     })
     .filter((m) => m.score >= MATCH_MIN);
 
-  const matches = rankMatches(scored).map(({ placeId, score }) => ({
+  // Corte relativo: si hay coincidencias muy fuertes, las débiles estorban.
+  // "casa en renta" ya no trae las casas en venta solo por decir "casa".
+  const top = Math.max(0, ...scored.map((m) => m.score));
+  const relevant = scored.filter((m) => m.score >= top * 0.6);
+
+  const matches = rankMatches(relevant).map(({ placeId, score }) => ({
     placeId,
     score: Math.round(score * 1000) / 1000,
   }));

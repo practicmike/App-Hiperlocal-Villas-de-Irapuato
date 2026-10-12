@@ -30,6 +30,7 @@ import type {
   ContactRequest,
   CreateInviteRequest,
   Creator,
+  DemoResult,
   EndorseRequest,
   ErrorResponse,
   HealthStatus,
@@ -2101,6 +2102,154 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminUpdatePlaceMutationOptions(options));
+    }
+
+export const getAdminLoadDemoPlacesUrl = () => {
+
+
+
+
+  return `/api/admin/demo-places`
+}
+
+/**
+ * @summary Carga 30 estrellas de ejemplo (10 por constelación); no duplica
+ */
+export const adminLoadDemoPlaces = async ( options?: Parameters<typeof customFetch>[1]): Promise<DemoResult> => {
+
+  return customFetch<DemoResult>(getAdminLoadDemoPlacesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminLoadDemoPlacesMutationKey = () => ['adminLoadDemoPlaces'] as const;
+
+export const getAdminLoadDemoPlacesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLoadDemoPlaces>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminLoadDemoPlaces>>, TError,void, TContext> => {
+
+const mutationKey = getAdminLoadDemoPlacesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLoadDemoPlaces>>, void> = () => {
+
+
+          return  adminLoadDemoPlaces(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminLoadDemoPlacesMutationResult = NonNullable<Awaited<ReturnType<typeof adminLoadDemoPlaces>>>
+
+    export type AdminLoadDemoPlacesMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Carga 30 estrellas de ejemplo (10 por constelación); no duplica
+ */
+export const useAdminLoadDemoPlaces = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLoadDemoPlaces>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminLoadDemoPlaces>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAdminLoadDemoPlacesMutationOptions(options));
+    }
+
+export const getAdminRemoveDemoPlacesUrl = () => {
+
+
+
+
+  return `/api/admin/demo-places`
+}
+
+/**
+ * @summary Borra solo las estrellas de ejemplo
+ */
+export const adminRemoveDemoPlaces = async ( options?: Parameters<typeof customFetch>[1]): Promise<DemoResult> => {
+
+  return customFetch<DemoResult>(getAdminRemoveDemoPlacesUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminRemoveDemoPlacesMutationKey = () => ['adminRemoveDemoPlaces'] as const;
+
+export const getAdminRemoveDemoPlacesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRemoveDemoPlaces>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRemoveDemoPlaces>>, TError,void, TContext> => {
+
+const mutationKey = getAdminRemoveDemoPlacesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRemoveDemoPlaces>>, void> = () => {
+
+
+          return  adminRemoveDemoPlaces(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRemoveDemoPlacesMutationResult = NonNullable<Awaited<ReturnType<typeof adminRemoveDemoPlaces>>>
+
+    export type AdminRemoveDemoPlacesMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Borra solo las estrellas de ejemplo
+ */
+export const useAdminRemoveDemoPlaces = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRemoveDemoPlaces>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRemoveDemoPlaces>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAdminRemoveDemoPlacesMutationOptions(options));
     }
 
 export const getAdminListSearchesUrl = () => {
