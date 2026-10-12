@@ -1,0 +1,29 @@
+kind = "web"
+previewPath = "/"
+title = "Villas"
+version = "1.0.0"
+id = "villas-web-universo-01"
+
+[[services]]
+localPort = 5173
+name = "Villas Web"
+paths = ["/"]
+
+[services.env]
+PORT = "5173"
+BASE_PATH = "/"
+
+[services.development]
+run = "pnpm --filter @workspace/villas-web run dev"
+
+[services.production]
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/villas-web", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.static]
+directory = "artifacts/villas-web/dist"
+notFound = "index.html"

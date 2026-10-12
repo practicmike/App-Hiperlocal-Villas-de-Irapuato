@@ -2,21 +2,22 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: App Hiperlocal Villas de Irapuato
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: universe
+  - name: admin
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +25,840 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ------------------------------------------------------------------ auth
+  /creator:
+    get:
+      operationId: getCreator
+      tags: [auth]
+      summary: Presentación pública del creador
+      responses:
+        "200":
+          description: Creador
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Creator"
+  /auth/join:
+    post:
+      operationId: joinWithInvite
+      tags: [auth]
+      summary: Canjear un código de invitación; el vecino queda pendiente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRequest"
+      responses:
+        "201":
+          description: Solicitud registrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinResult"
+        "400":
+          description: Código inválido o ya usado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/key:
+    post:
+      operationId: loginWithKey
+      tags: [auth]
+      summary: Entrar con la llave personal; crea la sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyLoginRequest"
+      responses:
+        "200":
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          description: Llave inválida o revocada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "204":
+          description: Sesión cerrada
+  /me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      responses:
+        "200":
+          description: Vecino con sesión
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMe
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeRequest"
+      responses:
+        "200":
+          description: Actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+
+  # -------------------------------------------------------------- universe
+  /universe:
+    get:
+      operationId: getUniverse
+      tags: [universe]
+      summary: Todas las estrellas activas
+      responses:
+        "200":
+          description: Universo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Universe"
+  /places/{id}:
+    get:
+      operationId: getPlace
+      tags: [universe]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Tarjeta de la estrella
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetail"
+        "404":
+          description: No existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /places/{id}/endorsement:
+    put:
+      operationId: endorsePlace
+      tags: [universe]
+      summary: Lo recomiendo
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndorseRequest"
+      responses:
+        "200":
+          description: Recomendación guardada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetail"
+    delete:
+      operationId: removeEndorsement
+      tags: [universe]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Recomendación retirada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetail"
+  /places/{id}/contact:
+    post:
+      operationId: recordContact
+      tags: [universe]
+      summary: Registrar que el vecino abrió WhatsApp
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+      responses:
+        "204":
+          description: Registrado
+  /places/{id}/complaints:
+    post:
+      operationId: sendComplaint
+      tags: [universe]
+      summary: Queja privada que solo llega al creador
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintRequest"
+      responses:
+        "201":
+          description: Enviada
+  /search:
+    post:
+      operationId: search
+      tags: [universe]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: Coincidencias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+
+  # ----------------------------------------------------------------- admin
+  /admin/overview:
+    get:
+      operationId: adminOverview
+      tags: [admin]
+      responses:
+        "200":
+          description: Señales de que funciona
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+  /admin/residents:
+    get:
+      operationId: adminListResidents
+      tags: [admin]
+      responses:
+        "200":
+          description: Vecinos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminResident"
+  /admin/residents/{id}/approve:
+    post:
+      operationId: adminApproveResident
+      tags: [admin]
+      summary: Aprobar y generar su llave personal
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Llave generada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessKey"
+  /admin/residents/{id}/key:
+    post:
+      operationId: adminRegenerateKey
+      tags: [admin]
+      summary: Generar llave nueva y revocar las anteriores
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Llave generada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessKey"
+  /admin/residents/{id}/block:
+    post:
+      operationId: adminBlockResident
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Bloqueado
+  /admin/invites:
+    get:
+      operationId: adminListInvites
+      tags: [admin]
+      responses:
+        "200":
+          description: Invitaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invite"
+    post:
+      operationId: adminCreateInvite
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInviteRequest"
+      responses:
+        "201":
+          description: Creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invite"
+  /admin/places:
+    get:
+      operationId: adminListPlaces
+      tags: [admin]
+      responses:
+        "200":
+          description: Lugares, incluidos inactivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminPlace"
+    post:
+      operationId: adminCreatePlace
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceInput"
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPlace"
+  /admin/places/{id}:
+    put:
+      operationId: adminUpdatePlace
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceInput"
+      responses:
+        "200":
+          description: Actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPlace"
+  /admin/searches:
+    get:
+      operationId: adminListSearches
+      tags: [admin]
+      responses:
+        "200":
+          description: Últimas búsquedas, sin resultado primero
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminSearch"
+  /admin/searches/{id}/handled:
+    post:
+      operationId: adminMarkSearchHandled
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Atendida
+  /admin/complaints:
+    get:
+      operationId: adminListComplaints
+      tags: [admin]
+      responses:
+        "200":
+          description: Quejas privadas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminComplaint"
+  /admin/complaints/{id}/resolve:
+    post:
+      operationId: adminResolveComplaint
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Resuelta
+
 components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
+      required: [status]
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+    Constellation:
+      type: string
+      enum: [casas, confianza, comercios]
+    Creator:
+      type: object
+      properties:
+        name:
+          type: string
+        message:
+          type: string
+        whatsapp:
+          type: string
+        photoUrl:
+          type: [string, "null"]
+        aiEnabled:
+          type: boolean
+      required: [name, message, whatsapp, photoUrl, aiEnabled]
+    JoinRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 4
+          maxLength: 32
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        zone:
+          type: string
+          maxLength: 80
+      required: [code, name, phone]
+    JoinResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending]
+        invitedBy:
+          type: string
+      required: [status, invitedBy]
+    KeyLoginRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 200
+      required: [token]
+    Me:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [resident, admin]
+        showNameOnEndorsements:
+          type: boolean
+      required: [id, name, role, showNameOnEndorsements]
+    UpdateMeRequest:
+      type: object
+      properties:
+        showNameOnEndorsements:
+          type: boolean
+      required: [showNameOnEndorsements]
+    PlaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        constellation:
+          $ref: "#/components/schemas/Constellation"
+        name:
+          type: string
+        category:
+          type: string
+        verified:
+          type: boolean
+        sponsored:
+          type: boolean
+        endorsementCount:
+          type: integer
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount]
+    Universe:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaceSummary"
+      required: [places]
+    PlaceDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        constellation:
+          $ref: "#/components/schemas/Constellation"
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        contactName:
+          type: [string, "null"]
+        whatsapp:
+          type: string
+        zone:
+          type: [string, "null"]
+        operation:
+          type: [string, "null"]
+          enum: [venta, renta, null]
+        priceLabel:
+          type: [string, "null"]
+        imageUrl:
+          type: [string, "null"]
+        verified:
+          type: boolean
+        sponsored:
+          type: boolean
+        endorsementCount:
+          type: integer
+        endorserNames:
+          description: Solo vecinos que dieron permiso de mostrar su nombre
+          type: array
+          items:
+            type: string
+        endorsedByMe:
+          type: boolean
       required:
-        - status
-
+        - id
+        - constellation
+        - name
+        - category
+        - description
+        - contactName
+        - whatsapp
+        - zone
+        - operation
+        - priceLabel
+        - imageUrl
+        - verified
+        - sponsored
+        - endorsementCount
+        - endorserNames
+        - endorsedByMe
+    EndorseRequest:
+      type: object
+      properties:
+        showName:
+          type: boolean
+      required: [showName]
+    ContactRequest:
+      type: object
+      properties:
+        searchId:
+          type: [string, "null"]
+          format: uuid
+      required: [searchId]
+    ComplaintRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 5
+          maxLength: 1000
+      required: [message]
+    SearchRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 200
+        refine:
+          type: boolean
+      required: [query, refine]
+    SearchMatch:
+      type: object
+      properties:
+        placeId:
+          type: string
+        score:
+          type: number
+          description: 0 a 1, coincidencia con lo escrito
+      required: [placeId, score]
+    SearchResult:
+      type: object
+      properties:
+        searchId:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchMatch"
+        refinedQuery:
+          type: [string, "null"]
+        constellation:
+          oneOf:
+            - $ref: "#/components/schemas/Constellation"
+            - type: "null"
+        mode:
+          type: string
+          enum: [semantic, keywords]
+      required: [searchId, matches, refinedQuery, constellation, mode]
+    AdminOverview:
+      type: object
+      properties:
+        residentsApproved:
+          type: integer
+        residentsPending:
+          type: integer
+        residentsByInvite:
+          type: integer
+        places:
+          type: integer
+        searches30d:
+          type: integer
+        searchesWithContact30d:
+          type: integer
+        searchesNoResult30d:
+          type: integer
+        openComplaints:
+          type: integer
+      required:
+        - residentsApproved
+        - residentsPending
+        - residentsByInvite
+        - places
+        - searches30d
+        - searchesWithContact30d
+        - searchesNoResult30d
+        - openComplaints
+    AdminResident:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        zone:
+          type: [string, "null"]
+        role:
+          type: string
+          enum: [resident, admin]
+        status:
+          type: string
+          enum: [pending, approved, blocked]
+        invitedBy:
+          type: [string, "null"]
+        inviteCode:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, phone, zone, role, status, invitedBy, inviteCode, createdAt]
+    AccessKey:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Se muestra una sola vez; el servidor solo guarda el hash
+        phone:
+          type: string
+        name:
+          type: string
+      required: [token, phone, name]
+    Invite:
+      type: object
+      properties:
+        code:
+          type: string
+        note:
+          type: [string, "null"]
+        usedBy:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [code, note, usedBy, createdAt]
+    CreateInviteRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 120
+      required: [note]
+    PlaceInput:
+      type: object
+      properties:
+        constellation:
+          $ref: "#/components/schemas/Constellation"
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        category:
+          type: string
+          minLength: 2
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 600
+        contactName:
+          type: [string, "null"]
+          maxLength: 80
+        whatsapp:
+          type: string
+          minLength: 10
+          maxLength: 20
+        zone:
+          type: [string, "null"]
+          maxLength: 80
+        operation:
+          type: [string, "null"]
+          enum: [venta, renta, null]
+        priceLabel:
+          type: [string, "null"]
+          maxLength: 60
+        imageUrl:
+          type: [string, "null"]
+          maxLength: 500
+        verified:
+          type: boolean
+        active:
+          type: boolean
+      required:
+        - constellation
+        - name
+        - category
+        - description
+        - contactName
+        - whatsapp
+        - zone
+        - operation
+        - priceLabel
+        - imageUrl
+        - verified
+        - active
+    AdminPlace:
+      allOf:
+        - $ref: "#/components/schemas/PlaceInput"
+        - type: object
+          properties:
+            id:
+              type: string
+            whatsappClicks:
+              type: integer
+            endorsementCount:
+              type: integer
+            hasEmbedding:
+              type: boolean
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding]
+    AdminSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        query:
+          type: string
+        refinedQuery:
+          type: [string, "null"]
+        residentName:
+          type: [string, "null"]
+        residentPhone:
+          type: [string, "null"]
+        resultCount:
+          type: integer
+        contacted:
+          type: boolean
+        handled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - query
+        - refinedQuery
+        - residentName
+        - residentPhone
+        - resultCount
+        - contacted
+        - handled
+        - createdAt
+    AdminComplaint:
+      type: object
+      properties:
+        id:
+          type: string
+        placeName:
+          type: string
+        residentName:
+          type: string
+        residentPhone:
+          type: string
+        message:
+          type: string
+        resolved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, placeName, residentName, residentPhone, message, resolved, createdAt]
