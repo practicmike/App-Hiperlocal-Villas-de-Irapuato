@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
 import { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
-import { desc, eq, gte, like, sql } from "drizzle-orm";
+import { desc, eq, gte, isNull, like, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import {
   db,
+  accessKeysTable,
   residentsTable,
   invitesTable,
   placesTable,
@@ -83,6 +84,16 @@ router.get("/admin/residents", async (_req, res) => {
       sql`case ${residentsTable.status} when 'pending' then 0 when 'approved' then 1 else 2 end`,
       desc(residentsTable.createdAt),
     );
+  // Llave vigente (no revocada) de cada vecino.
+  const keys = await db
+    .select({
+      residentId: accessKeysTable.residentId,
+      firstUsedAt: accessKeysTable.firstUsedAt,
+      rejectedAttempts: accessKeysTable.rejectedAttempts,
+    })
+    .from(accessKeysTable)
+    .where(isNull(accessKeysTable.revokedAt));
+  const keyBy = new Map(keys.map((k) => [k.residentId, k]));
   res.json(
     rows.map(({ r, inviterName }) => ({
       id: r.id,
@@ -94,6 +105,9 @@ router.get("/admin/residents", async (_req, res) => {
       invitedBy: inviterName,
       inviteCode: r.inviteCode,
       createdAt: r.createdAt.toISOString(),
+      keyStatus: !keyBy.has(r.id) ? "none" : keyBy.get(r.id)!.firstUsedAt ? "used" : "unused",
+      keyUsedAt: keyBy.get(r.id)?.firstUsedAt?.toISOString() ?? null,
+      keyRejectedAttempts: keyBy.get(r.id)?.rejectedAttempts ?? 0,
     })),
   );
 });

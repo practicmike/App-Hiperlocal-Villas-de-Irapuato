@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   useGetUniverse,
   useSearch,
+  useSuggestPhrasing,
   type Creator,
   type Me,
   type SearchResult,
@@ -12,6 +13,7 @@ import { UniverseCanvas, type UniverseHandle, type Level } from "@/components/Un
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { ListView } from "@/components/ListView";
+import { MeSheet } from "@/components/MeSheet";
 import { homeLayout, searchLayout } from "@/lib/layout";
 import { CONSTELLATIONS, whatsappLink } from "@/lib/constellations";
 
@@ -25,6 +27,10 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
   const autoSelected = useRef(false);
   const [view, setView] = useState<"universe" | "list">("universe");
   const [creatorOpen, setCreatorOpen] = useState(false);
+  const [meOpen, setMeOpen] = useState(false);
+  // Sugerencias de la IA para decir mejor lo que se busca; null = ocultas.
+  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+  const [aiHint, setAiHint] = useState<string | null>(null);
   const [level, setLevel] = useState<Level>("far");
   const canvas = useRef<UniverseHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,16 +68,47 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
     return () => clearTimeout(t);
   }, [result, view]);
 
-  const run = (refine: boolean) => {
-    const q = query.trim();
+  const runWith = (text: string) => {
+    const q = text.trim();
     if (!q || search.isPending) return;
-    search.mutate({ data: { query: q, refine } });
+    setSuggestions(null);
+    setAiHint(null);
+    search.mutate({ data: { query: q, refine: false } });
+  };
+  const run = () => runWith(query);
+
+  const suggest = useSuggestPhrasing({
+    mutation: {
+      onSuccess: (r) => {
+        if (!r.available || r.suggestions.length === 0) {
+          setSuggestions(null);
+          setAiHint("No pude ayudarte ahora. Intenta escribirlo con otras palabras.");
+          return;
+        }
+        setAiHint(null);
+        setSuggestions(r.suggestions);
+      },
+      onError: () => setAiHint("No pude ayudarte ahora. Intenta de nuevo en un momento."),
+    },
+  });
+  const askHelp = () => {
+    const q = query.trim();
+    if (!q) {
+      setSuggestions(null);
+      setAiHint("Escribe lo que necesitas como te salga y te ayudo a decirlo mejor.");
+      inputRef.current?.focus();
+      return;
+    }
+    setAiHint(null);
+    suggest.mutate({ data: { query: q } });
   };
 
   const clear = () => {
     setQuery("");
     setResult(null);
     setSelectedId(null);
+    setSuggestions(null);
+    setAiHint(null);
     canvas.current?.home();
   };
 
@@ -82,6 +119,7 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
   };
 
   const firstName = creator.name.split(" ")[0] ?? creator.name;
+  const meFirst = me.name.trim().split(/\s+/)[0] ?? me.name;
   const noResults = result && result.matches.length === 0;
 
   return (
@@ -97,6 +135,8 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
           selectedId={selectedId}
           onSelect={select}
           onLevelChange={setLevel}
+          meLabel={meFirst}
+          onMeClick={() => setMeOpen(true)}
           onApproach={(id) => {
             if (id && !selectedId) {
               autoSelected.current = true;
@@ -118,7 +158,7 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
             className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-white/10 bg-panel/90 py-1.5 pl-4 pr-1.5 shadow-xl backdrop-blur focus-within:border-primary"
             onSubmit={(e) => {
               e.preventDefault();
-              run(false);
+              run();
             }}
             role="search"
           >
@@ -141,12 +181,13 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
             {creator.aiEnabled && (
               <button
                 type="button"
-                onClick={() => run(true)}
-                disabled={!query.trim() || search.isPending}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-ai px-3 py-2 text-xs font-black text-space disabled:opacity-40"
-                title="Refinar con IA"
+                onClick={askHelp}
+                disabled={suggest.isPending}
+                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-ai transition hover:bg-ai/15 ${suggest.isPending ? "animate-pulse" : ""}`}
+                aria-label="Ayúdame a decirlo mejor"
+                title="Ayúdame a decirlo mejor"
               >
-                <Sparkles size={14} /> <span className="hidden min-[380px]:inline">Refinar con IA</span>
+                <Sparkles size={18} />
               </button>
             )}
           </form>
@@ -162,16 +203,43 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
               {result.refinedQuery && <span className="block text-ai">Busqué: {result.refinedQuery}</span>}
             </>
           )}
-          {!search.isPending && !result && !isLoading && level === "far" && view === "universe" && (
-            <>Pellizca para acercarte · toca una constelación</>
+          {!search.isPending && !result && !suggestions && !aiHint && !isLoading && level === "far" && view === "universe" && (
+            <>Hola, {meFirst} · pellizca para acercarte o toca una constelación</>
           )}
+          {suggest.isPending && <span className="text-ai">Pensando cómo decirlo…</span>}
+          {aiHint && <span className="text-ai">{aiHint}</span>}
           {search.isError && <span className="text-alert">No pude buscar. Revisa tu conexión.</span>}
         </div>
+
+        {suggestions && (
+          <div className="sheet-enter pointer-events-auto mx-auto mt-2 max-w-lg px-1">
+            <p className="mb-1.5 flex items-center gap-1 text-xs text-ai">
+              <Sparkles size={12} /> ¿Lo quieres decir así? Toca una:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setQuery(s);
+                    runWith(s);
+                  }}
+                  className="rounded-full border border-ai/50 bg-panel/90 px-3 py-1.5 text-left text-sm text-ink backdrop-blur hover:bg-ai/15"
+                >
+                  {s}
+                </button>
+              ))}
+              <button onClick={() => setSuggestions(null)} className="px-2 text-xs text-muted" aria-label="Ocultar sugerencias">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {noResults && (
           <div className="sheet-enter pointer-events-auto mx-auto mt-3 max-w-lg rounded-2xl border border-primary/40 bg-panel/95 p-4 text-sm shadow-xl">
             <p className="mb-3">
-              No encontré nada para <b>«{result.refinedQuery ?? query}»</b>. Ya le llegó a {firstName} y te ayuda en persona.
+              No encontré nada para <b>«{query}»</b>. Ya le llegó a {firstName} y te ayuda en persona.
             </p>
             <a
               href={whatsappLink(creator.whatsapp, `Hola ${firstName}, busqué «${query}» en la guía de Villas y no encontré nada.`)}
@@ -181,6 +249,15 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
             >
               <MessageCircle size={16} /> Escribirle a {firstName}
             </a>
+            {creator.aiEnabled && (
+              <button
+                onClick={askHelp}
+                disabled={suggest.isPending}
+                className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-ai/50 px-4 py-2 font-bold text-ai"
+              >
+                <Sparkles size={15} /> Decirlo de otra forma
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -245,6 +322,7 @@ export function UniversePage({ me, creator }: { me: Me; creator: Creator }) {
         />
       )}
       {creatorOpen && <CreatorSheet creator={creator} onClose={() => setCreatorOpen(false)} />}
+      {meOpen && <MeSheet me={me} creatorFirstName={firstName} onClose={() => setMeOpen(false)} />}
     </div>
   );
 }

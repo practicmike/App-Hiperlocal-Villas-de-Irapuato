@@ -28,5 +28,14 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "CREATE INDEX \"places_constellation_idx\" ON \"places\" USING btree (\"constellation\");",
       "CREATE INDEX \"searches_created_idx\" ON \"searches\" USING btree (\"created_at\");"
     ]
+  },
+  {
+    "tag": "0001_llaves_un_uso",
+    "statements": [
+      "ALTER TABLE \"access_keys\" ADD COLUMN \"first_used_at\" timestamp with time zone;",
+      "ALTER TABLE \"access_keys\" ADD COLUMN \"sessions_created\" integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE \"access_keys\" ADD COLUMN \"rejected_attempts\" integer DEFAULT 0 NOT NULL;",
+      "-- Las llaves que ya se abrieron antes de este cambio cuentan como usadas.\nUPDATE \"access_keys\" SET \"first_used_at\" = \"last_used_at\", \"sessions_created\" = 2 WHERE \"last_used_at\" IS NOT NULL;"
+    ]
   }
 ];

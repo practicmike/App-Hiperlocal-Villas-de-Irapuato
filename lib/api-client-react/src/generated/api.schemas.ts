@@ -189,6 +189,20 @@ export interface ComplaintRequest {
   message: string;
 }
 
+export interface SuggestRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  query: string;
+}
+
+export interface SuggestResult {
+  suggestions: string[];
+  /** false si la IA no está configurada o falló */
+  available: boolean;
+}
+
 export interface SearchRequest {
   /**
      * @minLength 1
@@ -249,6 +263,18 @@ export const AdminResidentStatus = {
   blocked: 'blocked',
 } as const;
 
+/**
+ * none = sin llave vigente; unused = enviada y sin abrir; used = ya abrió sesión
+ */
+export type AdminResidentKeyStatus = typeof AdminResidentKeyStatus[keyof typeof AdminResidentKeyStatus];
+
+
+export const AdminResidentKeyStatus = {
+  none: 'none',
+  unused: 'unused',
+  used: 'used',
+} as const;
+
 export interface AdminResident {
   id: string;
   name: string;
@@ -262,6 +288,12 @@ export interface AdminResident {
   /** @nullable */
   inviteCode: string | null;
   createdAt: string;
+  /** none = sin llave vigente; unused = enviada y sin abrir; used = ya abrió sesión */
+  keyStatus: AdminResidentKeyStatus;
+  /** @nullable */
+  keyUsedAt: string | null;
+  /** Intentos de abrir su llave después de usada (posible reenvío) */
+  keyRejectedAttempts: number;
 }
 
 export interface AccessKey {

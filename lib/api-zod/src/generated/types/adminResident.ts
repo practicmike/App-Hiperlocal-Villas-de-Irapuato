@@ -5,6 +5,7 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { AdminResidentKeyStatus } from './adminResidentKeyStatus';
 import type { AdminResidentRole } from './adminResidentRole';
 import type { AdminResidentStatus } from './adminResidentStatus';
 
@@ -21,4 +22,10 @@ export interface AdminResident {
   /** @nullable */
   inviteCode: string | null;
   createdAt: Date;
+  /** none = sin llave vigente; unused = enviada y sin abrir; used = ya abrió sesión */
+  keyStatus: AdminResidentKeyStatus;
+  /** @nullable */
+  keyUsedAt: Date | null;
+  /** Intentos de abrir su llave después de usada (posible reenvío) */
+  keyRejectedAttempts: number;
 }

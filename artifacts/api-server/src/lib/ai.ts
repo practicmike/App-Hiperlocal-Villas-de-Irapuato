@@ -111,3 +111,44 @@ export async function refineQuery(raw: string): Promise<Refinement | null> {
     return null;
   }
 }
+
+/**
+ * "Ayúdame a decirlo": propone 2–3 formas más claras de expresar lo que el
+ * vecino necesita, usando de preferencia los giros que sí existen en Villas.
+ * No busca ni inventa lugares: solo ayuda a expresarse; el vecino elige.
+ */
+export async function suggestPhrasings(raw: string, categories: string[]): Promise<string[] | null> {
+  if (!aiEnabled()) return null;
+  try {
+    const data = await openai<{ choices: Array<{ message: { content: string } }> }>(
+      "/chat/completions",
+      {
+        model: config.openai.chatModel,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Ayudas a vecinos de Villas de Irapuato (México) a expresar lo que necesitan en una guía de casas, oficios y comercios del fraccionamiento. " +
+              "Reescribe lo que el vecino escribió en 2 o 3 frases cortas (máximo 7 palabras cada una), claras y en español de México, " +
+              "que nombren el oficio, giro o tipo de inmueble que probablemente necesita. " +
+              "Usa de preferencia estos giros, que sí existen en la guía: " + categories.slice(0, 60).join(", ") + ". " +
+              "No inventes nombres de negocios ni precios. Si la petición ya es clara, mejórala poco. " +
+              'Responde JSON: {"suggestions": ["…", "…"]}',
+          },
+          { role: "user", content: raw.slice(0, 200) },
+        ],
+      },
+    );
+    const parsed = JSON.parse(data.choices[0]?.message.content ?? "{}") as { suggestions?: unknown };
+    const list = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+    return list
+      .filter((x): x is string => typeof x === "string" && x.trim().length > 1)
+      .map((x) => x.trim().slice(0, 80))
+      .slice(0, 3);
+  } catch (err) {
+    logger.warn({ err }, "suggest failed");
+    return null;
+  }
+}

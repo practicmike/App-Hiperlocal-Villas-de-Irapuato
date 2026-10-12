@@ -267,6 +267,23 @@ export const SendComplaintBody = zod.object({
 export const SendComplaintResponse = zod.void()
 
 
+/**
+ * @summary La IA propone formas más claras de decir lo que el vecino busca
+ */
+export const suggestPhrasingBodyQueryMax = 200;
+
+
+
+export const SuggestPhrasingBody = zod.object({
+  "query": zod.string().min(1).max(suggestPhrasingBodyQueryMax)
+})
+
+export const SuggestPhrasingResponse = zod.object({
+  "suggestions": zod.array(zod.string()),
+  "available": zod.boolean().describe('false si la IA no está configurada o falló')
+})
+
+
 export const searchBodyQueryMax = 200;
 
 
@@ -309,7 +326,10 @@ export const AdminListResidentsResponseItem = zod.object({
   "status": zod.enum(['pending', 'approved', 'blocked']),
   "invitedBy": zod.string().nullable(),
   "inviteCode": zod.string().nullable(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "keyStatus": zod.enum(['none', 'unused', 'used']).describe('none = sin llave vigente; unused = enviada y sin abrir; used = ya abrió sesión'),
+  "keyUsedAt": zod.coerce.date().nullable(),
+  "keyRejectedAttempts": zod.number().int().describe('Intentos de abrir su llave después de usada (posible reenvío)')
 })
 export const AdminListResidentsResponse = zod.array(AdminListResidentsResponseItem)
 

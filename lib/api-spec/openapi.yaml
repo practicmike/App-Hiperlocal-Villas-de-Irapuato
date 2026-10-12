@@ -269,6 +269,24 @@ paths:
       responses:
         "201":
           description: Enviada
+  /suggest:
+    post:
+      operationId: suggestPhrasing
+      tags: [universe]
+      summary: La IA propone formas más claras de decir lo que el vecino busca
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestRequest"
+      responses:
+        "200":
+          description: Sugerencias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestResult"
   /search:
     post:
       operationId: search
@@ -725,6 +743,25 @@ components:
           minLength: 5
           maxLength: 1000
       required: [message]
+    SuggestRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [query]
+    SuggestResult:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: string
+        available:
+          type: boolean
+          description: false si la IA no está configurada o falló
+      required: [suggestions, available]
     SearchRequest:
       type: object
       properties:
@@ -815,7 +852,17 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, name, phone, zone, role, status, invitedBy, inviteCode, createdAt]
+        keyStatus:
+          type: string
+          enum: [none, unused, used]
+          description: none = sin llave vigente; unused = enviada y sin abrir; used = ya abrió sesión
+        keyUsedAt:
+          type: [string, "null"]
+          format: date-time
+        keyRejectedAttempts:
+          type: integer
+          description: Intentos de abrir su llave después de usada (posible reenvío)
+      required: [id, name, phone, zone, role, status, invitedBy, inviteCode, createdAt, keyStatus, keyUsedAt, keyRejectedAttempts]
     AccessKey:
       type: object
       properties:
