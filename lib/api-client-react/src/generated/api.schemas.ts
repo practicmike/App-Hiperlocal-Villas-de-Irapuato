@@ -346,7 +346,13 @@ export type AdminPlace = PlaceInput & {
   whatsappClicks: number;
   endorsementCount: number;
   hasEmbedding: boolean;
+  isDemo: boolean;
 };
+
+export interface DemoResult {
+  inserted: number;
+  removed: number;
+}
 
 export interface AdminSearch {
   id: string;

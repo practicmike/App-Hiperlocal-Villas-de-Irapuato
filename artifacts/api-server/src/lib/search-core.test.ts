@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   MATCH_MIN,
+  buildIdf,
   keywordScore,
   normalize,
   rankMatches,
@@ -78,4 +79,20 @@ test("el impulso sí desempata resultados parecidos", () => {
 test("calibración acotada entre 0 y 1", () => {
   assert.equal(calibrateSimilarity(0.1), 0);
   assert.equal(calibrateSimilarity(0.9), 1);
+});
+
+test("IDF: 'casa con alberca' solo coincide con la casa que tiene alberca", () => {
+  const casas = Array.from({ length: 9 }, (_, i) =>
+    place({ id: `c${i}`, constellation: "casas", name: `Casa en Privada ${i}`, category: "Casa en venta", description: "Tres recámaras y jardín" }),
+  );
+  const conAlberca = place({ id: "alb", constellation: "casas", name: "Casa Sección Sur", category: "Casa en venta", description: "Cuatro recámaras, alberca y jardín" });
+  const corpus = [...casas, conAlberca, plomero, tacos];
+  const w = buildIdf(corpus);
+  const hits = corpus.filter((p) => keywordScore("casa con alberca", p, w) >= MATCH_MIN).map((p) => p.id);
+  assert.deepEqual(hits, ["alb"]);
+});
+
+test("IDF: palabras de relleno no hunden una búsqueda válida", () => {
+  const w = buildIdf([plomero, tacos, casa]);
+  assert.ok(keywordScore("necesito plomero urgente porfa", plomero, w) >= MATCH_MIN);
 });

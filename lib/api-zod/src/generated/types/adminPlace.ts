@@ -12,4 +12,5 @@ export type AdminPlace = PlaceInput & {
   whatsappClicks: number;
   endorsementCount: number;
   hasEmbedding: boolean;
+  isDemo: boolean;
 };

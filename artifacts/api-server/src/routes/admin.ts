@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
-import { desc, eq, gte, sql } from "drizzle-orm";
+import { desc, eq, gte, like, sql } from "drizzle-orm";
+import { waitUntil } from "@vercel/functions";
 import {
   db,
   residentsTable,
@@ -24,6 +25,10 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, issueAccessKey, normalizePhone } from "../lib/auth";
 import { endorsementCounts, refreshEmbedding } from "../lib/places";
+import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
+import { embedMany } from "../lib/ai";
+import { placeEmbeddingText } from "../lib/search-core";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 router.use("/admin", requireAdmin);
@@ -190,6 +195,7 @@ const toAdminPlace = (p: Place, counts: Map<string, number>) => ({
   whatsappClicks: p.whatsappClicks,
   endorsementCount: counts.get(p.id) ?? 0,
   hasEmbedding: Array.isArray(p.embedding) && p.embedding.length > 0,
+  isDemo: p.whatsapp.startsWith(DEMO_WHATSAPP_PREFIX),
 });
 
 function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>) {
@@ -240,6 +246,41 @@ router.put("/admin/places/:id", async (req, res) => {
   }
   refreshEmbedding(place);
   res.json(toAdminPlace(place, await endorsementCounts()));
+});
+
+// --------------------------------------------------------- datos de ejemplo
+const isDemo = like(placesTable.whatsapp, `${DEMO_WHATSAPP_PREFIX}%`);
+
+/** Carga las 30 estrellas de ejemplo (si ya están, no las duplica). */
+router.post("/admin/demo-places", async (_req, res) => {
+  const existing = new Set(
+    (await db.select({ whatsapp: placesTable.whatsapp }).from(placesTable).where(isDemo)).map((r) => r.whatsapp),
+  );
+  const missing = DEMO_PLACES.filter((p) => !existing.has(p.whatsapp));
+  const inserted = missing.length ? await db.insert(placesTable).values(missing).returning() : [];
+
+  // Embeddings en una sola llamada, sin hacer esperar al panel.
+  if (inserted.length) {
+    const job = (async () => {
+      const vectors = await embedMany(inserted.map((p) => placeEmbeddingText(p)));
+      await Promise.all(
+        inserted.map((p, i) =>
+          vectors[i]
+            ? db.update(placesTable).set({ embedding: vectors[i] }).where(eq(placesTable.id, p.id))
+            : null,
+        ),
+      );
+      logger.info({ withEmbedding: vectors.filter(Boolean).length, total: inserted.length }, "demo places embedded");
+    })().catch((err) => logger.warn({ err }, "demo embedding failed"));
+    waitUntil(job);
+  }
+  res.json({ inserted: inserted.length, removed: 0 });
+});
+
+/** Borra solo las estrellas de ejemplo; las reales no se tocan. */
+router.delete("/admin/demo-places", async (_req, res) => {
+  const removed = await db.delete(placesTable).where(isDemo).returning({ id: placesTable.id });
+  res.json({ inserted: 0, removed: removed.length });
 });
 
 // --------------------------------------------------------------- búsquedas

@@ -44,6 +44,26 @@ export async function embed(text: string): Promise<number[] | null> {
   }
 }
 
+/**
+ * Embeddings de varios textos en UNA sola llamada (la API acepta listas).
+ * Más rápido y barato que llamar una vez por lugar al cargar muchos.
+ */
+export async function embedMany(texts: string[]): Promise<Array<number[] | null>> {
+  if (!aiEnabled() || texts.length === 0) return texts.map(() => null);
+  try {
+    const data = await openai<{ data: Array<{ index: number; embedding: number[] }> }>("/embeddings", {
+      model: config.openai.embeddingModel,
+      input: texts.map((t) => t.trim().toLowerCase()),
+    });
+    const out: Array<number[] | null> = texts.map(() => null);
+    for (const d of data.data) out[d.index] = d.embedding;
+    return out;
+  } catch (err) {
+    logger.warn({ err }, "batch embedding failed, places stay keyword-searchable");
+    return texts.map(() => null);
+  }
+}
+
 export interface Refinement {
   query: string;
   constellation: "casas" | "confianza" | "comercios" | null;

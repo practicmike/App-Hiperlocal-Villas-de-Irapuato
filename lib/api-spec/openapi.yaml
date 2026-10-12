@@ -426,6 +426,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminPlace"
+  /admin/demo-places:
+    post:
+      operationId: adminLoadDemoPlaces
+      tags: [admin]
+      summary: Carga 30 estrellas de ejemplo (10 por constelación); no duplica
+      responses:
+        "200":
+          description: Cargadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoResult"
+    delete:
+      operationId: adminRemoveDemoPlaces
+      tags: [admin]
+      summary: Borra solo las estrellas de ejemplo
+      responses:
+        "200":
+          description: Borradas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoResult"
   /admin/searches:
     get:
       operationId: adminListSearches
@@ -889,7 +912,17 @@ components:
               type: integer
             hasEmbedding:
               type: boolean
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding]
+            isDemo:
+              type: boolean
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo]
+    DemoResult:
+      type: object
+      properties:
+        inserted:
+          type: integer
+        removed:
+          type: integer
+      required: [inserted, removed]
     AdminSearch:
       type: object
       properties:

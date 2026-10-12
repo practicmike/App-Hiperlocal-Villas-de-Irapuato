@@ -87,34 +87,71 @@ function fieldHit(token: string, words: string[]): boolean {
   return words.some((w) => w === token || (s.length >= 4 && w.startsWith(s)));
 }
 
-/**
- * Coincidencia por palabras, de 0 a 1.
- * Peso por campo: nombre y giro valen más que la descripción.
- */
-export function keywordScore(query: string, place: SearchablePlace): number {
-  const tokens = tokenize(query);
-  if (tokens.length === 0) return 0;
-
-  const fields: Array<[string[], number]> = [
+function placeFields(place: SearchablePlace): Array<[string[], number]> {
+  return [
     [tokenize(place.name), 1],
     [tokenize(place.category), 0.95],
     [tokenize(`${place.description} ${place.contactName ?? ""}`), 0.7],
     [tokenize(`${place.zone ?? ""} ${place.operation ?? ""} ${place.priceLabel ?? ""}`), 0.6],
   ];
+}
+
+const variantsOf = (token: string) => [token, ...(SYNONYMS[token] ?? [])];
+
+/** Peso de cada palabra de la búsqueda; 1 para todas si no se da. */
+export type TokenWeight = (token: string) => number;
+
+/**
+ * Ponderación tipo IDF: una palabra que aparece en muchas estrellas ("casa")
+ * distingue poco; una que aparece en pocas ("alberca") distingue mucho.
+ * Sin esto, "casa con alberca" coincidía con todas las casas.
+ * Las palabras que no aparecen en ninguna estrella pesan poco para no
+ * castigar búsquedas con palabras de relleno ("urgente", "porfa").
+ */
+export function buildIdf(places: SearchablePlace[]): TokenWeight {
+  const n = places.length;
+  const allWords = places.map((p) => placeFields(p).flatMap(([w]) => w));
+  const cache = new Map<string, number>();
+  return (token) => {
+    const cached = cache.get(token);
+    if (cached !== undefined) return cached;
+    const variants = variantsOf(token);
+    const df = allWords.filter((words) => variants.some((v) => fieldHit(v, words))).length;
+    const weight = df === 0 ? 0.5 * Math.log(1 + n) : Math.log(1 + n / df);
+    cache.set(token, weight);
+    return weight;
+  };
+}
+
+/**
+ * Coincidencia por palabras, de 0 a 1.
+ * Peso por campo: nombre y giro valen más que la descripción.
+ * Peso por palabra: el que da buildIdf (las palabras raras cuentan más).
+ */
+export function keywordScore(
+  query: string,
+  place: SearchablePlace,
+  weightOf: TokenWeight = () => 1,
+): number {
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return 0;
+  const fields = placeFields(place);
 
   let total = 0;
+  let totalWeight = 0;
   for (const token of tokens) {
-    const variants = [token, ...(SYNONYMS[token] ?? [])];
     let best = 0;
-    for (const [words, weight] of fields) {
-      for (const v of variants) {
-        const w = v === token ? weight : weight * 0.85;
+    for (const [words, fieldWeight] of fields) {
+      for (const v of variantsOf(token)) {
+        const w = v === token ? fieldWeight : fieldWeight * 0.85;
         if (w > best && fieldHit(v, words)) best = w;
       }
     }
-    total += best;
+    const tw = weightOf(token);
+    total += best * tw;
+    totalWeight += tw;
   }
-  return total / tokens.length;
+  return totalWeight > 0 ? total / totalWeight : 0;
 }
 
 /** Texto con el que se calcula el embedding de cada estrella. */
