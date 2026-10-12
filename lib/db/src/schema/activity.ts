@@ -49,3 +49,13 @@ export const complaintsTable = pgTable("complaints", {
   resolved: boolean("resolved").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Contadores del límite de intentos. Viven en la base (no en memoria) para que
+ * funcionen igual con un solo servidor o con muchas funciones serverless.
+ */
+export const rateLimitsTable = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});

@@ -39,7 +39,7 @@ router.get("/creator", (_req, res) => {
 });
 
 /** Canje del código: el vecino queda pendiente hasta que el creador lo conozca y lo apruebe. */
-router.post("/auth/join", rateLimit(10, 60 * 60_000), async (req, res) => {
+router.post("/auth/join", rateLimit("join", 10, 60 * 60_000), async (req, res) => {
   const body = JoinWithInviteBody.parse(req.body);
   const code = body.code.trim().toUpperCase();
   const phone = normalizePhone(body.phone);
@@ -90,7 +90,7 @@ router.post("/auth/join", rateLimit(10, 60 * 60_000), async (req, res) => {
 });
 
 /** Entrar con la llave personal que el creador envió por WhatsApp. */
-router.post("/auth/key", rateLimit(20, 15 * 60_000), async (req, res) => {
+router.post("/auth/key", rateLimit("key", 20, 15 * 60_000), async (req, res) => {
   const { token } = LoginWithKeyBody.parse(req.body);
   const [row] = await db
     .select({ key: accessKeysTable, resident: residentsTable })

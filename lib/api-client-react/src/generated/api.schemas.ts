@@ -9,6 +9,38 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface SetupStatus {
+  /** Existe SETUP_TOKEN en el servidor */
+  setupEnabled: boolean;
+  databaseConfigured: boolean;
+  databaseReachable: boolean;
+  tablesReady: boolean;
+  hasAdmin: boolean;
+  /**
+     * Qué falta, en lenguaje simple
+     * @nullable
+     */
+  problem: string | null;
+}
+
+export interface SetupRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  token: string;
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
+  name: string;
+  /**
+     * @minLength 10
+     * @maxLength 20
+     */
+  phone: string;
+}
+
 export interface ErrorResponse {
   message: string;
 }

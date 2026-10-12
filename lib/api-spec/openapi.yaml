@@ -9,6 +9,7 @@ servers:
     description: Base API path
 tags:
   - name: health
+  - name: setup
   - name: auth
   - name: universe
   - name: admin
@@ -25,6 +26,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ----------------------------------------------------------------- setup
+  /setup/status:
+    get:
+      operationId: getSetupStatus
+      tags: [setup]
+      summary: Qué falta configurar (sin revelar secretos)
+      responses:
+        "200":
+          description: Estado de la configuración
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupStatus"
+  /setup:
+    post:
+      operationId: runSetup
+      tags: [setup]
+      summary: Crea o actualiza las tablas y la cuenta del creador; entrega su llave
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupRequest"
+      responses:
+        "200":
+          description: Listo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessKey"
+        "401":
+          description: Clave de configuración incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Falta configuración en el servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ------------------------------------------------------------------ auth
   /creator:
@@ -442,6 +487,40 @@ components:
         status:
           type: string
       required: [status]
+    SetupStatus:
+      type: object
+      properties:
+        setupEnabled:
+          type: boolean
+          description: Existe SETUP_TOKEN en el servidor
+        databaseConfigured:
+          type: boolean
+        databaseReachable:
+          type: boolean
+        tablesReady:
+          type: boolean
+        hasAdmin:
+          type: boolean
+        problem:
+          type: [string, "null"]
+          description: Qué falta, en lenguaje simple
+      required: [setupEnabled, databaseConfigured, databaseReachable, tablesReady, hasAdmin, problem]
+    SetupRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 200
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+      required: [token, name, phone]
     ErrorResponse:
       type: object
       properties:

@@ -14,13 +14,36 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+  const shared = buildOptions();
+
+  // Servidor de larga vida (Replit): abre el puerto.
   await esbuild({
+    ...shared,
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
+    plugins: [
+      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
+      esbuildPluginPino({ transports: ["pino-pretty"] }),
+    ],
+  });
+
+  // Función de Vercel: un solo archivo con la app, sin puerto ni workers de pino
+  // (en producción el logger escribe JSON directo a stdout).
+  await esbuild({
+    ...shared,
+    entryPoints: [path.resolve(artifactDir, "src/vercel.ts")],
+    outfile: path.resolve(distDir, "vercel.mjs"),
+    external: [...shared.external, "pino-pretty"],
+  });
+}
+
+function buildOptions() {
+  return {
     platform: "node",
     bundle: true,
     format: "esm",
-    outdir: distDir,
-    outExtension: { ".js": ".mjs" },
+    target: "node20",
     logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
@@ -102,10 +125,6 @@ async function buildAll() {
       "electron",
     ],
     sourcemap: "linked",
-    plugins: [
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] })
-    ],
     // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
@@ -117,7 +136,7 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
-  });
+  };
 }
 
 buildAll().catch((err) => {

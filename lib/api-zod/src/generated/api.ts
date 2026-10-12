@@ -17,6 +17,45 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Qué falta configurar (sin revelar secretos)
+ */
+export const GetSetupStatusResponse = zod.object({
+  "setupEnabled": zod.boolean().describe('Existe SETUP_TOKEN en el servidor'),
+  "databaseConfigured": zod.boolean(),
+  "databaseReachable": zod.boolean(),
+  "tablesReady": zod.boolean(),
+  "hasAdmin": zod.boolean(),
+  "problem": zod.string().nullable().describe('Qué falta, en lenguaje simple')
+})
+
+
+/**
+ * @summary Crea o actualiza las tablas y la cuenta del creador; entrega su llave
+ */
+export const runSetupBodyTokenMax = 200;
+
+export const runSetupBodyNameMin = 2;
+export const runSetupBodyNameMax = 80;
+
+export const runSetupBodyPhoneMin = 10;
+export const runSetupBodyPhoneMax = 20;
+
+
+
+export const RunSetupBody = zod.object({
+  "token": zod.string().min(1).max(runSetupBodyTokenMax),
+  "name": zod.string().min(runSetupBodyNameMin).max(runSetupBodyNameMax),
+  "phone": zod.string().min(runSetupBodyPhoneMin).max(runSetupBodyPhoneMax)
+})
+
+export const RunSetupResponse = zod.object({
+  "token": zod.string().describe('Se muestra una sola vez; el servidor solo guarda el hash'),
+  "phone": zod.string(),
+  "name": zod.string()
+})
+
+
+/**
  * @summary Presentación pública del creador
  */
 export const GetCreatorResponse = zod.object({

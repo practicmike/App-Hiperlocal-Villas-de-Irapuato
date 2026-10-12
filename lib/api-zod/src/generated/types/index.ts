@@ -38,5 +38,7 @@ export * from './searchMatch';
 export * from './searchRequest';
 export * from './searchResult';
 export * from './searchResultMode';
+export * from './setupRequest';
+export * from './setupStatus';
 export * from './universe';
 export * from './updateMeRequest';
