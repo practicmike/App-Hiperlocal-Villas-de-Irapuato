@@ -9,7 +9,7 @@ if (!url) {
 export default defineConfig({
   schema: path.join(__dirname, "./src/schema/index.ts"),
   // Migraciones SQL versionadas: producción las aplica desde /setup.
-  out: path.join(__dirname, "./drizzle"),
+  out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
     url,

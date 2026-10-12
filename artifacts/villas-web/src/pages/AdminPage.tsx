@@ -26,6 +26,7 @@ import {
   getAdminOverviewQueryKey,
   getGetUniverseQueryKey,
   type AccessKey,
+  type AdminResident,
   type AdminPlace,
   type PlaceInput,
   type Creator,
@@ -127,10 +128,10 @@ function KeyBox({ k, me, onDone }: { k: AccessKey; me: string; onDone: () => voi
     <div className="mb-4 rounded-2xl border border-primary/50 bg-primary/10 p-4 text-sm">
       <p className="mb-2 font-bold">Llave de {k.name}</p>
       <p className="mb-3 break-all rounded-lg bg-space-2 p-2 font-mono text-xs">{link}</p>
-      <p className="mb-3 text-xs text-muted">Se muestra una sola vez. Si se pierde, genera otra: la anterior deja de servir.</p>
+      <p className="mb-3 text-xs text-muted">Funciona una sola vez: en el primer teléfono que la abra. Si alguien la reenvía, a esa otra persona no le abre y te avisa aquí.</p>
       <div className="flex flex-wrap gap-2">
         <a
-          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de la guía de vecinos de Villas. Esta es tu llave personal, ábrela en tu teléfono y no la compartas: ${link}`)}
+          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de la guía de vecinos de Villas. Esta es tu llave personal. Ábrela en tu teléfono; funciona una sola vez, así que no la reenvíes: ${link}`)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 font-bold text-[#0b3d1f]"
@@ -240,6 +241,14 @@ function Residents({ me }: { me: string }) {
                   </div>
                   <StatusPill status={r.status} />
                 </div>
+                {r.status === "approved" && <KeyStatus r={r} />}
+                {r.role === "admin" && (
+                  <div className="mt-3">
+                    <button onClick={() => regen.mutate({ id: r.id })} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold">
+                      Nueva llave para mí (otro teléfono o computadora)
+                    </button>
+                  </div>
+                )}
                 {r.role !== "admin" && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {r.status === "pending" && (
@@ -270,6 +279,26 @@ function Residents({ me }: { me: string }) {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Estado de la llave: sin abrir, abierta, o alguien intentó reusarla. */
+function KeyStatus({ r }: { r: AdminResident }) {
+  const text =
+    r.keyStatus === "none"
+      ? "Sin llave vigente"
+      : r.keyStatus === "unused"
+        ? "Llave enviada · aún sin abrir"
+        : `Llave abierta el ${fmtDate(r.keyUsedAt!)}`;
+  return (
+    <div className="mt-2 space-y-1 text-xs">
+      <p className={r.keyStatus === "unused" ? "text-casas" : "text-muted"}>{text}</p>
+      {r.keyRejectedAttempts > 0 && (
+        <p className="rounded-lg bg-alert/15 px-2 py-1 text-alert">
+          ⚠ Alguien intentó abrir su llave ya usada {r.keyRejectedAttempts} {r.keyRejectedAttempts === 1 ? "vez" : "veces"}. Puede que la haya reenviado. Escríbele y, si hace falta, genera una nueva.
+        </p>
+      )}
     </div>
   );
 }

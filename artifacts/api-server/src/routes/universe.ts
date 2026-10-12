@@ -17,11 +17,12 @@ import {
   SendComplaintParams,
   SendComplaintBody,
   SearchBody,
+  SuggestPhrasingBody,
 } from "@workspace/api-zod";
 import { requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
-import { embed, refineQuery } from "../lib/ai";
+import { embed, refineQuery, suggestPhrasings } from "../lib/ai";
 import {
   MATCH_MIN,
   calibrateSimilarity,
@@ -133,6 +134,16 @@ router.post("/places/:id/complaints", rateLimit("complaint", 10, 60 * 60_000), a
   }
   await db.insert(complaintsTable).values({ placeId: id, residentId: req.resident!.id, message });
   res.status(201).end();
+});
+
+router.post("/suggest", rateLimit("suggest", 20, 60_000), async (req, res) => {
+  const { query } = SuggestPhrasingBody.parse(req.body);
+  const rows = await db
+    .selectDistinct({ category: placesTable.category })
+    .from(placesTable)
+    .where(eq(placesTable.active, true));
+  const suggestions = await suggestPhrasings(query.trim(), rows.map((r) => r.category));
+  res.json({ suggestions: suggestions ?? [], available: suggestions !== null });
 });
 
 router.post("/search", rateLimit("search", 60, 60_000), async (req, res) => {

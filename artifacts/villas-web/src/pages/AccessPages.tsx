@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useJoinWithInvite,
   useLoginWithKey,
+  useGetCreator,
+  getGetCreatorQueryKey,
   getGetMeQueryKey,
   type Creator,
 } from "@workspace/api-client-react";
@@ -89,7 +91,7 @@ export function LandingPage({ creator }: { creator: Creator }) {
         <Field label="Tu WhatsApp (10 dígitos)" value={form.phone} onChange={set("phone")} inputMode="tel" autoComplete="tel" required />
         <Field label="Privada o sección (opcional)" value={form.zone} onChange={set("zone")} />
         <p className="text-xs text-muted">
-          Tu WhatsApp solo lo ve {firstName} para darte acceso. Nunca apareces en el mapa.
+          Tu WhatsApp solo lo ve {firstName} para darte acceso.
         </p>
         {join.isError && <p className="text-sm text-alert">{errorMessage(join.error, "No se pudo registrar.")}</p>}
         <button
@@ -139,6 +141,8 @@ export function KeyLoginPage({ token }: { token: string }) {
       },
     },
   });
+  const creator = useGetCreator({ query: { queryKey: getGetCreatorQueryKey(), staleTime: Infinity } });
+  const creatorFirst = creator.data?.name.split(" ")[0] ?? "el creador";
   const started = useRef(false);
   useEffect(() => {
     if (started.current) return;
@@ -153,8 +157,20 @@ export function KeyLoginPage({ token }: { token: string }) {
         {login.isError ? (
           <>
             <h1 className="mb-2 text-2xl font-black">Esta llave ya no abre</h1>
-            <p className="mb-6 text-ink/80">{errorMessage(login.error, "Pide una nueva al creador.")}</p>
-            <a href="/" className="text-primary underline">Ir al inicio</a>
+            <p className="mb-6 text-ink/80">
+              {errorMessage(login.error, "Pide una nueva al creador.").replace("al creador", `a ${creatorFirst}`)}
+            </p>
+            {creator.data?.whatsapp && (
+              <a
+                href={whatsappLink(creator.data.whatsapp, `Hola ${creatorFirst}, mi llave de la guía de Villas ya no abre. ¿Me mandas una nueva?`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-4 inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 font-black text-space"
+              >
+                <MessageCircle size={18} /> Pedir llave nueva a {creatorFirst}
+              </a>
+            )}
+            <a href="/" className="block text-sm text-muted underline">Ir al inicio</a>
           </>
         ) : (
           <h1 className="text-2xl font-black">Abriendo Villas…</h1>

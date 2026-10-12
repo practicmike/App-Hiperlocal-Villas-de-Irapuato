@@ -9,7 +9,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { loadSession } from "./lib/auth";
-import { databaseConfigError } from "@workspace/db";
+import { databaseConfigError, runMigrations } from "@workspace/db";
 
 const app: Express = express();
 
@@ -49,6 +49,23 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return;
   }
   next();
+});
+
+// Aplica migraciones pendientes una vez por instancia (idempotente, con candado).
+// Así un cambio de esquema llega a producción solo con desplegar.
+let migrated: Promise<void> | null = null;
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  if (databaseConfigError) return next();
+  try {
+    await (migrated ??= runMigrations().catch((err) => {
+      migrated = null;
+      throw err;
+    }));
+    next();
+  } catch (err) {
+    logger.error({ err }, "auto-migration failed");
+    next(err);
+  }
 });
 
 app.use("/api", router);

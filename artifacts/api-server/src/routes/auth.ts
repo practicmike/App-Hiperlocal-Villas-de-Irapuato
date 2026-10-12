@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, residentsTable, invitesTable, accessKeysTable } from "@workspace/db";
 import {
   GetCreatorResponse,
@@ -89,7 +89,13 @@ router.post("/auth/join", rateLimit("join", 10, 60 * 60_000), async (req, res) =
   res.status(201).json({ status: "pending", invitedBy: result.invitedBy });
 });
 
-/** Entrar con la llave personal que el creador envió por WhatsApp. */
+/**
+ * Entrar con la llave personal que el creador envió por WhatsApp.
+ * Es de un solo uso: si alguien reenvía el link, a esa otra persona no le abre.
+ */
+const KEY_GRACE_MS = 15 * 60_000;
+const KEY_MAX_SESSIONS = 2;
+
 router.post("/auth/key", rateLimit("key", 20, 15 * 60_000), async (req, res) => {
   const { token } = LoginWithKeyBody.parse(req.body);
   const [row] = await db
@@ -103,9 +109,39 @@ router.post("/auth/key", rateLimit("key", 20, 15 * 60_000), async (req, res) => 
     res.status(401).json({ message: "Esta llave ya no es válida. Pide una nueva al creador." });
     return;
   }
+
+  // El mismo vecino que ya tiene sesión en este teléfono vuelve a tocar su link:
+  // entra directo, sin gastar la llave ni contarlo como intento sospechoso.
+  if (req.resident?.id === row.resident.id) {
+    res.json(me(row.resident));
+    return;
+  }
+
+  const now = new Date();
+  const first = row.key.firstUsedAt;
+  const withinGrace = first !== null && now.getTime() - first.getTime() <= KEY_GRACE_MS;
+  const allowed = first === null || (withinGrace && row.key.sessionsCreated < KEY_MAX_SESSIONS);
+
+  if (!allowed) {
+    // Queda registrado: el creador lo ve en el panel como aviso.
+    await db
+      .update(accessKeysTable)
+      .set({ rejectedAttempts: sql`${accessKeysTable.rejectedAttempts} + 1` })
+      .where(eq(accessKeysTable.id, row.key.id));
+    res.status(401).json({
+      message: "Esta llave ya se usó en otro teléfono. Por seguridad solo funciona una vez. Pide una nueva al creador.",
+      used: true,
+    });
+    return;
+  }
+
   await db
     .update(accessKeysTable)
-    .set({ lastUsedAt: new Date() })
+    .set({
+      firstUsedAt: first ?? now,
+      lastUsedAt: now,
+      sessionsCreated: sql`${accessKeysTable.sessionsCreated} + 1`,
+    })
     .where(eq(accessKeysTable.id, row.key.id));
   await startSession(res, row.resident.id);
   res.json(me(row.resident));

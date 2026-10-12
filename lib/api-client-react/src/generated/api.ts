@@ -45,6 +45,8 @@ import type {
   SearchResult,
   SetupRequest,
   SetupStatus,
+  SuggestRequest,
+  SuggestResult,
   Universe,
   UpdateMeRequest
 } from './api.schemas';
@@ -1273,6 +1275,94 @@ export const useSendComplaint = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendComplaintMutationOptions(options));
+    }
+
+export const getSuggestPhrasingUrl = () => {
+
+
+
+
+  return `/api/suggest`
+}
+
+/**
+ * @summary La IA propone formas más claras de decir lo que el vecino busca
+ */
+export const suggestPhrasing = async (suggestRequest: SuggestRequest, options?: Parameters<typeof customFetch>[1]): Promise<SuggestResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuggestResult>(getSuggestPhrasingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suggestRequest)
+  }
+);}
+
+
+
+
+
+export const getSuggestPhrasingMutationKey = () => ['suggestPhrasing'] as const;
+
+export const getSuggestPhrasingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestPhrasing>>, TError,SuggestPhrasingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof suggestPhrasing>>, TError,SuggestPhrasingMutationVariables, TContext> => {
+
+const mutationKey = getSuggestPhrasingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof suggestPhrasing>>, SuggestPhrasingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  suggestPhrasing(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SuggestPhrasingMutationResult = NonNullable<Awaited<ReturnType<typeof suggestPhrasing>>>
+    export type SuggestPhrasingMutationBody = BodyType<SuggestRequest>
+    export type SuggestPhrasingMutationError = ErrorType<unknown>
+    export type SuggestPhrasingMutationVariables = {data: BodyType<SuggestRequest>}
+
+    /**
+ * @summary La IA propone formas más claras de decir lo que el vecino busca
+ */
+export const useSuggestPhrasing = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestPhrasing>>, TError,SuggestPhrasingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof suggestPhrasing>>,
+        TError,
+        SuggestPhrasingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSuggestPhrasingMutationOptions(options));
     }
 
 export const getSearchUrl = () => {

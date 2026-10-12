@@ -3,6 +3,7 @@ import {
   text,
   uuid,
   boolean,
+  integer,
   timestamp,
   index,
   type AnyPgColumn,
@@ -59,6 +60,14 @@ export const accessKeysTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * La llave es de un solo uso: abre sesión en el primer teléfono y, como margen,
+     * en un segundo dentro de 15 minutos (por si primero se abrió en el navegador
+     * interno de WhatsApp). Después se rechaza y se cuenta el intento.
+     */
+    firstUsedAt: timestamp("first_used_at", { withTimezone: true }),
+    sessionsCreated: integer("sessions_created").notNull().default(0),
+    rejectedAttempts: integer("rejected_attempts").notNull().default(0),
   },
   (t) => [index("access_keys_resident_idx").on(t.residentId)],
 );

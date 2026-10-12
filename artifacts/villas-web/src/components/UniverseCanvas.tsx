@@ -33,13 +33,16 @@ interface Props {
   onLevelChange?: (level: Level) => void;
   /** Al acercarse mucho, la estrella más cercana al centro abre su tarjeta. */
   onApproach?: (id: string | null) => void;
+  /** Nombre de pila del vecino: va en el centro del universo, en lugar de "Tú". */
+  meLabel: string;
+  onMeClick?: () => void;
 }
 
 const STAR_R = 7;
 const DURATION = 750;
 
 export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function UniverseCanvas(
-  { places, positions, searching, selectedId, onSelect, onLevelChange, onApproach },
+  { places, positions, searching, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -245,7 +248,22 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
         })}
 
         {/* El vecino al centro: punto de referencia, nunca un dato público. */}
-        <g>
+        <g
+          className="star"
+          role="button"
+          tabIndex={0}
+          aria-label={`Tu cuenta, ${meLabel}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMeClick?.();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onMeClick?.();
+            }
+          }}
+        >
           <circle className="me-pulse" r={14} fill="none" stroke="#6eb5ff" strokeWidth={1.5} />
           <g className="star-body">
             <circle r={26} fill="url(#halo-me)" />
@@ -253,7 +271,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
           </g>
           <g className="label-wrap">
             <text className="star-label" textAnchor="middle" y={30}>
-              Tú
+              {meLabel}
             </text>
           </g>
         </g>
