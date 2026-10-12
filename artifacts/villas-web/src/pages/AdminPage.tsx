@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,7 @@ import {
   useAdminCreatePlace,
   useAdminUpdatePlace,
   useAdminLoadDemoPlaces,
+  useAdminDeletePlace,
   useAdminRemoveDemoPlaces,
   useAdminListSearches,
   useAdminMarkSearchHandled,
@@ -48,7 +49,9 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function AdminPage({ creator }: { creator: Creator }) {
-  const [tab, setTab] = useState<Tab>("resumen");
+  // Desde la tarjeta de una estrella: /panel?editar=<id> abre su edición.
+  const editId = new URLSearchParams(window.location.search).get("editar");
+  const [tab, setTab] = useState<Tab>(editId ? "lugares" : "resumen");
   const me = creator.name.split(" ")[0] ?? creator.name;
   return (
     <div className="h-full overflow-y-auto bg-space">
@@ -76,7 +79,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
       <main className="mx-auto max-w-3xl px-4 py-5 pb-24">
         {tab === "resumen" && <Overview />}
         {tab === "vecinos" && <Residents me={me} />}
-        {tab === "lugares" && <Places />}
+        {tab === "lugares" && <Places editId={editId} />}
         {tab === "busquedas" && <Searches />}
         {tab === "quejas" && <Complaints />}
       </main>
@@ -97,6 +100,7 @@ function Overview() {
           <Stat label="Vecinos por invitación" value={o.residentsByInvite} hint={`${o.residentsApproved} aprobados`} />
           <Stat label="Búsquedas → WhatsApp" value={`${pct}%`} hint={`${o.searchesWithContact30d} de ${o.searches30d}`} accent="#50e3c2" />
           <Stat label="Búsquedas sin resultado" value={o.searchesNoResult30d} hint="Lo que falta en Villas" accent="#e6c882" />
+          <Stat label="Búsquedas de visitantes" value={o.guestSearches30d} hint="Gente sin llave probando" accent="#c38cf3" />
         </div>
       </section>
       <section className="grid grid-cols-3 gap-3">
@@ -329,10 +333,19 @@ const EMPTY: PlaceInput = {
   active: true,
 };
 
-function Places() {
+function Places({ editId }: { editId: string | null }) {
   const qc = useQueryClient();
   const { data: places } = useAdminListPlaces();
   const [editing, setEditing] = useState<{ id: string | null; form: PlaceInput } | null>(null);
+  const openedFromCard = useRef(false);
+  useEffect(() => {
+    if (!editId || openedFromCard.current || !places) return;
+    const p = places.find((x) => x.id === editId);
+    if (p) {
+      openedFromCard.current = true;
+      setEditing({ id: p.id, form: toInput(p) });
+    }
+  }, [editId, places]);
   const [filter, setFilter] = useState("");
   const done = () => {
     setEditing(null);
@@ -341,7 +354,8 @@ function Places() {
   };
   const create = useAdminCreatePlace({ mutation: { onSuccess: done } });
   const update = useAdminUpdatePlace({ mutation: { onSuccess: done } });
-  const error = create.error ?? update.error;
+  const remove = useAdminDeletePlace({ mutation: { onSuccess: done } });
+  const error = create.error ?? update.error ?? remove.error;
 
   if (editing) {
     const f = editing.form;
@@ -384,8 +398,14 @@ function Places() {
         <AdminField label="Nombre" required minLength={2} maxLength={80} {...txt("name")} />
         <AdminField label="Giro u oficio (Plomería, Tacos, Casa en renta…)" required minLength={2} maxLength={60} {...txt("category")} />
         <label className="block">
-          <span className="mb-1 block text-xs font-bold text-muted">Descripción: qué ofrece, con las palabras que usaría un vecino</span>
-          <textarea rows={3} maxLength={600} {...txt("description")} className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-primary" />
+          <span className="mb-1 block text-xs font-bold text-muted">Descripción detallada</span>
+          <span className="mb-1.5 block text-xs text-ai">
+            Entre más detalle, mejor match. Incluye: qué hace exactamente, horarios, si va a domicilio, zonas, precios aproximados, garantías, cómo se le contacta mejor.
+          </span>
+          <textarea rows={6} maxLength={1500} {...txt("description")} className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-primary" />
+          <span className={`block text-right text-[11px] ${f.description.length < 120 ? "text-casas" : "text-muted"}`}>
+            {f.description.length < 120 ? `Corta para un buen match (${f.description.length}/120 mínimo sugerido)` : `${f.description.length}/1500`}
+          </span>
         </label>
         <div className="grid grid-cols-2 gap-3">
           <AdminField label="WhatsApp (10 dígitos)" required inputMode="tel" {...txt("whatsapp")} />
@@ -427,6 +447,19 @@ function Places() {
           <button type="button" onClick={() => setEditing(null)} className="px-4 text-muted">
             Cancelar
           </button>
+          {editing.id && (
+            <button
+              type="button"
+              disabled={remove.isPending}
+              onClick={() =>
+                confirm(`¿Eliminar «${f.name}» para siempre? Se borran también sus recomendaciones. Si solo quieres ocultarla, desmarca "Visible en el universo".`) &&
+                remove.mutate({ id: editing.id! })
+              }
+              className="ml-auto rounded-xl px-4 text-sm font-bold text-alert"
+            >
+              Eliminar
+            </button>
+          )}
         </div>
       </form>
     );
@@ -483,7 +516,11 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   const load = useAdminLoadDemoPlaces({
     mutation: {
       onSuccess: (r) => {
-        setMsg(r.inserted ? `Listo: ${r.inserted} estrellas de ejemplo. La marca "IA" aparece en unos segundos si OpenAI responde.` : "Los ejemplos ya estaban cargados.");
+        setMsg(
+          r.inserted
+            ? `Listo: ${r.inserted} estrellas de ejemplo. La marca "IA" aparece en unos segundos si OpenAI responde.`
+            : `Actualicé ${r.updated ?? 0} ejemplos con descripciones detalladas. La marca "IA" vuelve en unos segundos.`,
+        );
         onChange();
       },
     },
@@ -508,7 +545,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
           onClick={() => load.mutate()}
           className="rounded-full bg-casas px-4 py-1.5 text-xs font-bold text-space disabled:opacity-50"
         >
-          {load.isPending ? "Cargando…" : "Cargar 30 ejemplos"}
+          {load.isPending ? "Cargando…" : demoCount > 0 ? "Actualizar ejemplos" : "Cargar 30 ejemplos"}
         </button>
         {demoCount > 0 && (
           <button
@@ -571,7 +608,7 @@ function Searches() {
             <p className="font-bold">«{s.query}»</p>
             {s.refinedQuery && <p className="text-xs text-ai">IA: {s.refinedQuery}</p>}
             <p className="mt-1 text-xs text-muted">
-              {s.residentName ?? "—"} · {fmtDate(s.createdAt)} · {s.resultCount} {s.resultCount === 1 ? "resultado" : "resultados"}
+              {s.residentName ?? "Visitante sin llave"} · {fmtDate(s.createdAt)} · {s.resultCount} {s.resultCount === 1 ? "resultado" : "resultados"}
               {s.contacted && " · terminó en WhatsApp"}
             </p>
             {pending && (

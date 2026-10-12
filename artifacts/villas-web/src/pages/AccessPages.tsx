@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useJoinWithInvite,
@@ -102,12 +102,15 @@ export function LandingPage({ creator }: { creator: Creator }) {
         </button>
       </form>
 
+      <Link href="/" className="mt-6 block text-center text-sm font-bold text-primary underline underline-offset-4">
+        Primero quiero ver la guía
+      </Link>
       {creator.whatsapp && (
         <a
           href={whatsappLink(creator.whatsapp, "Hola, me gustaría entrar a la guía de vecinos de Villas.")}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-6 text-center text-sm text-muted underline underline-offset-4"
+          className="mt-3 text-center text-sm text-muted underline underline-offset-4"
         >
           ¿Sin código? Escríbele a {firstName}
         </a>

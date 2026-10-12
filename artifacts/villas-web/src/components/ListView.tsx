@@ -6,10 +6,14 @@ import { CONSTELLATIONS, ORDER } from "@/lib/constellations";
 export function ListView({
   places,
   scores,
+  reasons,
+  showPercent = false,
   onSelect,
 }: {
   places: PlaceSummary[];
   scores: Map<string, number> | null;
+  reasons?: Map<string, string | null>;
+  showPercent?: boolean;
   onSelect: (id: string) => void;
 }) {
   const visible = scores ? places.filter((p) => scores.has(p.id)) : places;
@@ -46,7 +50,13 @@ export function ListView({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-bold">{p.name}</span>
                         <span className="block truncate text-xs text-muted">{p.category}</span>
+                        {showPercent && reasons?.get(p.id) && (
+                          <span className="block text-xs text-ai">{reasons.get(p.id)}</span>
+                        )}
                       </span>
+                      {showPercent && scores?.has(p.id) && (
+                        <span className="shrink-0 text-sm font-black text-ai">{Math.round(scores.get(p.id)! * 100)}%</span>
+                      )}
                       {p.verified && <BadgeCheck size={16} className="text-me" aria-label="Verificado" />}
                       {p.endorsementCount > 0 && (
                         <span className="flex items-center gap-1 text-xs text-alert">

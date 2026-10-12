@@ -170,6 +170,8 @@ export interface PlaceDetail {
   /** Solo vecinos que dieron permiso de mostrar su nombre */
   endorserNames: string[];
   endorsedByMe: boolean;
+  /** true para visitantes sin llave (sin contacto ni nombres de vecinos) */
+  locked: boolean;
 }
 
 export interface EndorseRequest {
@@ -189,24 +191,10 @@ export interface ComplaintRequest {
   message: string;
 }
 
-export interface SuggestRequest {
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  query: string;
-}
-
-export interface SuggestResult {
-  suggestions: string[];
-  /** false si la IA no está configurada o falló */
-  available: boolean;
-}
-
 export interface SearchRequest {
   /**
      * @minLength 1
-     * @maxLength 200
+     * @maxLength 400
      */
   query: string;
   refine: boolean;
@@ -216,12 +204,18 @@ export interface SearchMatch {
   placeId: string;
   /** 0 a 1, coincidencia con lo escrito */
   score: number;
+  /**
+     * Por qué coincide (solo con match de IA)
+     * @nullable
+     */
+  reason: string | null;
 }
 
 export type SearchResultMode = typeof SearchResultMode[keyof typeof SearchResultMode];
 
 
 export const SearchResultMode = {
+  ai: 'ai',
   semantic: 'semantic',
   keywords: 'keywords',
 } as const;
@@ -244,6 +238,7 @@ export interface AdminOverview {
   searchesWithContact30d: number;
   searchesNoResult30d: number;
   openComplaints: number;
+  guestSearches30d: number;
 }
 
 export type AdminResidentRole = typeof AdminResidentRole[keyof typeof AdminResidentRole];
@@ -340,7 +335,7 @@ export interface PlaceInput {
      * @maxLength 60
      */
   category: string;
-  /** @maxLength 600 */
+  /** @maxLength 1500 */
   description: string;
   /**
      * @maxLength 80
@@ -384,6 +379,7 @@ export type AdminPlace = PlaceInput & {
 export interface DemoResult {
   inserted: number;
   removed: number;
+  updated?: number;
 }
 
 export interface AdminSearch {

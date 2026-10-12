@@ -28,6 +28,8 @@ interface Props {
   places: PlaceSummary[];
   positions: Map<string, StarPos>;
   searching: boolean;
+  /** Búsqueda con IA: cada estrella que coincide muestra su % de match. */
+  showPercent?: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onLevelChange?: (level: Level) => void;
@@ -42,7 +44,7 @@ const STAR_R = 7;
 const DURATION = 750;
 
 export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function UniverseCanvas(
-  { places, positions, searching, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
+  { places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -325,7 +327,11 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                   {/* En el nivel medio los nombres largos se recortan para no encimarse. */}
                   {showSub || selected || p.name.length <= 18 ? p.name : `${p.name.slice(0, 16).trimEnd()}…`}
                 </text>
-                {showSub && (
+                {showPercent && pos.matched ? (
+                  <text className="star-sub" textAnchor="middle" y={40} style={{ fill: "#c38cf3", fontWeight: 700 }}>
+                    {Math.round(pos.glow * 100)}% match
+                  </text>
+                ) : showSub && (
                   <text className="star-sub" textAnchor="middle" y={40}>
                     {p.category}
                     {p.endorsementCount > 0 ? ` · ${p.endorsementCount} ♥` : ""}

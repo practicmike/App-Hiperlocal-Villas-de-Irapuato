@@ -269,24 +269,6 @@ paths:
       responses:
         "201":
           description: Enviada
-  /suggest:
-    post:
-      operationId: suggestPhrasing
-      tags: [universe]
-      summary: La IA propone formas más claras de decir lo que el vecino busca
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SuggestRequest"
-      responses:
-        "200":
-          description: Sugerencias
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuggestResult"
   /search:
     post:
       operationId: search
@@ -444,6 +426,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminPlace"
+    delete:
+      operationId: adminDeletePlace
+      tags: [admin]
+      summary: Elimina una estrella para siempre (sus recomendaciones y quejas también)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Eliminada
   /admin/demo-places:
     post:
       operationId: adminLoadDemoPlaces
@@ -705,6 +696,9 @@ components:
             type: string
         endorsedByMe:
           type: boolean
+        locked:
+          type: boolean
+          description: true para visitantes sin llave (sin contacto ni nombres de vecinos)
       required:
         - id
         - constellation
@@ -722,6 +716,7 @@ components:
         - endorsementCount
         - endorserNames
         - endorsedByMe
+        - locked
     EndorseRequest:
       type: object
       properties:
@@ -743,32 +738,13 @@ components:
           minLength: 5
           maxLength: 1000
       required: [message]
-    SuggestRequest:
-      type: object
-      properties:
-        query:
-          type: string
-          minLength: 1
-          maxLength: 200
-      required: [query]
-    SuggestResult:
-      type: object
-      properties:
-        suggestions:
-          type: array
-          items:
-            type: string
-        available:
-          type: boolean
-          description: false si la IA no está configurada o falló
-      required: [suggestions, available]
     SearchRequest:
       type: object
       properties:
         query:
           type: string
           minLength: 1
-          maxLength: 200
+          maxLength: 400
         refine:
           type: boolean
       required: [query, refine]
@@ -780,7 +756,10 @@ components:
         score:
           type: number
           description: 0 a 1, coincidencia con lo escrito
-      required: [placeId, score]
+        reason:
+          type: [string, "null"]
+          description: Por qué coincide (solo con match de IA)
+      required: [placeId, score, reason]
     SearchResult:
       type: object
       properties:
@@ -798,7 +777,7 @@ components:
             - type: "null"
         mode:
           type: string
-          enum: [semantic, keywords]
+          enum: [ai, semantic, keywords]
       required: [searchId, matches, refinedQuery, constellation, mode]
     AdminOverview:
       type: object
@@ -819,6 +798,8 @@ components:
           type: integer
         openComplaints:
           type: integer
+        guestSearches30d:
+          type: integer
       required:
         - residentsApproved
         - residentsPending
@@ -828,6 +809,7 @@ components:
         - searchesWithContact30d
         - searchesNoResult30d
         - openComplaints
+        - guestSearches30d
     AdminResident:
       type: object
       properties:
@@ -909,7 +891,7 @@ components:
           maxLength: 60
         description:
           type: string
-          maxLength: 600
+          maxLength: 1500
         contactName:
           type: [string, "null"]
           maxLength: 80
@@ -968,6 +950,8 @@ components:
         inserted:
           type: integer
         removed:
+          type: integer
+        updated:
           type: integer
       required: [inserted, removed]
     AdminSearch:

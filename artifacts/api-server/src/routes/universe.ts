@@ -17,12 +17,12 @@ import {
   SendComplaintParams,
   SendComplaintBody,
   SearchBody,
-  SuggestPhrasingBody,
 } from "@workspace/api-zod";
 import { requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
-import { embed, refineQuery, suggestPhrasings } from "../lib/ai";
+import { embed, refineQuery } from "../lib/ai";
+import { aiMatch, AI_MAX_CANDIDATES } from "../lib/ai-match";
 import {
   MATCH_MIN,
   calibrateSimilarity,
@@ -32,8 +32,11 @@ import {
   rankMatches,
 } from "../lib/search-core";
 
+/**
+ * Visitantes sin llave: ven el universo, las tarjetas sin contacto y pueden
+ * buscar (con límite). Contactar, recomendar y quejarse requiere ser vecino.
+ */
 const router: IRouter = Router();
-router.use(requireResident);
 
 router.get("/universe", async (_req, res) => {
   const [places, counts] = await Promise.all([
@@ -63,10 +66,10 @@ router.get("/places/:id", async (req, res) => {
     res.status(404).json({ message: "No encontramos esa estrella." });
     return;
   }
-  res.json(await placeDetail(place, req.resident!.id));
+  res.json(await placeDetail(place, req.resident?.status === "approved" ? req.resident.id : null));
 });
 
-router.put("/places/:id/endorsement", async (req, res) => {
+router.put("/places/:id/endorsement", requireResident, async (req, res) => {
   const { id } = EndorsePlaceParams.parse(req.params);
   const { showName } = EndorsePlaceBody.parse(req.body);
   const place = await getActivePlace(id);
@@ -84,7 +87,7 @@ router.put("/places/:id/endorsement", async (req, res) => {
   res.json(await placeDetail(place, req.resident!.id));
 });
 
-router.delete("/places/:id/endorsement", async (req, res) => {
+router.delete("/places/:id/endorsement", requireResident, async (req, res) => {
   const { id } = RemoveEndorsementParams.parse(req.params);
   const place = await getActivePlace(id);
   if (!place) {
@@ -100,7 +103,7 @@ router.delete("/places/:id/endorsement", async (req, res) => {
 });
 
 /** Base del KPI "búsquedas que terminan en WhatsApp" (idea del contador de TiendApp). */
-router.post("/places/:id/contact", async (req, res) => {
+router.post("/places/:id/contact", requireResident, async (req, res) => {
   const { id } = RecordContactParams.parse(req.params);
   const { searchId } = RecordContactBody.parse(req.body);
   await db
@@ -124,7 +127,7 @@ router.post("/places/:id/contact", async (req, res) => {
 });
 
 /** Quejas privadas: nunca se publican. */
-router.post("/places/:id/complaints", rateLimit("complaint", 10, 60 * 60_000), async (req, res) => {
+router.post("/places/:id/complaints", requireResident, rateLimit("complaint", 10, 60 * 60_000), async (req, res) => {
   const { id } = SendComplaintParams.parse(req.params);
   const { message } = SendComplaintBody.parse(req.body);
   const place = await getActivePlace(id);
@@ -136,71 +139,83 @@ router.post("/places/:id/complaints", rateLimit("complaint", 10, 60 * 60_000), a
   res.status(201).end();
 });
 
-router.post("/suggest", rateLimit("suggest", 20, 60_000), async (req, res) => {
-  const { query } = SuggestPhrasingBody.parse(req.body);
-  const rows = await db
-    .selectDistinct({ category: placesTable.category })
-    .from(placesTable)
-    .where(eq(placesTable.active, true));
-  const suggestions = await suggestPhrasings(query.trim(), rows.map((r) => r.category));
-  res.json({ suggestions: suggestions ?? [], available: suggestions !== null });
-});
+const residentSearchLimit = rateLimit("search", 60, 60_000);
+const guestSearchLimit = rateLimit("search-guest", 15, 60 * 60_000);
 
-router.post("/search", rateLimit("search", 60, 60_000), async (req, res) => {
-  const body = SearchBody.parse(req.body);
-  const raw = body.query.trim();
+router.post(
+  "/search",
+  (req, res, next) =>
+    (req.resident?.status === "approved" ? residentSearchLimit : guestSearchLimit)(req, res, next),
+  async (req, res) => {
+    const body = SearchBody.parse(req.body);
+    const raw = body.query.trim();
+    const isResident = req.resident?.status === "approved";
 
-  const refinement = body.refine ? await refineQuery(raw) : null;
-  const effectiveQuery = refinement?.query ?? raw;
-  const constellation = refinement?.constellation ?? null;
+    const refinement = isResident && body.refine ? await refineQuery(raw) : null;
+    const effectiveQuery = refinement?.query ?? raw;
+    const constellation = refinement?.constellation ?? null;
 
-  const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
-  const queryVector = await embed(effectiveQuery);
+    const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
+    const queryVector = await embed(effectiveQuery);
 
-  // Pesos por palabra según qué tan comunes son en TODO el universo actual.
-  const weightOf = buildIdf(places);
-  const scored = places
-    .filter((p) => !constellation || p.constellation === constellation)
-    .map((p) => {
-      const kw = Math.max(keywordScore(effectiveQuery, p, weightOf), keywordScore(raw, p, weightOf));
-      const sem =
-        queryVector && p.embedding
-          ? calibrateSimilarity(cosineSimilarity(queryVector, p.embedding))
-          : 0;
-      return { placeId: p.id, score: Math.min(1, Math.max(kw, sem)), boost: p.boost };
-    })
-    .filter((m) => m.score >= MATCH_MIN);
+    // 1) Búsqueda rápida: palabras (con peso por rareza) + significado (embeddings).
+    const weightOf = buildIdf(places);
+    const all = places
+      .filter((p) => !constellation || p.constellation === constellation)
+      .map((p) => {
+        const kw = Math.max(keywordScore(effectiveQuery, p, weightOf), keywordScore(raw, p, weightOf));
+        const sem =
+          queryVector && p.embedding ? calibrateSimilarity(cosineSimilarity(queryVector, p.embedding)) : 0;
+        return { place: p, placeId: p.id, score: Math.min(1, Math.max(kw, sem)), boost: p.boost };
+      })
+      .sort((a, b) => b.score - a.score);
 
-  // Corte relativo: si hay coincidencias muy fuertes, las débiles estorban.
-  // "casa en renta" ya no trae las casas en venta solo por decir "casa".
-  const top = Math.max(0, ...scored.map((m) => m.score));
-  const relevant = scored.filter((m) => m.score >= top * 0.6);
+    // 2) Match con IA (solo vecinos): califica los mejores candidatos y explica por qué.
+    let mode: "ai" | "semantic" | "keywords" = queryVector ? "semantic" : "keywords";
+    let matches: Array<{ placeId: string; score: number; reason: string | null }> = [];
+    if (isResident) {
+      const candidates = all.filter((m) => m.score > 0.12).slice(0, AI_MAX_CANDIDATES);
+      const ai = await aiMatch(raw, candidates.map((m) => m.place));
+      if (ai) {
+        mode = "ai";
+        const boostOf = new Map(candidates.map((m) => [m.placeId, m.boost]));
+        matches = rankMatches(ai.map((m) => ({ ...m, boost: boostOf.get(m.placeId) ?? 0 }))).map(
+          ({ placeId, score, reason }) => ({ placeId, score, reason }),
+        );
+      }
+    }
+    if (mode !== "ai") {
+      const scored = all.filter((m) => m.score >= MATCH_MIN);
+      // Corte relativo: si hay coincidencias muy fuertes, las débiles estorban.
+      const top = Math.max(0, ...scored.map((m) => m.score));
+      matches = rankMatches(scored.filter((m) => m.score >= top * 0.6)).map(({ placeId, score }) => ({
+        placeId,
+        score: Math.round(score * 1000) / 1000,
+        reason: null,
+      }));
+    }
 
-  const matches = rankMatches(relevant).map(({ placeId, score }) => ({
-    placeId,
-    score: Math.round(score * 1000) / 1000,
-  }));
+    // Toda búsqueda se registra; las que no encuentran nada le llegan al creador.
+    const [logged] = await db
+      .insert(searchesTable)
+      .values({
+        residentId: isResident ? req.resident!.id : null,
+        query: raw,
+        refined: mode === "ai",
+        refinedQuery: refinement?.query ?? null,
+        resultCount: matches.length,
+        topScore: matches[0]?.score ?? null,
+      })
+      .returning({ id: searchesTable.id });
 
-  // Toda búsqueda se registra; las que no encuentran nada le llegan al creador.
-  const [logged] = await db
-    .insert(searchesTable)
-    .values({
-      residentId: req.resident!.id,
-      query: raw,
-      refined: Boolean(refinement),
+    res.json({
+      searchId: logged!.id,
+      matches,
       refinedQuery: refinement?.query ?? null,
-      resultCount: matches.length,
-      topScore: matches[0]?.score ?? null,
-    })
-    .returning({ id: searchesTable.id });
-
-  res.json({
-    searchId: logged!.id,
-    matches,
-    refinedQuery: refinement?.query ?? null,
-    constellation,
-    mode: queryVector ? "semantic" : "keywords",
-  });
-});
+      constellation,
+      mode,
+    });
+  },
+);
 
 export default router;

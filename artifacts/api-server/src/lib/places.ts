@@ -14,8 +14,11 @@ export async function endorsementCounts(): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.placeId, r.n]));
 }
 
-/** Tarjeta completa de una estrella, vista por un vecino concreto. */
-export async function placeDetail(place: Place, viewerId: string) {
+/**
+ * Tarjeta de una estrella. viewerId = null es un visitante sin llave: ve qué es
+ * y cuántos vecinos lo recomiendan, pero no el contacto ni los nombres de vecinos.
+ */
+export async function placeDetail(place: Place, viewerId: string | null) {
   const endorsements = await db
     .select({
       residentId: endorsementsTable.residentId,
@@ -27,7 +30,7 @@ export async function placeDetail(place: Place, viewerId: string) {
     .where(eq(endorsementsTable.placeId, place.id))
     .orderBy(endorsementsTable.createdAt);
 
-  return {
+  const full = {
     id: place.id,
     constellation: place.constellation,
     name: place.name,
@@ -47,7 +50,16 @@ export async function placeDetail(place: Place, viewerId: string) {
       .filter((e) => e.showName)
       .map((e) => e.name.trim().split(/\s+/)[0]!)
       .slice(0, 5),
-    endorsedByMe: endorsements.some((e) => e.residentId === viewerId),
+    endorsedByMe: viewerId !== null && endorsements.some((e) => e.residentId === viewerId),
+    locked: false,
+  };
+  if (viewerId !== null) return full;
+  return {
+    ...full,
+    whatsapp: "",
+    contactName: null,
+    endorserNames: [],
+    locked: true,
   };
 }
 
