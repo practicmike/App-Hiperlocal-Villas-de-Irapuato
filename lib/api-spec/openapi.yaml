@@ -412,6 +412,79 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NewsItem"
+  /share/{slug}:
+    get:
+      operationId: getSharedPlace
+      tags: [universe]
+      summary: Tarjeta pública de una estrella (su link para compartir)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tarjeta con contacto abierto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetail"
+        "404":
+          description: No existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /places/{id}/lead:
+    post:
+      operationId: recordLead
+      tags: [universe]
+      summary: Alguien de fuera contacta por WhatsApp (casa o link público)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadRequest"
+      responses:
+        "204":
+          description: Registrado
+  /admin/leads:
+    get:
+      operationId: adminListLeads
+      tags: [admin]
+      responses:
+        "200":
+          description: Interesados (últimos 500)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminLead"
+  /admin/leads/{id}:
+    delete:
+      operationId: adminDeleteLead
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Borrado
+  /admin/leads/clear:
+    post:
+      operationId: adminClearLeads
+      tags: [admin]
+      responses:
+        "200":
+          description: Cuántos se borraron
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearVisitsResult"
   /places/{id}:
     get:
       operationId: getPlace
@@ -1267,7 +1340,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/NewsItem"
             - type: "null"
-      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news]
+        slug:
+          type: [string, "null"]
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news, slug]
     MerchantRecentVisit:
       type: object
       properties:
@@ -1379,6 +1454,39 @@ components:
           minLength: 3
           maxLength: 140
       required: [text]
+    LeadRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [casa, link]
+        name:
+          type: [string, "null"]
+          maxLength: 80
+        phone:
+          type: [string, "null"]
+          maxLength: 20
+      required: [source, name, phone]
+    AdminLead:
+      type: object
+      properties:
+        id:
+          type: string
+        placeId:
+          type: string
+        placeName:
+          type: string
+        source:
+          type: string
+          enum: [casa, link]
+        name:
+          type: [string, "null"]
+        phone:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, placeId, placeName, source, name, phone, createdAt]
     PlaceSummary:
       type: object
       properties:
@@ -1466,6 +1574,11 @@ components:
           description: true para visitantes sin llave (sin contacto ni nombres de vecinos)
         welcomeOffer:
           type: [string, "null"]
+        slug:
+          type: [string, "null"]
+        leadForm:
+          type: boolean
+          description: Visitante en una casa o link público; se le pide su nombre antes de escribir
         neighborsServed:
           type: integer
           description: Vecinos distintos con visita registrada
@@ -1866,7 +1979,11 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PhotoRef"
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos]
+            leadCount:
+              type: integer
+            slug:
+              type: [string, "null"]
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos, leadCount, slug]
     DemoResult:
       type: object
       properties:

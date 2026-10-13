@@ -9,6 +9,7 @@ import {
   MerchantNewsPhotoParams,
 } from "@workspace/api-zod";
 import { activeNews, newsById, publishNews, removeNews, setNewsPhoto } from "../lib/news";
+import { ensureSlug } from "../lib/slug";
 import { hashToken, requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import {
@@ -25,6 +26,8 @@ const router: IRouter = Router();
 /** Un segundo escaneo dentro de esta ventana no cuenta como otra visita. */
 const DUPLICATE_WINDOW_MS = 2 * 60 * 60_000;
 const TZ = "America/Mexico_City";
+/** El dueño no puede encenderse su propia estrella ni darse el regalo. */
+const OWN_PLACE = "Es la credencial del dueño de este comercio. La credencial es para registrar a clientes.";
 
 // ---------------------------------------------------------- vecino: su cielo
 router.get("/me/sky", requireResident, async (req, res) => {
@@ -61,7 +64,7 @@ router.post("/merchant/login", rateLimit("merchant-login", 20, 15 * 60_000), asy
   }
   await startMerchantSession(res, place.id);
   req.merchantPlace = place;
-  res.json(await merchantSummary(place.id, place.name, place.welcomeOffer, place.kind));
+  res.json(await merchantSummary(place.id, place.name, place.welcomeOffer, place.kind, await ensureSlug(place).catch(() => null)));
 });
 
 router.post("/merchant/logout", async (req, res) => {
@@ -71,10 +74,16 @@ router.post("/merchant/logout", async (req, res) => {
 
 router.get("/merchant/me", requireMerchant, async (req, res) => {
   const p = req.merchantPlace!;
-  res.json(await merchantSummary(p.id, p.name, p.welcomeOffer, p.kind));
+  res.json(await merchantSummary(p.id, p.name, p.welcomeOffer, p.kind, await ensureSlug(p).catch(() => null)));
 });
 
-async function merchantSummary(placeId: string, placeName: string, welcomeOffer: string | null, kind: "comercio" | "oficio") {
+async function merchantSummary(
+  placeId: string,
+  placeName: string,
+  welcomeOffer: string | null,
+  kind: "comercio" | "oficio",
+  slug: string | null,
+) {
   const [[stats], recent] = await Promise.all([
     db
       .select({
@@ -98,6 +107,7 @@ async function merchantSummary(placeId: string, placeName: string, welcomeOffer:
     placeName,
     welcomeOffer,
     kind,
+    slug,
     news: news ?? null,
     todayVisits: stats?.today ?? 0,
     totalVisits: stats?.total ?? 0,
@@ -139,6 +149,10 @@ router.get("/merchant/members/:code", requireMerchant, rateLimit("merchant-looku
     res.status(404).json({ message: "Esta credencial no es válida o el vecino ya no está activo." });
     return;
   }
+  if (s.resident.phone === p.whatsapp) {
+    res.status(400).json({ message: OWN_PLACE });
+    return;
+  }
   res.json({
     firstName: firstName(s.resident.name),
     visitsHere: s.visitsHere,
@@ -153,6 +167,10 @@ router.post("/merchant/visits", requireMerchant, rateLimit("merchant-visit", 120
   const s = await memberState(p.id, code);
   if (!s) {
     res.status(404).json({ message: "Esta credencial no es válida o el vecino ya no está activo." });
+    return;
+  }
+  if (s.resident.phone === p.whatsapp) {
+    res.status(400).json({ message: OWN_PLACE });
     return;
   }
   const name = firstName(s.resident.name);

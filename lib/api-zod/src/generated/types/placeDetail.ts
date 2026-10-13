@@ -39,6 +39,10 @@ export interface PlaceDetail {
   locked: boolean;
   /** @nullable */
   welcomeOffer: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /** Visitante en una casa o link público; se le pide su nombre antes de escribir */
+  leadForm?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;

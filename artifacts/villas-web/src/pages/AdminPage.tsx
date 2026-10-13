@@ -41,6 +41,10 @@ import {
   getListNewsQueryKey,
   adminPublishNews,
   adminRemoveNews,
+  useAdminListLeads,
+  useAdminDeleteLead,
+  useAdminClearLeads,
+  getAdminListLeadsQueryKey,
   useAdminClearSearches,
   getAdminListVisitsQueryKey,
   getGetMySkyQueryKey,
@@ -64,13 +68,15 @@ import { ArrowLeft, Copy, MessageCircle } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
 import { NewsComposer } from "@/components/NewsComposer";
+import { ShareButton } from "@/components/PlaceSheet";
 
-type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "constelaciones" | "busquedas" | "quejas";
+type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "interesados" | "constelaciones" | "busquedas" | "quejas";
 const TABS: Array<[Tab, string]> = [
   ["resumen", "Resumen"],
   ["vecinos", "Vecinos"],
   ["lugares", "Estrellas"],
   ["visitas", "Visitas"],
+  ["interesados", "Interesados"],
   ["constelaciones", "Constelaciones"],
   ["busquedas", "Búsquedas"],
   ["quejas", "Quejas"],
@@ -113,6 +119,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
         {tab === "vecinos" && <Residents me={me} />}
         {tab === "lugares" && <Places editId={editId} />}
         {tab === "visitas" && <Visits />}
+        {tab === "interesados" && <Leads />}
         {tab === "constelaciones" && <Constellations />}
         {tab === "busquedas" && <Searches />}
         {tab === "quejas" && <Complaints />}
@@ -597,6 +604,13 @@ function Places({ editId }: { editId: string | null }) {
         ) : (
           <p className="rounded-xl bg-space-2/60 p-3 text-xs text-muted">Las fotos se agregan después de guardar la estrella.</p>
         )}
+        {editing.id && places?.find((x) => x.id === editing.id)?.slug && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 p-3 text-xs">
+            <span className="font-bold text-muted">Link público:</span>
+            <span className="break-all font-mono">/e/{places.find((x) => x.id === editing.id)!.slug}</span>
+            <ShareButton slug={places.find((x) => x.id === editing.id)!.slug!} name={f.name} />
+          </div>
+        )}
         {editing.id && !current?.isProperty && <AdminNewsBox placeId={editing.id} />}
         {editing.id && <MerchantKeyBox placeId={editing.id} placeName={f.name} whatsapp={f.whatsapp} hasKey={!!places?.find((x) => x.id === editing.id)?.hasMerchantKey} />}
         {error && <p className="text-sm text-alert">Revisa los datos: {(error as Error).message}</p>}
@@ -744,6 +758,7 @@ function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: 
             {p.category} · {p.visitCount} visitas · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
             {p.welcomeOffer && <span className="text-[#E6C882]"> · regalo</span>}
             {p.hasMerchantKey && <span className="text-confianza"> · comercio</span>}
+            {p.leadCount > 0 && <span className="text-[#25D366]"> · {p.leadCount} interesados</span>}
             {p.hasEmbedding && <span className="text-ai"> · IA</span>}
           </span>
         </span>
@@ -1493,6 +1508,74 @@ function AdminNewsBox({ placeId }: { placeId: string }) {
         void qc.invalidateQueries({ queryKey: getGetPlaceQueryKey(placeId) });
       }}
     />
+  );
+}
+
+// -------------------------------------------------------------- interesados
+/** Gente de fuera que contactó una casa o un link público: el dato que vale para el anunciante. */
+function Leads() {
+  const qc = useQueryClient();
+  const { data } = useAdminListLeads();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: getAdminListLeadsQueryKey() });
+    void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+  };
+  const del = useAdminDeleteLead({ mutation: { onSuccess: refresh } });
+  const clear = useAdminClearLeads({ mutation: { onSuccess: refresh } });
+  if (!data) return <Loading />;
+  const byPlace = [...data.reduce((m, l) => m.set(l.placeName, (m.get(l.placeName) ?? 0) + 1), new Map<string, number>())].sort(
+    (a, b) => b[1] - a[1],
+  );
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted">
+        Personas que no son vecinas y escribieron por WhatsApp a una casa (con su nombre) o desde el link público de una estrella.
+        Es la prueba que le enseñas a un vendedor o comercio de que el universo le trae clientes.
+      </p>
+      {byPlace.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {byPlace.slice(0, 8).map(([n, c]) => (
+            <span key={n} className="rounded-full bg-panel px-3 py-1 text-xs">
+              {n} · <b>{c}</b>
+            </span>
+          ))}
+        </div>
+      )}
+      {data.length === 0 ? (
+        <Empty text="Aún no hay interesados. Aparecen cuando alguien de fuera escribe a una casa o desde un link compartido." />
+      ) : (
+        <ul className="space-y-2">
+          {data.map((l) => (
+            <li key={l.id} className="flex items-start gap-3 rounded-2xl bg-panel p-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">
+                  {l.name ?? "Sin nombre"} <span className="font-normal text-muted">→</span> {l.placeName}
+                </p>
+                <p className="text-xs text-muted">
+                  {l.source === "casa" ? "Casa" : "Link compartido"} · {fmtDate(l.createdAt)}
+                </p>
+              </div>
+              {l.phone && (
+                <a href={whatsappLink(l.phone, `Hola ${l.name ?? ""}, soy de la guía de Villas.`)} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-full bg-[#25D366] px-3 py-1 text-xs font-bold text-[#0b3d1f]">
+                  WhatsApp
+                </a>
+              )}
+              <button aria-label="Borrar" onClick={() => del.mutate({ id: l.id })} className="rounded-full px-2 py-1 text-alert/70">
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {data.length > 0 && (
+        <button
+          onClick={() => confirm(`¿Borrar los ${data.length} interesados? Úsalo solo para limpiar pruebas.`) && clear.mutate()}
+          className="rounded-full border border-alert/50 px-4 py-1.5 text-xs font-bold text-alert"
+        >
+          Borrar todos (pruebas)
+        </button>
+      )}
+    </div>
   );
 }
 

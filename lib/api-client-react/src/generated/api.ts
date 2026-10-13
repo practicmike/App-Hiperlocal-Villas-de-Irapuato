@@ -23,6 +23,7 @@ import type {
   AccessKey,
   AdminComplaint,
   AdminConstellation,
+  AdminLead,
   AdminOverview,
   AdminPlace,
   AdminResident,
@@ -43,6 +44,7 @@ import type {
   JoinRequest,
   JoinResult,
   KeyLoginRequest,
+  LeadRequest,
   Me,
   MemberLookup,
   MerchantKey,
@@ -1952,6 +1954,379 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminNewsPhotoMutationOptions(options));
+    }
+
+export const getGetSharedPlaceUrl = (slug: string,) => {
+
+
+
+
+  return `/api/share/${slug}`
+}
+
+/**
+ * @summary Tarjeta pública de una estrella (su link para compartir)
+ */
+export const getSharedPlace = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PlaceDetail> => {
+
+  return customFetch<PlaceDetail>(getGetSharedPlaceUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSharedPlaceQueryKey = (slug: string,) => {
+    return [
+    `/api/share/${slug}`
+    ] as const;
+    }
+
+
+export const getGetSharedPlaceQueryOptions = <TData = Awaited<ReturnType<typeof getSharedPlace>>, TError = ErrorType<ErrorResponse>>(slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedPlace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSharedPlaceQueryKey(slug);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedPlace>>> = ({ signal }) => getSharedPlace(slug, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSharedPlace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSharedPlaceQueryResult = NonNullable<Awaited<ReturnType<typeof getSharedPlace>>>
+export type GetSharedPlaceQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Tarjeta pública de una estrella (su link para compartir)
+ */
+
+export function useGetSharedPlace<TData = Awaited<ReturnType<typeof getSharedPlace>>, TError = ErrorType<ErrorResponse>>(
+ slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedPlace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSharedPlaceQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecordLeadUrl = (id: string,) => {
+
+
+
+
+  return `/api/places/${id}/lead`
+}
+
+/**
+ * @summary Alguien de fuera contacta por WhatsApp (casa o link público)
+ */
+export const recordLead = async (id: string,
+    leadRequest: LeadRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getRecordLeadUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(leadRequest)
+  }
+);}
+
+
+
+
+
+export const getRecordLeadMutationKey = () => ['recordLead'] as const;
+
+export const getRecordLeadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordLead>>, TError,RecordLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordLead>>, TError,RecordLeadMutationVariables, TContext> => {
+
+const mutationKey = getRecordLeadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordLead>>, RecordLeadMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordLead(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordLeadMutationResult = NonNullable<Awaited<ReturnType<typeof recordLead>>>
+    export type RecordLeadMutationBody = BodyType<LeadRequest>
+    export type RecordLeadMutationError = ErrorType<unknown>
+    export type RecordLeadMutationVariables = {id: string;data: BodyType<LeadRequest>}
+
+    /**
+ * @summary Alguien de fuera contacta por WhatsApp (casa o link público)
+ */
+export const useRecordLead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordLead>>, TError,RecordLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordLead>>,
+        TError,
+        RecordLeadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordLeadMutationOptions(options));
+    }
+
+export const getAdminListLeadsUrl = () => {
+
+
+
+
+  return `/api/admin/leads`
+}
+
+export const adminListLeads = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminLead[]> => {
+
+  return customFetch<AdminLead[]>(getAdminListLeadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListLeadsQueryKey = () => {
+    return [
+    `/api/admin/leads`
+    ] as const;
+    }
+
+
+export const getAdminListLeadsQueryOptions = <TData = Awaited<ReturnType<typeof adminListLeads>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListLeadsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListLeads>>> = ({ signal }) => adminListLeads({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListLeads>>>
+export type AdminListLeadsQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListLeads<TData = Awaited<ReturnType<typeof adminListLeads>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListLeadsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminDeleteLeadUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/leads/${id}`
+}
+
+export const adminDeleteLead = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteLeadUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteLeadMutationKey = () => ['adminDeleteLead'] as const;
+
+export const getAdminDeleteLeadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteLead>>, TError,AdminDeleteLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteLead>>, TError,AdminDeleteLeadMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteLeadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteLead>>, AdminDeleteLeadMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteLead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteLeadMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteLead>>>
+
+    export type AdminDeleteLeadMutationError = ErrorType<unknown>
+    export type AdminDeleteLeadMutationVariables = {id: string}
+
+    export const useAdminDeleteLead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteLead>>, TError,AdminDeleteLeadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteLead>>,
+        TError,
+        AdminDeleteLeadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteLeadMutationOptions(options));
+    }
+
+export const getAdminClearLeadsUrl = () => {
+
+
+
+
+  return `/api/admin/leads/clear`
+}
+
+export const adminClearLeads = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClearVisitsResult> => {
+
+  return customFetch<ClearVisitsResult>(getAdminClearLeadsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminClearLeadsMutationKey = () => ['adminClearLeads'] as const;
+
+export const getAdminClearLeadsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearLeads>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminClearLeads>>, TError,void, TContext> => {
+
+const mutationKey = getAdminClearLeadsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminClearLeads>>, void> = () => {
+
+
+          return  adminClearLeads(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminClearLeadsMutationResult = NonNullable<Awaited<ReturnType<typeof adminClearLeads>>>
+
+    export type AdminClearLeadsMutationError = ErrorType<unknown>
+
+
+    export const useAdminClearLeads = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearLeads>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminClearLeads>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAdminClearLeadsMutationOptions(options));
     }
 
 export const getGetPlaceUrl = (id: string,) => {

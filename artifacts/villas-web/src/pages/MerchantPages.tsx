@@ -20,6 +20,7 @@ import {
   type VisitResult,
 } from "@workspace/api-client-react";
 import { NewsComposer } from "@/components/NewsComposer";
+import { ShareButton } from "@/components/PlaceSheet";
 import { Camera, Check, Gift, Store, Star } from "lucide-react";
 import { Shell, errorMessage } from "@/pages/AccessPages";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -123,6 +124,20 @@ export function MerchantHomePage() {
           examples={m.kind === "oficio" ? "Esta semana tengo espacio el jueves · Promoción en mantenimiento" : undefined}
         />
       </div>
+
+      {m.slug && (
+        <div className="mb-4 rounded-3xl border border-white/10 bg-panel p-4">
+          <p className="font-black">Tu link para compartir</p>
+          <p className="mb-2 text-xs text-muted">
+            Ponlo en tu Facebook, Instagram o estado de WhatsApp. Quien lo abra ve tu tarjeta con fotos, horario y tu WhatsApp, aunque no viva en Villas.
+          </p>
+          <p className="mb-2 break-all rounded-xl bg-space-2 p-2 font-mono text-xs">
+            {window.location.origin}
+            {import.meta.env.BASE_URL}e/{m.slug}
+          </p>
+          <ShareButton slug={m.slug} name={m.placeName} />
+        </div>
+      )}
 
       {m.welcomeOffer && (
         <p className="mb-4 flex items-center gap-2 rounded-2xl bg-[#E6C882]/10 p-3 text-sm text-[#E6C882]">

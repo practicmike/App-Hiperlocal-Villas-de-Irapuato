@@ -8,7 +8,7 @@
 import type { PhotoRef } from './photoRef';
 import type { PlaceInput } from './placeInput';
 
-export type AdminPlace = PlaceInput & {
+export type AdminPlace = PlaceInput & ({
   id: string;
   whatsappClicks: number;
   endorsementCount: number;
@@ -17,4 +17,7 @@ export type AdminPlace = PlaceInput & {
   visitCount: number;
   hasMerchantKey: boolean;
   photos: PhotoRef[];
-};
+  leadCount: number;
+  /** @nullable */
+  slug: string | null;
+});

@@ -101,6 +101,8 @@ export const placesTable = pgTable(
     whatsappClicks: integer("whatsapp_clicks").notNull().default(0),
     /** Beneficio para la primera visita desde el universo: "Primer café 2x1". */
     welcomeOffer: text("welcome_offer"),
+    /** Para el link público: /e/pizzas-del-parque. Se crea al guardar. */
+    slug: text("slug").unique(),
     /** Hash del link del modo comercio; null = sin modo comercio. */
     merchantKeyHash: text("merchant_key_hash").unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -191,6 +193,25 @@ export const newsTable = pgTable(
   (t) => [index("news_place_idx").on(t.placeId), index("news_expires_idx").on(t.expiresAt)],
 );
 export const NEWS_HOURS = 24;
+
+/**
+ * Interesados: alguien de fuera de Villas contactó por WhatsApp una casa
+ * o una estrella desde su link público. Es el dato que se le puede cobrar al anunciante.
+ */
+export const leadsTable = pgTable(
+  "leads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    source: text("source", { enum: ["casa", "link"] }).notNull(),
+    name: text("name"),
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("leads_place_idx").on(t.placeId), index("leads_created_idx").on(t.createdAt)],
+);
 
 /** Teléfonos del comercio con el modo comercio abierto (solo el hash). */
 export const merchantSessionsTable = pgTable(
