@@ -183,7 +183,8 @@ export const MerchantLoginResponse = zod.object({
   "photoUrl": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date()
-}),zod.null()])
+}),zod.null()]),
+  "slug": zod.string().nullable()
 })
 
 
@@ -212,7 +213,8 @@ export const GetMerchantMeResponse = zod.object({
   "photoUrl": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date()
-}),zod.null()])
+}),zod.null()]),
+  "slug": zod.string().nullable()
 })
 
 
@@ -403,6 +405,135 @@ export const AdminNewsPhotoResponse = zod.object({
 })
 
 
+/**
+ * @summary Tarjeta pública de una estrella (su link para compartir)
+ */
+export const GetSharedPlaceParams = zod.object({
+  "slug": zod.coerce.string()
+})
+
+export const getSharedPlaceResponseHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const getSharedPlaceResponseHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const getSharedPlaceResponseHoursMin = 7;
+export const getSharedPlaceResponseHoursMax = 7;
+
+export const getSharedPlaceResponseLandM2Min = 0;
+export const getSharedPlaceResponseLandM2Max = 100000;
+
+export const getSharedPlaceResponseBuiltM2Min = 0;
+export const getSharedPlaceResponseBuiltM2Max = 100000;
+
+export const getSharedPlaceResponseBedroomsMin = 0;
+export const getSharedPlaceResponseBedroomsMax = 50;
+
+export const getSharedPlaceResponseBathroomsMin = 0;
+export const getSharedPlaceResponseBathroomsMax = 50;
+
+export const getSharedPlaceResponseParkingMin = 0;
+export const getSharedPlaceResponseParkingMax = 50;
+
+
+
+export const GetSharedPlaceResponse = zod.object({
+  "id": zod.string(),
+  "constellation": zod.string().describe('Id de la constelación (hogar, resolver, …)'),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string(),
+  "contactName": zod.string().nullable(),
+  "whatsapp": zod.string(),
+  "zone": zod.string().nullable(),
+  "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
+  "priceLabel": zod.string().nullable(),
+  "imageUrl": zod.string().nullable(),
+  "verified": zod.boolean(),
+  "sponsored": zod.boolean(),
+  "endorsementCount": zod.number().int(),
+  "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
+  "endorsedByMe": zod.boolean(),
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
+  "welcomeOffer": zod.string().nullable(),
+  "slug": zod.string().nullish(),
+  "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
+  "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myVisits": zod.number().int(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(getSharedPlaceResponseHoursItemOneOpenRegExp),
+  "close": zod.string().regex(getSharedPlaceResponseHoursItemOneCloseRegExp)
+}),zod.null()])).min(getSharedPlaceResponseHoursMin).max(getSharedPlaceResponseHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(getSharedPlaceResponseLandM2Min).max(getSharedPlaceResponseLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(getSharedPlaceResponseBuiltM2Min).max(getSharedPlaceResponseBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(getSharedPlaceResponseBedroomsMin).max(getSharedPlaceResponseBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(getSharedPlaceResponseBathroomsMin).max(getSharedPlaceResponseBathroomsMax).nullable(),
+  "parking": zod.number().int().min(getSharedPlaceResponseParkingMin).max(getSharedPlaceResponseParkingMax).nullable(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
+})
+
+
+/**
+ * @summary Alguien de fuera contacta por WhatsApp (casa o link público)
+ */
+export const RecordLeadParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const recordLeadBodyNameMax = 80;
+
+export const recordLeadBodyPhoneMax = 20;
+
+
+
+export const RecordLeadBody = zod.object({
+  "source": zod.enum(['casa', 'link']),
+  "name": zod.string().max(recordLeadBodyNameMax).nullable(),
+  "phone": zod.string().max(recordLeadBodyPhoneMax).nullable()
+})
+
+export const RecordLeadResponse = zod.void()
+
+
+export const AdminListLeadsResponseItem = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "source": zod.enum(['casa', 'link']),
+  "name": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListLeadsResponse = zod.array(AdminListLeadsResponseItem)
+
+
+export const AdminDeleteLeadParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteLeadResponse = zod.void()
+
+
+export const AdminClearLeadsResponse = zod.object({
+  "removed": zod.number().int()
+})
+
+
 export const GetPlaceParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
@@ -448,6 +579,8 @@ export const GetPlaceResponse = zod.object({
   "endorsedByMe": zod.boolean(),
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
+  "slug": zod.string().nullish(),
+  "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -533,6 +666,8 @@ export const EndorsePlaceResponse = zod.object({
   "endorsedByMe": zod.boolean(),
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
+  "slug": zod.string().nullish(),
+  "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -611,6 +746,8 @@ export const RemoveEndorsementResponse = zod.object({
   "endorsedByMe": zod.boolean(),
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
+  "slug": zod.string().nullish(),
+  "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -951,7 +1088,9 @@ export const AdminListPlacesResponseItem = zod.object({
   "url": zod.string(),
   "width": zod.number().int(),
   "height": zod.number().int()
-}))
+})),
+  "leadCount": zod.number().int(),
+  "slug": zod.string().nullable()
 }))
 export const AdminListPlacesResponse = zod.array(AdminListPlacesResponseItem)
 
@@ -1109,7 +1248,9 @@ export const AdminCreatePlaceResponse = zod.object({
   "url": zod.string(),
   "width": zod.number().int(),
   "height": zod.number().int()
-}))
+})),
+  "leadCount": zod.number().int(),
+  "slug": zod.string().nullable()
 }))
 
 
@@ -1270,7 +1411,9 @@ export const AdminUpdatePlaceResponse = zod.object({
   "url": zod.string(),
   "width": zod.number().int(),
   "height": zod.number().int()
-}))
+})),
+  "leadCount": zod.number().int(),
+  "slug": zod.string().nullable()
 }))
 
 

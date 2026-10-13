@@ -227,6 +227,8 @@ export interface MerchantMe {
   recent: MerchantRecentVisit[];
   kind: PlaceKind;
   news: NewsItem | null;
+  /** @nullable */
+  slug: string | null;
 }
 
 export interface MemberLookup {
@@ -286,6 +288,48 @@ export interface NewsInput {
      * @maxLength 140
      */
   text: string;
+}
+
+export type LeadRequestSource = typeof LeadRequestSource[keyof typeof LeadRequestSource];
+
+
+export const LeadRequestSource = {
+  casa: 'casa',
+  link: 'link',
+} as const;
+
+export interface LeadRequest {
+  source: LeadRequestSource;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  name: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  phone: string | null;
+}
+
+export type AdminLeadSource = typeof AdminLeadSource[keyof typeof AdminLeadSource];
+
+
+export const AdminLeadSource = {
+  casa: 'casa',
+  link: 'link',
+} as const;
+
+export interface AdminLead {
+  id: string;
+  placeId: string;
+  placeName: string;
+  source: AdminLeadSource;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  phone: string | null;
+  createdAt: string;
 }
 
 export interface PlaceSummary {
@@ -349,6 +393,10 @@ export interface PlaceDetail {
   locked: boolean;
   /** @nullable */
   welcomeOffer: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /** Visitante en una casa o link público; se le pide su nombre antes de escribir */
+  leadForm?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;
@@ -666,7 +714,7 @@ export interface PlaceInput {
   active: boolean;
 }
 
-export type AdminPlace = PlaceInput & {
+export type AdminPlace = PlaceInput & ({
   id: string;
   whatsappClicks: number;
   endorsementCount: number;
@@ -675,7 +723,10 @@ export type AdminPlace = PlaceInput & {
   visitCount: number;
   hasMerchantKey: boolean;
   photos: PhotoRef[];
-};
+  leadCount: number;
+  /** @nullable */
+  slug: string | null;
+});
 
 export interface DemoResult {
   inserted: number;

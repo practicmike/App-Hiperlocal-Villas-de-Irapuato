@@ -14,6 +14,7 @@ import { LandingPage, KeyLoginPage } from "@/pages/AccessPages";
 import { AdminPage } from "@/pages/AdminPage";
 import { NeedsSetup, SetupPage } from "@/pages/SetupPage";
 import { MerchantHomePage, MerchantKeyPage, MemberPassPage } from "@/pages/MerchantPages";
+import { SharedPlacePage } from "@/pages/SharedPlacePage";
 
 export default function App() {
   return (
@@ -63,6 +64,7 @@ function Main() {
       <Route path="/panel">
         {me.data?.role === "admin" ? <AdminPage creator={creator.data} /> : <Redirect to="/" />}
       </Route>
+      <Route path="/e/:slug">{(p) => <SharedPlacePage slug={p.slug} me={me.data ?? null} creator={creator.data!} />}</Route>
       <Route path="/unirme">
         {me.data ? <Redirect to="/" /> : <LandingPage creator={creator.data} />}
       </Route>

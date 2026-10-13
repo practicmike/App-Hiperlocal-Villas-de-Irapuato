@@ -96,5 +96,16 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "CREATE INDEX \"news_place_idx\" ON \"news\" USING btree (\"place_id\");",
       "CREATE INDEX \"news_expires_idx\" ON \"news\" USING btree (\"expires_at\");"
     ]
+  },
+  {
+    "tag": "0006_compartir",
+    "statements": [
+      "CREATE TABLE \"leads\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"source\" text NOT NULL,\n\t\"name\" text,\n\t\"phone\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"places\" ADD COLUMN \"slug\" text;",
+      "ALTER TABLE \"leads\" ADD CONSTRAINT \"leads_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE INDEX \"leads_place_idx\" ON \"leads\" USING btree (\"place_id\");",
+      "CREATE INDEX \"leads_created_idx\" ON \"leads\" USING btree (\"created_at\");",
+      "ALTER TABLE \"places\" ADD CONSTRAINT \"places_slug_unique\" UNIQUE(\"slug\");"
+    ]
   }
 ];

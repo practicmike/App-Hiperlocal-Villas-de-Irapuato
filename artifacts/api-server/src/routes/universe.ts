@@ -9,6 +9,7 @@ import {
   complaintsTable,
   placePhotosTable,
   newsTable,
+  leadsTable,
 } from "@workspace/db";
 import {
   GetPlaceParams,
@@ -20,8 +21,10 @@ import {
   SendComplaintParams,
   SendComplaintBody,
   SearchBody,
+  RecordLeadParams,
+  RecordLeadBody,
 } from "@workspace/api-zod";
-import { requireResident } from "../lib/auth";
+import { normalizePhone, requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
 import { photosByPlace } from "../lib/photos";
@@ -86,6 +89,45 @@ router.get("/universe", async (_req, res) => {
       hasNews: withNews.has(p.id),
     })),
   });
+});
+
+/** Link público de una estrella: lo comparte el comercio en sus redes. */
+router.get("/share/:slug", async (req, res) => {
+  const slug = String(req.params.slug ?? "").toLowerCase().slice(0, 60);
+  const [place] = await db
+    .select()
+    .from(placesTable)
+    .where(and(eq(placesTable.slug, slug), eq(placesTable.active, true)))
+    .limit(1);
+  if (!place) {
+    res.status(404).json({ message: "No encontramos esa estrella." });
+    return;
+  }
+  res.json(await placeDetail(place, req.resident?.status === "approved" ? req.resident.id : null, { shared: true }));
+});
+
+/** Contacto desde fuera de Villas: queda como interesado para el anunciante. */
+router.post("/places/:id/lead", rateLimit("lead", 20, 60 * 60_000), async (req, res) => {
+  const { id } = RecordLeadParams.parse(req.params);
+  const body = RecordLeadBody.parse(req.body);
+  const place = await getActivePlace(id);
+  if (!place) {
+    res.status(404).json({ message: "No encontramos esa estrella." });
+    return;
+  }
+  const name = body.name?.trim() || null;
+  if (body.source === "casa" && (!name || name.length < 2)) {
+    res.status(400).json({ message: "Escribe tu nombre para que el vendedor sepa quién eres." });
+    return;
+  }
+  const digits = body.phone ? normalizePhone(body.phone) : "";
+  const phone = digits.length >= 12 && digits.length <= 15 ? digits : null;
+  await db.insert(leadsTable).values({ placeId: id, source: body.source, name, phone });
+  await db
+    .update(placesTable)
+    .set({ whatsappClicks: sql`${placesTable.whatsappClicks} + 1` })
+    .where(eq(placesTable.id, id));
+  res.status(204).end();
 });
 
 router.get("/news", async (_req, res) => {

@@ -14,7 +14,8 @@ import { Link } from "wouter";
 import { BadgeCheck, Bath, BedDouble, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
 import { openState, weekSummary } from "@/lib/hours";
 import { setPickup } from "@/lib/pickup";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Share2 } from "lucide-react";
+import { useRecordLead } from "@workspace/api-client-react";
 import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
 
 interface Match {
@@ -62,7 +63,7 @@ export function PlaceSheet({ placeId, searchId, match, constellations, creatorNa
   );
 }
 
-function Card({
+export function Card({
   place,
   searchId,
   match,
@@ -81,6 +82,7 @@ function Card({
 }) {
   const qc = useQueryClient();
   const contact = useRecordContact();
+  const guest = !meName;
   const onSaved = (data: PlaceDetail) => {
     qc.setQueryData(getGetPlaceQueryKey(place.id), data);
     void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
@@ -144,7 +146,7 @@ function Card({
           <div className="text-sm">
             <p className="font-bold text-[#E6C882]">Tu primera visita: {place.welcomeOffer}</p>
             <p className="text-xs text-muted">
-              {place.locked ? "Para vecinos de Villas con credencial." : "Enseña tu credencial al pagar y se aplica solo."}
+              {place.locked || guest ? "Para vecinos de Villas con credencial." : "Enseña tu credencial al pagar y se aplica solo."}
             </p>
           </div>
         </div>
@@ -193,6 +195,11 @@ function Card({
         </div>
       ) : (
         <>
+      {guest ? (
+        // Visitante con contacto abierto (casa o link compartido): queda como interesado.
+        <GuestContact place={place} message={message} />
+      ) : (
+        <>
       <a
         href={whatsappLink(place.whatsapp, message)}
         target="_blank"
@@ -238,6 +245,10 @@ function Card({
       <Complaint placeId={place.id} creatorName={firstName ?? creatorName} />
         </>
       )}
+        </>
+      )}
+
+      {place.slug && <ShareButton slug={place.slug} name={place.name} />}
 
       {isAdmin && (
         <Link href={`/panel?editar=${place.id}`} className="flex items-center gap-1.5 pb-2 text-xs text-primary">
@@ -439,5 +450,96 @@ function PickupOrder({ place, meName, onSent }: { place: PlaceDetail; meName: st
       </a>
       <p className="text-[11px] text-muted">Al llegar, toca "Ya llegué" en la pantalla principal y le avisamos que estás afuera.</p>
     </div>
+  );
+}
+
+/**
+ * Contacto para alguien de fuera de Villas. En casas pide su nombre (el vendedor
+ * sabe quién escribe y tú ves cuántos interesados tuvo); en un link compartido, directo.
+ */
+function GuestContact({ place, message }: { place: PlaceDetail; message: string }) {
+  const lead = useRecordLead();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const btn = "flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-base font-black text-[#0b3d1f] active:scale-[0.98]";
+  if (!place.leadForm) {
+    return (
+      <a
+        href={whatsappLink(place.whatsapp, message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => lead.mutate({ id: place.id, data: { source: "link", name: null, phone: null } })}
+        className={btn}
+      >
+        <MessageCircle size={20} /> Escribir por WhatsApp
+      </a>
+    );
+  }
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className={btn}>
+        <MessageCircle size={20} /> Me interesa · escribir por WhatsApp
+      </button>
+    );
+  }
+  const ok = name.trim().length >= 2;
+  const text = `Hola${place.contactName ? ` ${place.contactName}` : ""}, soy ${name.trim()}. Vi «${place.name}» en la guía de Villas y me interesa. ¿Sigue disponible?`;
+  return (
+    <div className="space-y-2 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/5 p-3">
+      <p className="text-sm font-black">¿Cómo te llamas?</p>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={80}
+        placeholder="Tu nombre"
+        className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-[#25D366]"
+      />
+      <input
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        inputMode="tel"
+        maxLength={20}
+        placeholder="Tu WhatsApp (opcional)"
+        className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-[#25D366]"
+      />
+      <a
+        href={ok ? whatsappLink(place.whatsapp, text) : undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-disabled={!ok}
+        onClick={(e) => {
+          if (!ok) return e.preventDefault();
+          lead.mutate({ id: place.id, data: { source: "casa", name: name.trim(), phone: phone.trim() || null } });
+        }}
+        className={`${btn} ${ok ? "" : "opacity-40"}`}
+      >
+        <MessageCircle size={20} /> Escribir por WhatsApp
+      </a>
+    </div>
+  );
+}
+
+/** Compartir la estrella con su link público (en el celular abre el menú de compartir). */
+export function ShareButton({ slug, name }: { slug: string; name: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}${import.meta.env.BASE_URL}e/${slug}`;
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+        if (nav.share) {
+          await nav.share({ title: name, text: `${name} en la guía de Villas`, url }).catch(() => {});
+        } else {
+          await navigator.clipboard?.writeText(url).catch(() => {});
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      }}
+      className="flex items-center gap-1.5 pb-2 text-xs font-bold text-muted"
+    >
+      <Share2 size={14} /> {copied ? "Link copiado" : "Compartir esta estrella"}
+    </button>
   );
 }

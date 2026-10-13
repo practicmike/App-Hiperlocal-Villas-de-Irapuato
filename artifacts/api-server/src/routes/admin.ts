@@ -17,6 +17,7 @@ import {
   sessionsTable,
   endorsementsTable,
   placePhotosTable,
+  leadsTable,
   MAX_PHOTOS,
   type Place,
 } from "@workspace/db";
@@ -52,6 +53,7 @@ import {
   AdminPublishNewsBody,
   AdminRemoveNewsParams,
   AdminNewsPhotoParams,
+  AdminDeleteLeadParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
@@ -60,6 +62,7 @@ import { endorsementCounts, refreshEmbedding } from "../lib/places";
 import { issueMerchantKey } from "../lib/merchant";
 import { photosByPlace, photoUrl, sniffImage, type PhotoRef } from "../lib/photos";
 import { cleanHours } from "../lib/hours";
+import { ensureSlug } from "../lib/slug";
 import { activeNews, publishNews, removeNews, setNewsPhoto } from "../lib/news";
 import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
 import { embedMany, suggestConstellation } from "../lib/ai";
@@ -349,6 +352,14 @@ router.post("/admin/visits/clear", async (req, res) => {
 
 // ----------------------------------------------------------------- lugares
 /** Visitas registradas por lugar, en una sola consulta. */
+async function leadCounts(): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ placeId: leadsTable.placeId, n: sql<number>`count(*)::int` })
+    .from(leadsTable)
+    .groupBy(leadsTable.placeId);
+  return new Map(rows.map((r) => [r.placeId, r.n]));
+}
+
 async function visitCounts(): Promise<Map<string, number>> {
   const rows = await db
     .select({ placeId: visitsTable.placeId, n: sql<number>`count(*)::int` })
@@ -362,6 +373,7 @@ const toAdminPlace = (
   counts: Map<string, number>,
   visits: Map<string, number> = new Map(),
   photos: Map<string, PhotoRef[]> = new Map(),
+  leads: Map<string, number> = new Map(),
 ) => ({
   id: p.id,
   constellation: p.constellation,
@@ -393,6 +405,8 @@ const toAdminPlace = (
   bathrooms: p.bathrooms,
   parking: p.parking,
   photos: photos.get(p.id) ?? [],
+  leadCount: leads.get(p.id) ?? 0,
+  slug: p.slug,
 });
 
 async function constellationById(id: string) {
@@ -430,13 +444,18 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
 }
 
 router.get("/admin/places", async (_req, res) => {
-  const [rows, counts, visits] = await Promise.all([
+  const [rows0, counts, visits, leads] = await Promise.all([
     db.select().from(placesTable).orderBy(desc(placesTable.updatedAt)),
     endorsementCounts(),
     visitCounts(),
+    leadCounts(),
   ]);
+  // Cada estrella recibe su link público la primera vez que se lista.
+  const rows = await Promise.all(
+    rows0.map(async (p) => (p.slug ? p : { ...p, slug: await ensureSlug(p).catch(() => null) })),
+  );
   const photos = await photosByPlace(rows.map((p) => p.id));
-  res.json(rows.map((p) => toAdminPlace(p, counts, visits, photos)));
+  res.json(rows.map((p) => toAdminPlace(p, counts, visits, photos, leads)));
 });
 
 router.post("/admin/places", async (req, res) => {
@@ -446,9 +465,10 @@ router.post("/admin/places", async (req, res) => {
     res.status(400).json({ message: "Esa constelación no existe." });
     return;
   }
-  const [place] = await db.insert(placesTable).values(cleanPlaceInput(body, c.isProperty)).returning();
-  refreshEmbedding(place!);
-  res.status(201).json(toAdminPlace(place!, new Map()));
+  const [place0] = await db.insert(placesTable).values(cleanPlaceInput(body, c.isProperty)).returning();
+  const place = { ...place0!, slug: await ensureSlug(place0!).catch(() => null) };
+  refreshEmbedding(place);
+  res.status(201).json(toAdminPlace(place, new Map()));
 });
 
 router.put("/admin/places/:id", async (req, res) => {
@@ -469,7 +489,7 @@ router.put("/admin/places/:id", async (req, res) => {
     return;
   }
   refreshEmbedding(place);
-  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts(), await photosByPlace([place.id])));
+  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts(), await photosByPlace([place.id]), await leadCounts()));
 });
 
 router.delete("/admin/places/:id", async (req, res) => {
@@ -598,6 +618,36 @@ router.post("/admin/constellations/:cid/remove", async (req, res) => {
 });
 
 /** La IA sugiere constelación y giro; el creador decide. */
+// ------------------------------------------------------------- interesados
+router.get("/admin/leads", async (_req, res) => {
+  const rows = await db
+    .select({
+      id: leadsTable.id,
+      placeId: leadsTable.placeId,
+      placeName: placesTable.name,
+      source: leadsTable.source,
+      name: leadsTable.name,
+      phone: leadsTable.phone,
+      createdAt: leadsTable.createdAt,
+    })
+    .from(leadsTable)
+    .innerJoin(placesTable, eq(leadsTable.placeId, placesTable.id))
+    .orderBy(desc(leadsTable.createdAt))
+    .limit(500);
+  res.json(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+});
+
+router.delete("/admin/leads/:id", async (req, res) => {
+  const { id } = AdminDeleteLeadParams.parse(req.params);
+  await db.delete(leadsTable).where(eq(leadsTable.id, id));
+  res.status(204).end();
+});
+
+router.post("/admin/leads/clear", async (_req, res) => {
+  const removed = await db.delete(leadsTable).returning({ id: leadsTable.id });
+  res.json({ removed: removed.length });
+});
+
 // --------------------------------------------------------- hoy en villas
 router.get("/admin/news", async (_req, res) => {
   res.json(await activeNews());

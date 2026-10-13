@@ -9,6 +9,8 @@
 export * from './accessKey';
 export * from './adminComplaint';
 export * from './adminConstellation';
+export * from './adminLead';
+export * from './adminLeadSource';
 export * from './adminOverview';
 export * from './adminPlace';
 export * from './adminResident';
@@ -36,6 +38,8 @@ export * from './joinRequest';
 export * from './joinResult';
 export * from './joinResultStatus';
 export * from './keyLoginRequest';
+export * from './leadRequest';
+export * from './leadRequestSource';
 export * from './me';
 export * from './memberLookup';
 export * from './merchantKey';

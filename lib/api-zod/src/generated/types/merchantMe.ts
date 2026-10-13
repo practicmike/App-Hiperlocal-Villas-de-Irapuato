@@ -20,4 +20,6 @@ export interface MerchantMe {
   recent: MerchantRecentVisit[];
   kind: PlaceKind;
   news: NewsItem | null;
+  /** @nullable */
+  slug: string | null;
 }

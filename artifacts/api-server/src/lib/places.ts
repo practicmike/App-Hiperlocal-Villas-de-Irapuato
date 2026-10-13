@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
-import { db, placesTable, endorsementsTable, residentsTable, visitsTable, type Place } from "@workspace/db";
+import { db, placesTable, endorsementsTable, residentsTable, visitsTable, constellationsTable, type Place } from "@workspace/db";
+import { ensureSlug } from "./slug";
 import { embed } from "./ai";
 import { photosByPlace } from "./photos";
 import { activeNews } from "./news";
@@ -20,7 +21,14 @@ export async function endorsementCounts(): Promise<Map<string, number>> {
  * Tarjeta de una estrella. viewerId = null es un visitante sin llave: ve qué es
  * y cuántos vecinos lo recomiendan, pero no el contacto ni los nombres de vecinos.
  */
-export async function placeDetail(place: Place, viewerId: string | null) {
+export async function placeDetail(place: Place, viewerId: string | null, opts: { shared?: boolean } = {}) {
+  const [c] = await db
+    .select({ isProperty: constellationsTable.isProperty })
+    .from(constellationsTable)
+    .where(eq(constellationsTable.id, place.constellation))
+    .limit(1);
+  const isProperty = c?.isProperty ?? false;
+  const slug = await ensureSlug(place).catch(() => place.slug);
   const endorsements = await db
     .select({
       residentId: endorsementsTable.residentId,
@@ -64,6 +72,8 @@ export async function placeDetail(place: Place, viewerId: string | null) {
     endorsedByMe: viewerId !== null && endorsements.some((e) => e.residentId === viewerId),
     locked: false,
     welcomeOffer: place.welcomeOffer,
+    slug,
+    leadForm: false,
     neighborsServed: v?.neighbors ?? 0,
     myVisits: Number(v?.mine ?? 0),
     kind: place.kind,
@@ -79,6 +89,11 @@ export async function placeDetail(place: Place, viewerId: string | null) {
     photos: (await photosByPlace([place.id])).get(place.id) ?? [],
   };
   if (viewerId !== null) return full;
+  // Visitante con contacto abierto: casas (son anuncios para gente de fuera)
+  // o el link público que el propio comercio compartió. Los nombres de vecinos siguen privados.
+  if (isProperty || opts.shared) {
+    return { ...full, endorserNames: [], leadForm: isProperty };
+  }
   return {
     ...full,
     whatsapp: "",
