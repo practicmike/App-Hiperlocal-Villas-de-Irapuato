@@ -1479,6 +1479,9 @@ components:
         source:
           type: string
           enum: [casa, link]
+        via:
+          type: string
+          enum: [vendedor, creador]
         name:
           type: [string, "null"]
         phone:
@@ -1486,7 +1489,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, placeId, placeName, source, name, phone, createdAt]
+      required: [id, placeId, placeName, source, via, name, phone, createdAt]
     PlaceSummary:
       type: object
       properties:
@@ -1579,6 +1582,9 @@ components:
         leadForm:
           type: boolean
           description: Visitante en una casa o link público; se le pide su nombre antes de escribir
+        viaCreator:
+          type: boolean
+          description: Visitante en una casa sin contacto directo; escribe al creador, que lo presenta
         neighborsServed:
           type: integer
           description: Vecinos distintos con visita registrada
@@ -1907,6 +1913,8 @@ components:
           type: boolean
         pickup:
           type: boolean
+        directContact:
+          type: boolean
         hours:
           $ref: "#/components/schemas/WeekHours"
         landM2:
@@ -1948,6 +1956,7 @@ components:
         - kind
         - delivers
         - pickup
+        - directContact
         - hours
         - landM2
         - builtM2

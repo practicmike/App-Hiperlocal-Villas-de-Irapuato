@@ -31,12 +31,13 @@ interface Props {
   /** Constelaciones por id, para color y nombre. */
   constellations: Map<string, Constellation>;
   creatorName: string;
+  creatorWhatsapp?: string;
   meName: string;
   isAdmin: boolean;
   onClose: () => void;
 }
 
-export function PlaceSheet({ placeId, searchId, match, constellations, creatorName, meName, isAdmin, onClose }: Props) {
+export function PlaceSheet({ placeId, searchId, match, constellations, creatorName, creatorWhatsapp = "", meName, isAdmin, onClose }: Props) {
   const { data: place, isLoading } = useGetPlace(placeId);
 
   return (
@@ -57,7 +58,7 @@ export function PlaceSheet({ placeId, searchId, match, constellations, creatorNa
       {isLoading || !place ? (
         <div className="h-40 animate-pulse" />
       ) : (
-        <Card place={place} searchId={searchId} match={match} info={constellations.get(place.constellation) ?? FALLBACK} creatorName={creatorName} meName={meName} isAdmin={isAdmin} />
+        <Card place={place} searchId={searchId} match={match} info={constellations.get(place.constellation) ?? FALLBACK} creatorName={creatorName} creatorWhatsapp={creatorWhatsapp} meName={meName} isAdmin={isAdmin} />
       )}
     </div>
   );
@@ -69,6 +70,7 @@ export function Card({
   match,
   info,
   creatorName,
+  creatorWhatsapp = "",
   meName,
   isAdmin,
 }: {
@@ -77,6 +79,7 @@ export function Card({
   match: Match | null;
   info: Constellation;
   creatorName: string;
+  creatorWhatsapp?: string;
   meName: string;
   isAdmin: boolean;
 }) {
@@ -197,7 +200,7 @@ export function Card({
         <>
       {guest ? (
         // Visitante con contacto abierto (casa o link compartido): queda como interesado.
-        <GuestContact place={place} message={message} />
+        <GuestContact place={place} message={message} creatorName={creatorName} creatorWhatsapp={creatorWhatsapp} />
       ) : (
         <>
       <a
@@ -457,8 +460,20 @@ function PickupOrder({ place, meName, onSent }: { place: PlaceDetail; meName: st
  * Contacto para alguien de fuera de Villas. En casas pide su nombre (el vendedor
  * sabe quién escribe y tú ves cuántos interesados tuvo); en un link compartido, directo.
  */
-function GuestContact({ place, message }: { place: PlaceDetail; message: string }) {
+function GuestContact({
+  place,
+  message,
+  creatorName,
+  creatorWhatsapp,
+}: {
+  place: PlaceDetail;
+  message: string;
+  creatorName: string;
+  creatorWhatsapp: string;
+}) {
   const lead = useRecordLead();
+  const [sent, setSent] = useState(false);
+  const creatorFirst = creatorName.split(" ")[0] ?? creatorName;
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -476,18 +491,36 @@ function GuestContact({ place, message }: { place: PlaceDetail; message: string 
       </a>
     );
   }
+  if (sent && place.viaCreator) {
+    return (
+      <p className="rounded-2xl border border-[#25D366]/40 bg-[#25D366]/5 p-3 text-sm">
+        Listo. {creatorFirst} te responde por WhatsApp y te presenta con el vendedor.
+      </p>
+    );
+  }
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className={btn}>
-        <MessageCircle size={20} /> Me interesa · escribir por WhatsApp
+        <MessageCircle size={20} /> {place.viaCreator ? "Me interesa · pedir informes" : "Me interesa · escribir por WhatsApp"}
       </button>
     );
   }
   const ok = name.trim().length >= 2;
-  const text = `Hola${place.contactName ? ` ${place.contactName}` : ""}, soy ${name.trim()}. Vi «${place.name}» en la guía de Villas y me interesa. ¿Sigue disponible?`;
+  const link = place.slug ? ` ${window.location.origin}${import.meta.env.BASE_URL}e/${place.slug}` : "";
+  const detail = [place.operation, place.priceLabel].filter(Boolean).join(" ");
+  // Sin contacto directo: el mensaje va al creador, que lo presenta con el vendedor.
+  const to = place.viaCreator ? creatorWhatsapp : place.whatsapp;
+  const text = place.viaCreator
+    ? `Hola ${creatorFirst}, soy ${name.trim()}. Me interesa «${place.name}»${detail ? ` (${detail})` : ""} que vi en la guía de Villas. ¿Me pasas informes o me presentas con el vendedor?${link}`
+    : `Hola${place.contactName ? ` ${place.contactName}` : ""}, soy ${name.trim()}. Vi «${place.name}» en la guía de Villas y me interesa. ¿Sigue disponible?`;
   return (
     <div className="space-y-2 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/5 p-3">
       <p className="text-sm font-black">¿Cómo te llamas?</p>
+      {place.viaCreator && (
+        <p className="text-xs text-ink/80">
+          Le escribes a {creatorFirst}: él conoce al vendedor en persona y te presenta. Así el vendedor no recibe mensajes de desconocidos.
+        </p>
+      )}
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -504,17 +537,18 @@ function GuestContact({ place, message }: { place: PlaceDetail; message: string 
         className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-[#25D366]"
       />
       <a
-        href={ok ? whatsappLink(place.whatsapp, text) : undefined}
+        href={ok && to ? whatsappLink(to, text) : undefined}
         target="_blank"
         rel="noopener noreferrer"
         aria-disabled={!ok}
         onClick={(e) => {
           if (!ok) return e.preventDefault();
           lead.mutate({ id: place.id, data: { source: "casa", name: name.trim(), phone: phone.trim() || null } });
+          setSent(true);
         }}
         className={`${btn} ${ok ? "" : "opacity-40"}`}
       >
-        <MessageCircle size={20} /> Escribir por WhatsApp
+        <MessageCircle size={20} /> {place.viaCreator ? `Escribirle a ${creatorFirst}` : "Escribir por WhatsApp"}
       </a>
     </div>
   );

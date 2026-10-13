@@ -320,11 +320,20 @@ export const AdminLeadSource = {
   link: 'link',
 } as const;
 
+export type AdminLeadVia = typeof AdminLeadVia[keyof typeof AdminLeadVia];
+
+
+export const AdminLeadVia = {
+  vendedor: 'vendedor',
+  creador: 'creador',
+} as const;
+
 export interface AdminLead {
   id: string;
   placeId: string;
   placeName: string;
   source: AdminLeadSource;
+  via: AdminLeadVia;
   /** @nullable */
   name: string | null;
   /** @nullable */
@@ -397,6 +406,8 @@ export interface PlaceDetail {
   slug?: string | null;
   /** Visitante en una casa o link público; se le pide su nombre antes de escribir */
   leadForm?: boolean;
+  /** Visitante en una casa sin contacto directo; escribe al creador, que lo presenta */
+  viaCreator?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;
@@ -679,6 +690,7 @@ export interface PlaceInput {
   kind: PlaceKind;
   delivers: boolean;
   pickup: boolean;
+  directContact: boolean;
   hours: WeekHours | null;
   /**
      * @minimum 0

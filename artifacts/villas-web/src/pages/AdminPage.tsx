@@ -412,6 +412,7 @@ const EMPTY: PlaceInput = {
   kind: "comercio",
   delivers: false,
   pickup: false,
+  directContact: false,
   hours: null,
   landM2: null,
   builtM2: null,
@@ -544,6 +545,13 @@ function Places({ editId }: { editId: string | null }) {
                 <option value="venta">Venta</option>
                 <option value="renta">Renta</option>
               </select>
+            </label>
+            <label className="flex items-start gap-2 rounded-xl bg-space-2/60 p-3 text-sm">
+              <input type="checkbox" className="mt-0.5 accent-[#7d80d9]" checked={f.directContact} onChange={(e) => set("directContact", e.target.checked)} />
+              <span>
+                El vendedor acepta que visitantes le escriban directo
+                <span className="block text-xs text-muted">Si no, los visitantes te escriben a ti y tú los presentas. Los vecinos siempre le escriben directo.</span>
+              </span>
             </label>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               <NumField label="Recámaras" value={f.bedrooms} onChange={(v) => set("bedrooms", v)} />
@@ -684,6 +692,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   kind: p.kind,
   delivers: p.delivers,
   pickup: p.pickup,
+  directContact: p.directContact,
   hours: p.hours,
   landM2: p.landM2,
   builtM2: p.builtM2,
@@ -1553,6 +1562,11 @@ function Leads() {
                 </p>
                 <p className="text-xs text-muted">
                   {l.source === "casa" ? "Casa" : "Link compartido"} · {fmtDate(l.createdAt)}
+                  {l.via === "creador" ? (
+                    <span className="font-bold text-[#E6C882]"> · te escribió a ti: preséntalo</span>
+                  ) : (
+                    <span> · escribió directo al vendedor</span>
+                  )}
                 </p>
               </div>
               {l.phone && (

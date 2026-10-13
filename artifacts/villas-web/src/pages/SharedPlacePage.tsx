@@ -52,6 +52,7 @@ export function SharedPlacePage({ slug, me, creator }: { slug: string; me: Me | 
             match={null}
             info={cById.get(place.constellation) ?? FALLBACK}
             creatorName={creator.name}
+            creatorWhatsapp={creator.whatsapp}
             meName={me?.name ?? ""}
             isAdmin={me?.role === "admin"}
           />

@@ -74,6 +74,7 @@ export async function placeDetail(place: Place, viewerId: string | null, opts: {
     welcomeOffer: place.welcomeOffer,
     slug,
     leadForm: false,
+    viaCreator: false,
     neighborsServed: v?.neighbors ?? 0,
     myVisits: Number(v?.mine ?? 0),
     kind: place.kind,
@@ -91,6 +92,11 @@ export async function placeDetail(place: Place, viewerId: string | null, opts: {
   if (viewerId !== null) return full;
   // Visitante con contacto abierto: casas (son anuncios para gente de fuera)
   // o el link público que el propio comercio compartió. Los nombres de vecinos siguen privados.
+  // Casas sin contacto directo: el visitante no ve el WhatsApp del vendedor;
+  // le escribe al creador, que filtra y lo presenta.
+  if (isProperty && !place.directContact) {
+    return { ...full, whatsapp: "", contactName: null, endorserNames: [], leadForm: true, viaCreator: true };
+  }
   if (isProperty || opts.shared) {
     return { ...full, endorserNames: [], leadForm: isProperty };
   }

@@ -11,6 +11,7 @@ export * from './adminComplaint';
 export * from './adminConstellation';
 export * from './adminLead';
 export * from './adminLeadSource';
+export * from './adminLeadVia';
 export * from './adminOverview';
 export * from './adminPlace';
 export * from './adminResident';

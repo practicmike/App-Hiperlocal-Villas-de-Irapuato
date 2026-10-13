@@ -77,6 +77,8 @@ export const placesTable = pgTable(
     kind: text("kind", { enum: ["comercio", "oficio"] }).notNull().default("comercio"),
     /** Entrega o atiende a domicilio. */
     delivers: boolean("delivers").notNull().default(false),
+    /** Casas: el vendedor acepta que visitantes le escriban directo (si no, pasan por el creador). */
+    directContact: boolean("direct_contact").notNull().default(false),
     /** Acepta pedidos por WhatsApp para pasar a recoger. */
     pickup: boolean("pickup").notNull().default(false),
     /** null = sin horario capturado. */
@@ -206,6 +208,8 @@ export const leadsTable = pgTable(
       .notNull()
       .references(() => placesTable.id, { onDelete: "cascade" }),
     source: text("source", { enum: ["casa", "link"] }).notNull(),
+    /** A quién le escribió: al vendedor directo o al creador, que lo presenta. */
+    via: text("via", { enum: ["vendedor", "creador"] }).notNull().default("vendedor"),
     name: text("name"),
     phone: text("phone"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
