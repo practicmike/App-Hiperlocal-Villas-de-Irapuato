@@ -153,15 +153,6 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           meLabel={meFirst}
           lit={lit}
           onMeClick={() => (guest ? navigate("/unirme") : setMeOpen(true))}
-          onApproach={(id) => {
-            if (id && !selectedId) {
-              autoSelected.current = true;
-              setSelectedId(id);
-            } else if (!id && autoSelected.current) {
-              autoSelected.current = false;
-              setSelectedId(null);
-            }
-          }}
         />
       ) : (
         <ListView constellations={constellations} places={places} scores={scores} reasons={reasons} showPercent={result?.mode === "ai"} onSelect={select} />
