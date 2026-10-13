@@ -10,6 +10,7 @@ import {
   placePhotosTable,
   newsTable,
   leadsTable,
+  visitsTable,
 } from "@workspace/db";
 import {
   GetPlaceParams,
@@ -77,7 +78,15 @@ router.get("/universe", async (_req, res) => {
       .orderBy(placesTable.createdAt),
     endorsementCounts(),
   ]);
-  const [photos, news] = await Promise.all([photosByPlace(places.map((p) => p.id)), activeNews()]);
+  const [photos, news, visitRows] = await Promise.all([
+    photosByPlace(places.map((p) => p.id)),
+    activeNews(),
+    db
+      .select({ placeId: visitsTable.placeId, n: sql<number>`count(distinct ${visitsTable.residentId})::int` })
+      .from(visitsTable)
+      .groupBy(visitsTable.placeId),
+  ]);
+  const neighborsBy = new Map(visitRows.map((r) => [r.placeId, r.n]));
   const withNews = new Set(news.map((n) => n.placeId));
   res.json({
     constellations,
@@ -87,6 +96,7 @@ router.get("/universe", async (_req, res) => {
       welcome: !!welcomeOffer,
       coverUrl: photos.get(p.id)?.[0]?.url ?? null,
       hasNews: withNews.has(p.id),
+      neighbors: neighborsBy.get(p.id) ?? 0,
     })),
   });
 });

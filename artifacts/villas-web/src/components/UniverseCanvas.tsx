@@ -12,6 +12,38 @@ import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zo
 import "d3-transition";
 import type { PlaceSummary } from "@workspace/api-client-react";
 import { FALLBACK, byId, type Constellation } from "@/lib/constellations";
+import { categoryIcon } from "@/lib/icons";
+
+/** Números pseudoaleatorios con semilla: el cielo de fondo es siempre el mismo. */
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/** Capas de estrellas lejanas: entre más lejos, más pequeñas, tenues y lentas al arrastrar. */
+const STAR_LAYERS = [
+  { id: "far", size: 420, count: 70, r: [0.4, 0.8], o: [0.15, 0.35], parallax: 0.03 },
+  { id: "mid", size: 520, count: 34, r: [0.6, 1.1], o: [0.25, 0.5], parallax: 0.08 },
+  { id: "near", size: 640, count: 14, r: [0.9, 1.5], o: [0.35, 0.7], parallax: 0.16 },
+].map((l, li) => {
+  const rand = rng(97 + li * 31);
+  const lerp = ([a, b]: number[], t: number) => a! + (b! - a!) * t;
+  return {
+    ...l,
+    stars: Array.from({ length: l.count }, () => ({
+      x: rand() * l.size,
+      y: rand() * l.size,
+      r: lerp(l.r, rand()),
+      o: lerp(l.o, rand()),
+      twinkle: li === 2 && rand() < 0.5,
+      delay: rand() * 6,
+    })),
+  };
+});
 import { NEBULA_SIZE, matchBounds, nebulaCenter, nebulaRadius, worldRadius, type StarPos } from "@/lib/layout";
 
 /**
@@ -129,6 +161,13 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     const { w, h, k0 } = sizeRef.current;
     svg.parentElement?.style.setProperty("--sky-x", `${(t.x - w / 2) * 0.04}px`);
     svg.parentElement?.style.setProperty("--sky-y", `${(t.y - h / 2) * 0.04}px`);
+    // Profundidad: cada capa del fondo se mueve más lento que el universo.
+    for (const l of STAR_LAYERS) {
+      const z = 1 + Math.log2(Math.max(t.k / (k0 || 1), 0.5)) * l.parallax * 0.6;
+      svg
+        .querySelector(`#sky-${l.id}`)
+        ?.setAttribute("patternTransform", `translate(${(t.x - w / 2) * l.parallax} ${(t.y - h / 2) * l.parallax}) scale(${z})`);
+    }
     const next = levelFor(t.k / k0);
     if (next !== levelRef.current) {
       levelRef.current = next;
@@ -275,12 +314,38 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
             <stop offset="100%" stopColor={c.color} stopOpacity="0" />
           </radialGradient>
         ))}
+        {STAR_LAYERS.map((l) => (
+          <pattern key={l.id} id={`sky-${l.id}`} width={l.size} height={l.size} patternUnits="userSpaceOnUse">
+            {l.stars.map((st, i) => (
+              <circle key={i} cx={st.x} cy={st.y} r={st.r} fill="#ffffff" opacity={st.o} />
+            ))}
+          </pattern>
+        ))}
         <radialGradient id="halo-me">
           <stop offset="0%" stopColor="#6eb5ff" stopOpacity="0.6" />
           <stop offset="100%" stopColor="#6eb5ff" stopOpacity="0" />
         </radialGradient>
       </defs>
 
+      {/* Fondo con profundidad: tres capas que se repiten sin fin y unas cuantas estrellas que titilan. */}
+      <g pointerEvents="none" aria-hidden>
+        {STAR_LAYERS.map((l) => (
+          <rect key={l.id} width="100%" height="100%" fill={`url(#sky-${l.id})`} />
+        ))}
+        {STAR_LAYERS[2]!.stars
+          .filter((st) => st.twinkle)
+          .map((st, i) => (
+            <circle
+              key={i}
+              className="twinkle"
+              cx={`${(st.x / STAR_LAYERS[2]!.size) * 100}%`}
+              cy={`${(st.y / STAR_LAYERS[2]!.size) * 100}%`}
+              r={st.r * 1.1}
+              fill="#ffffff"
+              style={{ animationDelay: `${st.delay}s` }}
+            />
+          ))}
+      </g>
       <g ref={worldRef}>
         {/* Órbitas alrededor de "Tú": la misma idea del logo. */}
         <g style={{ opacity: level === "near" ? 0 : 1, transition: "opacity 400ms ease" }} pointerEvents="none">
@@ -376,7 +441,10 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
           if (!pos) return null;
           const color = (cById.get(p.constellation) ?? FALLBACK).color;
           const selected = p.id === selectedId;
-          const core = STAR_R * (0.75 + pos.glow * 0.55) + Math.min(p.endorsementCount, 6) * 0.35;
+          // Más vecinos atendidos y más recomendaciones = estrella más grande (con tope para no tapar a otras).
+          const popularity = p.neighbors + p.endorsementCount * 2;
+          const core = STAR_R * (0.75 + pos.glow * 0.55) + Math.min(Math.log2(1 + popularity) * 1.3, 5);
+          const icon = level !== "far" ? categoryIcon(p.category, p.name) : null;
           const labelOn = showNames && !pos.dimmed;
           // En búsqueda manda el match; fuera de ella, tu cielo personal.
           const unlit = !!lit && !searching && !lit.has(p.id);
@@ -416,8 +484,14 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                   <>
                     <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={0.35 + pos.glow * 0.65} />
                     <circle r={core} fill={color} />
-                    <circle r={core * 0.38} fill="white" opacity={0.75} />
+                    {!icon && <circle r={core * 0.38} fill="white" opacity={0.75} />}
                   </>
+                )}
+                {/* De cerca, el ícono del giro dentro de la estrella. */}
+                {icon && (
+                  <text className="star-icon" textAnchor="middle" dominantBaseline="central" fontSize={core * 1.05}>
+                    {icon}
+                  </text>
                 )}
                 {/* Novedad del día: la estrella late. */}
                 {p.hasNews && !pos.dimmed && (
