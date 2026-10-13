@@ -123,6 +123,18 @@ body {
 @keyframes boot {
   50% { transform: scale(1.06); filter: drop-shadow(0 0 18px #6eb5ff88); }
 }
+.star-icon {
+  pointer-events: none;
+  user-select: none;
+}
+.twinkle {
+  opacity: 0.2;
+  animation: twinkle 6s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.85; }
+}
 .news-ring {
   animation: news 2.2s ease-out infinite;
   transform-origin: 0 0;

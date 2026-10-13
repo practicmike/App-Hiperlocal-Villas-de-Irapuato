@@ -25,4 +25,6 @@ export interface PlaceSummary {
   /** @nullable */
   coverUrl: string | null;
   hasNews: boolean;
+  /** Vecinos distintos con visita registrada (para el tamaño de la estrella) */
+  neighbors: number;
 }

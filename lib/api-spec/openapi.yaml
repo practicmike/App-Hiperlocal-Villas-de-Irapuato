@@ -1520,7 +1520,10 @@ components:
           type: [string, "null"]
         hasNews:
           type: boolean
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews]
+        neighbors:
+          type: integer
+          description: Vecinos distintos con visita registrada (para el tamaño de la estrella)
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors]
     Universe:
       type: object
       properties:

@@ -283,7 +283,8 @@ export const GetUniverseResponse = zod.object({
   "close": zod.string().regex(getUniverseResponsePlacesItemHoursItemOneCloseRegExp)
 }),zod.null()])).min(getUniverseResponsePlacesItemHoursMin).max(getUniverseResponsePlacesItemHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
   "coverUrl": zod.string().nullable(),
-  "hasNews": zod.boolean()
+  "hasNews": zod.boolean(),
+  "neighbors": zod.number().int().describe('Vecinos distintos con visita registrada (para el tamaño de la estrella)')
 }))
 })
 
