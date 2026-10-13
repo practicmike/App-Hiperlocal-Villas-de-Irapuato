@@ -9,17 +9,13 @@
  * preciso es el % (el modelo compara significado, no palabras).
  */
 import { config, aiEnabled } from "./config";
+import { placeFacts, type SearchablePlace } from "./search-core";
 import { logger } from "./logger";
 
-export interface MatchCandidate {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  zone: string | null;
-  operation: string | null;
-  priceLabel: string | null;
-}
+export type MatchCandidate = Pick<
+  SearchablePlace,
+  "id" | "name" | "category" | "description" | "zone" | "operation" | "priceLabel" | "kind" | "delivers" | "hours" | "landM2" | "builtM2" | "bedrooms" | "bathrooms" | "parking"
+>;
 
 export interface AiMatch {
   placeId: string;
@@ -40,6 +36,7 @@ export function buildMatchPrompt(query: string, candidates: MatchCandidate[]) {
         c.operation ? `operación: ${c.operation}` : "",
         c.priceLabel ? `precio: ${c.priceLabel}` : "",
         c.zone ? `zona: ${c.zone}` : "",
+        placeFacts(c as SearchablePlace) ? `datos: ${placeFacts(c as SearchablePlace)}` : "",
         c.description ? `descripción: ${c.description.slice(0, 700)}` : "",
       ]
         .filter(Boolean)

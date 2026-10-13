@@ -54,7 +54,7 @@ router.post("/merchant/login", rateLimit("merchant-login", 20, 15 * 60_000), asy
   }
   await startMerchantSession(res, place.id);
   req.merchantPlace = place;
-  res.json(await merchantSummary(place.id, place.name, place.welcomeOffer));
+  res.json(await merchantSummary(place.id, place.name, place.welcomeOffer, place.kind));
 });
 
 router.post("/merchant/logout", async (req, res) => {
@@ -64,10 +64,10 @@ router.post("/merchant/logout", async (req, res) => {
 
 router.get("/merchant/me", requireMerchant, async (req, res) => {
   const p = req.merchantPlace!;
-  res.json(await merchantSummary(p.id, p.name, p.welcomeOffer));
+  res.json(await merchantSummary(p.id, p.name, p.welcomeOffer, p.kind));
 });
 
-async function merchantSummary(placeId: string, placeName: string, welcomeOffer: string | null) {
+async function merchantSummary(placeId: string, placeName: string, welcomeOffer: string | null, kind: "comercio" | "oficio") {
   const [[stats], recent] = await Promise.all([
     db
       .select({
@@ -89,6 +89,7 @@ async function merchantSummary(placeId: string, placeName: string, welcomeOffer:
     placeId,
     placeName,
     welcomeOffer,
+    kind,
     todayVisits: stats?.today ?? 0,
     totalVisits: stats?.total ?? 0,
     neighbors: stats?.neighbors ?? 0,

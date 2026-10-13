@@ -15,6 +15,8 @@ import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { ListView } from "@/components/ListView";
 import { MeSheet } from "@/components/MeSheet";
+import { Intro, introSeen } from "@/components/Intro";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { homeLayout, searchLayout } from "@/lib/layout";
 import { byId, placeConstellations, whatsappLink } from "@/lib/constellations";
 
@@ -45,7 +47,9 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
   const autoSelected = useRef(false);
   const [view, setView] = useState<"universe" | "list">("universe");
   const [creatorOpen, setCreatorOpen] = useState(false);
-  const [meOpen, setMeOpen] = useState(false);
+  // Atajo del ícono instalado ("Mi credencial") o link directo: abre la credencial.
+  const [meOpen, setMeOpen] = useState(() => !guest && new URLSearchParams(window.location.search).has("credencial"));
+  const [showIntro, setShowIntro] = useState(() => !introSeen());
   const [level, setLevel] = useState<Level>("far");
   const canvas = useRef<UniverseHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -231,7 +235,9 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
       </header>
 
       {/* Controles mínimos abajo. */}
-      <nav className="pb-safe pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between px-4">
+      <nav className="pb-safe pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4">
+        {!guest && !showIntro && !selectedId && !meOpen && <InstallPrompt />}
+        <div className="flex items-end justify-between">
         <div className="pointer-events-auto flex gap-2">
           <button
             onClick={() => {
@@ -273,6 +279,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
             <Crosshair size={18} />
           </button>
         )}
+        </div>
       </nav>
 
       {isLoading && (
@@ -304,6 +311,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           }}
         />
       )}
+      {showIntro && <Intro creator={creator} guest={guest} onDone={() => setShowIntro(false)} />}
       {creatorOpen && <CreatorSheet creator={creator} onClose={() => setCreatorOpen(false)} />}
       {meOpen && me && (
         <MeSheet

@@ -14,6 +14,36 @@ export interface SearchablePlace {
   operation: string | null;
   priceLabel: string | null;
   boost: number;
+  // Datos de la ficha completa (opcionales para no romper pruebas viejas).
+  kind?: "comercio" | "oficio";
+  delivers?: boolean;
+  hours?: Array<{ open: string; close: string } | null> | null;
+  landM2?: number | null;
+  builtM2?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  parking?: number | null;
+}
+
+const DAY_NAMES = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+/** Datos duros en texto: "a domicilio", "3 recámaras", horario… para palabras, embeddings e IA. */
+export function placeFacts(p: SearchablePlace): string {
+  const f: string[] = [];
+  if (p.kind === "oficio") f.push("Va a tu casa");
+  if (p.delivers) f.push("Servicio a domicilio");
+  if (p.bedrooms != null) f.push(`${p.bedrooms} recámaras`);
+  if (p.bathrooms != null) f.push(`${p.bathrooms} baños`);
+  if (p.parking != null) f.push(`${p.parking} cajones de estacionamiento`);
+  if (p.landM2 != null) f.push(`${p.landM2} m² de terreno`);
+  if (p.builtM2 != null) f.push(`${p.builtM2} m² de construcción`);
+  if (p.hours) {
+    const days = p.hours
+      .map((d, i) => (d ? `${DAY_NAMES[i]} ${d.open}-${d.close}` : null))
+      .filter(Boolean);
+    if (days.length) f.push(`Horario: ${days.join(", ")}`);
+  }
+  return f.join(". ");
 }
 
 /** Por debajo de este score una estrella no cuenta como coincidencia. */
@@ -92,7 +122,7 @@ function placeFields(place: SearchablePlace): Array<[string[], number]> {
     [tokenize(place.name), 1],
     [tokenize(place.category), 0.95],
     [tokenize(`${place.description} ${place.contactName ?? ""}`), 0.7],
-    [tokenize(`${place.zone ?? ""} ${place.operation ?? ""} ${place.priceLabel ?? ""}`), 0.6],
+    [tokenize(`${place.zone ?? ""} ${place.operation ?? ""} ${place.priceLabel ?? ""} ${placeFacts(place)}`), 0.6],
   ];
 }
 
@@ -156,7 +186,7 @@ export function keywordScore(
 
 /** Texto con el que se calcula el embedding de cada estrella. */
 export function placeEmbeddingText(p: SearchablePlace): string {
-  return [p.name, p.category, p.description, p.contactName, p.zone, p.operation, p.priceLabel]
+  return [p.name, p.category, p.description, p.contactName, p.zone, p.operation, p.priceLabel, placeFacts(p)]
     .filter(Boolean)
     .join(". ");
 }

@@ -129,7 +129,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
 
   const homeTransform = useCallback(() => {
     const { w, h, k0 } = sizeRef.current;
-    return zoomIdentity.translate(w / 2, h / 2 + 10).scale(k0);
+    return zoomIdentity.translate(w / 2, h / 2 + 14).scale(k0);
   }, []);
 
   useImperativeHandle(
@@ -172,7 +172,8 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
 
     const resize = () => {
       const r = svg.getBoundingClientRect();
-      const k0 = (Math.min(r.width, r.height - 140) / (2 * worldRadius(nRef.current))) * 1.05;
+      // Deja libre la barra de búsqueda y los botones: importa en tablets acostadas.
+      const k0 = (Math.min(r.width, r.height - 200) / (2 * worldRadius(nRef.current))) * 1.03;
       const first = sizeRef.current.w === 0;
       sizeRef.current = { w: r.width, h: r.height, k0: Math.max(k0, 0.2) };
       z.scaleExtent([k0 * 0.6, k0 * 10]);
@@ -193,7 +194,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     const z = zoomRef.current;
     if (!svg || !z || sizeRef.current.w === 0) return;
     const r = svg.getBoundingClientRect();
-    const k0 = Math.max((Math.min(r.width, r.height - 140) / (2 * worldRadius(n))) * 1.05, 0.2);
+    const k0 = Math.max((Math.min(r.width, r.height - 200) / (2 * worldRadius(n))) * 1.03, 0.2);
     sizeRef.current = { ...sizeRef.current, k0 };
     z.scaleExtent([k0 * 0.6, k0 * 10]);
     if (!searching) select(svg).call(z.transform, homeTransform());

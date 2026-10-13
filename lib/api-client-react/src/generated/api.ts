@@ -47,6 +47,7 @@ import type {
   MemberLookup,
   MerchantKey,
   MerchantMe,
+  PhotoRef,
   PlaceDetail,
   PlaceInput,
   RecordVisitRequest,
@@ -3514,6 +3515,246 @@ export const useAdminRemoveConstellation = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminRemoveConstellationMutationOptions(options));
+    }
+
+export const getAdminUploadPhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/places/${id}/photos`
+}
+
+/**
+ * @summary Sube una foto (ya redimensionada en el celular) como binario
+ */
+export const adminUploadPhoto = async (id: string,
+    adminUploadPhotoBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<PhotoRef> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PhotoRef>(getAdminUploadPhotoUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
+    body: adminUploadPhotoBody
+  }
+);}
+
+
+
+
+
+export const getAdminUploadPhotoMutationKey = () => ['adminUploadPhoto'] as const;
+
+export const getAdminUploadPhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUploadPhoto>>, TError,AdminUploadPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUploadPhoto>>, TError,AdminUploadPhotoMutationVariables, TContext> => {
+
+const mutationKey = getAdminUploadPhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUploadPhoto>>, AdminUploadPhotoMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUploadPhoto(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUploadPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof adminUploadPhoto>>>
+    export type AdminUploadPhotoMutationBody = BodyType<Blob>
+    export type AdminUploadPhotoMutationError = ErrorType<unknown>
+    export type AdminUploadPhotoMutationVariables = {id: string;data: BodyType<Blob>}
+
+    /**
+ * @summary Sube una foto (ya redimensionada en el celular) como binario
+ */
+export const useAdminUploadPhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUploadPhoto>>, TError,AdminUploadPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUploadPhoto>>,
+        TError,
+        AdminUploadPhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminUploadPhotoMutationOptions(options));
+    }
+
+export const getAdminReorderPhotosUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/places/${id}/photos/order`
+}
+
+export const adminReorderPhotos = async (id: string,
+    reorderRequest: ReorderRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminReorderPhotosUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reorderRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminReorderPhotosMutationKey = () => ['adminReorderPhotos'] as const;
+
+export const getAdminReorderPhotosMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReorderPhotos>>, TError,AdminReorderPhotosMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminReorderPhotos>>, TError,AdminReorderPhotosMutationVariables, TContext> => {
+
+const mutationKey = getAdminReorderPhotosMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminReorderPhotos>>, AdminReorderPhotosMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminReorderPhotos(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminReorderPhotosMutationResult = NonNullable<Awaited<ReturnType<typeof adminReorderPhotos>>>
+    export type AdminReorderPhotosMutationBody = BodyType<ReorderRequest>
+    export type AdminReorderPhotosMutationError = ErrorType<unknown>
+    export type AdminReorderPhotosMutationVariables = {id: string;data: BodyType<ReorderRequest>}
+
+    export const useAdminReorderPhotos = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReorderPhotos>>, TError,AdminReorderPhotosMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminReorderPhotos>>,
+        TError,
+        AdminReorderPhotosMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminReorderPhotosMutationOptions(options));
+    }
+
+export const getAdminDeletePhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/photos/${id}`
+}
+
+export const adminDeletePhoto = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeletePhotoUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeletePhotoMutationKey = () => ['adminDeletePhoto'] as const;
+
+export const getAdminDeletePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeletePhoto>>, TError,AdminDeletePhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeletePhoto>>, TError,AdminDeletePhotoMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeletePhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeletePhoto>>, AdminDeletePhotoMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeletePhoto(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeletePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeletePhoto>>>
+
+    export type AdminDeletePhotoMutationError = ErrorType<unknown>
+    export type AdminDeletePhotoMutationVariables = {id: string}
+
+    export const useAdminDeletePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeletePhoto>>, TError,AdminDeletePhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeletePhoto>>,
+        TError,
+        AdminDeletePhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeletePhotoMutationOptions(options));
     }
 
 export const getAdminIssueMerchantKeyUrl = (id: string,) => {

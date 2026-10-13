@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { Router, type IRouter } from "express";
+import express, { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
 import { and, desc, eq, gte, isNull, like, ne, or, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
@@ -16,6 +16,8 @@ import {
   visitsTable,
   sessionsTable,
   endorsementsTable,
+  placePhotosTable,
+  MAX_PHOTOS,
   type Place,
 } from "@workspace/db";
 import {
@@ -42,12 +44,18 @@ import {
   AdminClearVisitsBody,
   AdminDeleteInviteParams,
   AdminDeleteSearchParams,
+  AdminUploadPhotoParams,
+  AdminReorderPhotosParams,
+  AdminReorderPhotosBody,
+  AdminDeletePhotoParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
 import { requireAdmin, issueAccessKey, normalizePhone } from "../lib/auth";
 import { endorsementCounts, refreshEmbedding } from "../lib/places";
 import { issueMerchantKey } from "../lib/merchant";
+import { photosByPlace, photoUrl, sniffImage, type PhotoRef } from "../lib/photos";
+import { cleanHours } from "../lib/hours";
 import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
 import { embedMany, suggestConstellation } from "../lib/ai";
 import { placeEmbeddingText } from "../lib/search-core";
@@ -344,7 +352,12 @@ async function visitCounts(): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.placeId, r.n]));
 }
 
-const toAdminPlace = (p: Place, counts: Map<string, number>, visits: Map<string, number> = new Map()) => ({
+const toAdminPlace = (
+  p: Place,
+  counts: Map<string, number>,
+  visits: Map<string, number> = new Map(),
+  photos: Map<string, PhotoRef[]> = new Map(),
+) => ({
   id: p.id,
   constellation: p.constellation,
   name: p.name,
@@ -365,6 +378,15 @@ const toAdminPlace = (p: Place, counts: Map<string, number>, visits: Map<string,
   welcomeOffer: p.welcomeOffer,
   visitCount: visits.get(p.id) ?? 0,
   hasMerchantKey: p.merchantKeyHash !== null,
+  kind: p.kind,
+  delivers: p.delivers,
+  hours: p.hours ?? null,
+  landM2: p.landM2,
+  builtM2: p.builtM2,
+  bedrooms: p.bedrooms,
+  bathrooms: p.bathrooms,
+  parking: p.parking,
+  photos: photos.get(p.id) ?? [],
 });
 
 async function constellationById(id: string) {
@@ -382,11 +404,19 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
     contactName: blank(body.contactName),
     whatsapp: normalizePhone(body.whatsapp),
     zone: blank(body.zone),
-    // Operación y precio solo aplican a constelaciones de inmuebles.
+    // Operación y datos de la casa solo aplican a inmuebles; el precio, a todos.
     operation: isProperty ? (body.operation ?? null) : null,
-    priceLabel: isProperty ? blank(body.priceLabel) : null,
+    priceLabel: blank(body.priceLabel),
     imageUrl: blank(body.imageUrl),
     welcomeOffer: blank(body.welcomeOffer),
+    kind: body.kind,
+    delivers: body.delivers,
+    hours: isProperty ? null : cleanHours(body.hours),
+    landM2: isProperty ? (body.landM2 ?? null) : null,
+    builtM2: isProperty ? (body.builtM2 ?? null) : null,
+    bedrooms: isProperty ? (body.bedrooms ?? null) : null,
+    bathrooms: isProperty ? (body.bathrooms ?? null) : null,
+    parking: isProperty ? (body.parking ?? null) : null,
     verified: body.verified,
     active: body.active,
   };
@@ -398,7 +428,8 @@ router.get("/admin/places", async (_req, res) => {
     endorsementCounts(),
     visitCounts(),
   ]);
-  res.json(rows.map((p) => toAdminPlace(p, counts, visits)));
+  const photos = await photosByPlace(rows.map((p) => p.id));
+  res.json(rows.map((p) => toAdminPlace(p, counts, visits, photos)));
 });
 
 router.post("/admin/places", async (req, res) => {
@@ -431,7 +462,7 @@ router.put("/admin/places/:id", async (req, res) => {
     return;
   }
   refreshEmbedding(place);
-  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts()));
+  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts(), await photosByPlace([place.id])));
 });
 
 router.delete("/admin/places/:id", async (req, res) => {
@@ -560,6 +591,71 @@ router.post("/admin/constellations/:cid/remove", async (req, res) => {
 });
 
 /** La IA sugiere constelación y giro; el creador decide. */
+// ------------------------------------------------------------------ fotos
+/**
+ * Sube una foto como binario. El celular la manda ya reducida; aquí solo se
+ * valida que de verdad sea imagen y se respeta el máximo de fotos por estrella.
+ */
+router.post(
+  "/admin/places/:id/photos",
+  express.raw({ type: () => true, limit: "3mb" }),
+  async (req, res) => {
+    const { id } = AdminUploadPhotoParams.parse(req.params);
+    const buf = req.body as Buffer;
+    const mime = Buffer.isBuffer(buf) ? sniffImage(buf) : null;
+    if (!mime) {
+      res.status(400).json({ message: "Eso no parece una foto (JPG, PNG o WebP)." });
+      return;
+    }
+    const [place] = await db.select({ id: placesTable.id }).from(placesTable).where(eq(placesTable.id, id)).limit(1);
+    if (!place) {
+      res.status(404).json({ message: "Lugar no encontrado." });
+      return;
+    }
+    const [count] = await db
+      .select({ n: sql<number>`count(*)::int`, maxPos: sql<number>`coalesce(max(${placePhotosTable.position}), -1)::int` })
+      .from(placePhotosTable)
+      .where(eq(placePhotosTable.placeId, id));
+    if ((count?.n ?? 0) >= MAX_PHOTOS) {
+      res.status(400).json({ message: `Máximo ${MAX_PHOTOS} fotos por estrella. Borra una para subir otra.` });
+      return;
+    }
+    const dim = (h: unknown) => Math.max(1, Math.min(10000, Number(h) || 1));
+    const [photo] = await db
+      .insert(placePhotosTable)
+      .values({
+        placeId: id,
+        position: (count?.maxPos ?? -1) + 1,
+        mime,
+        width: dim(req.header("x-width")),
+        height: dim(req.header("x-height")),
+        data: buf,
+      })
+      .returning({ id: placePhotosTable.id, width: placePhotosTable.width, height: placePhotosTable.height });
+    res.status(201).json({ id: photo!.id, url: photoUrl(photo!.id), width: photo!.width, height: photo!.height });
+  },
+);
+
+router.put("/admin/places/:id/photos/order", async (req, res) => {
+  const { id } = AdminReorderPhotosParams.parse(req.params);
+  const { ids } = AdminReorderPhotosBody.parse(req.body);
+  await db.transaction(async (tx) => {
+    for (const [i, pid] of ids.entries()) {
+      await tx
+        .update(placePhotosTable)
+        .set({ position: i })
+        .where(and(eq(placePhotosTable.id, pid), eq(placePhotosTable.placeId, id)));
+    }
+  });
+  res.status(204).end();
+});
+
+router.delete("/admin/photos/:id", async (req, res) => {
+  const { id } = AdminDeletePhotoParams.parse(req.params);
+  await db.delete(placePhotosTable).where(eq(placePhotosTable.id, id));
+  res.status(204).end();
+});
+
 /** Link del modo comercio. Generar uno nuevo apaga el anterior en todos sus teléfonos. */
 router.post("/admin/places/:id/merchant-key", async (req, res) => {
   const { id } = AdminIssueMerchantKeyParams.parse(req.params);
@@ -600,7 +696,7 @@ router.post("/admin/demo-places", async (_req, res) => {
     demos.filter((p) => existing.has(p.whatsapp)).map((p) =>
       db
         .update(placesTable)
-        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, embedding: null, updatedAt: new Date() })
+        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, kind: p.kind, delivers: p.delivers, hours: p.hours ?? null, landM2: p.landM2 ?? null, builtM2: p.builtM2 ?? null, bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, parking: p.parking ?? null, embedding: null, updatedAt: new Date() })
         .where(eq(placesTable.whatsapp, p.whatsapp))
         .returning(),
     ),

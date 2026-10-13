@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { MerchantRecentVisit } from './merchantRecentVisit';
+import type { PlaceKind } from './placeKind';
 
 export interface MerchantMe {
   placeId: string;
@@ -16,4 +17,5 @@ export interface MerchantMe {
   totalVisits: number;
   neighbors: number;
   recent: MerchantRecentVisit[];
+  kind: PlaceKind;
 }

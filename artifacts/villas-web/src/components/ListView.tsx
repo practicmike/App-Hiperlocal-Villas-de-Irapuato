@@ -1,6 +1,7 @@
 import type { PlaceSummary } from "@workspace/api-client-react";
 import { Heart, BadgeCheck, Gift } from "lucide-react";
 import type { Constellation } from "@/lib/constellations";
+import { openState } from "@/lib/hours";
 
 /** Vista en lista: misma información, sin 3D ni gestos. Accesible por teclado y lector. */
 export function ListView({
@@ -42,16 +43,34 @@ export function ListView({
                       onClick={() => onSelect(p.id)}
                       className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-white/5"
                     >
-                      <span
-                        className="h-3 w-3 shrink-0 rounded-full"
-                        style={{
-                          background: info.color,
-                          opacity: scores ? 0.35 + (scores.get(p.id) ?? 0) * 0.65 : 1,
-                        }}
-                      />
+                      {p.coverUrl ? (
+                        <img
+                          src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}${p.coverUrl}`}
+                          alt=""
+                          loading="lazy"
+                          className="h-11 w-11 shrink-0 rounded-xl object-cover"
+                          style={{ opacity: scores ? 0.45 + (scores.get(p.id) ?? 0) * 0.55 : 1 }}
+                        />
+                      ) : (
+                        <span className="grid h-11 w-11 shrink-0 place-items-center">
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{
+                              background: info.color,
+                              opacity: scores ? 0.35 + (scores.get(p.id) ?? 0) * 0.65 : 1,
+                            }}
+                          />
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-bold">{p.name}</span>
-                        <span className="block truncate text-xs text-muted">{p.category}</span>
+                        <span className="block truncate text-xs text-muted">
+                          {p.category}
+                          {(() => {
+                            const o = openState(p.hours);
+                            return o ? <span className={o.open ? "text-confianza" : ""}> · {o.open ? "Abierto" : "Cerrado"}</span> : null;
+                          })()}
+                        </span>
                         {showPercent && reasons?.get(p.id) && (
                           <span className="block text-xs text-ai">{reasons.get(p.id)}</span>
                         )}

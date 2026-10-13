@@ -196,6 +196,14 @@ export interface MerchantRecentVisit {
   welcomeApplied: boolean;
 }
 
+export type PlaceKind = typeof PlaceKind[keyof typeof PlaceKind];
+
+
+export const PlaceKind = {
+  comercio: 'comercio',
+  oficio: 'oficio',
+} as const;
+
 export interface MerchantMe {
   placeId: string;
   placeName: string;
@@ -205,6 +213,7 @@ export interface MerchantMe {
   totalVisits: number;
   neighbors: number;
   recent: MerchantRecentVisit[];
+  kind: PlaceKind;
 }
 
 export interface MemberLookup {
@@ -236,6 +245,28 @@ export interface VisitResult {
   duplicate: boolean;
 }
 
+export interface PhotoRef {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
+export interface DayHours {
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  open: string;
+  /** @pattern ^([01][0-9]|2[0-4]):[0-5][0-9]$ */
+  close: string;
+}
+
+/**
+ * 7 días de domingo a sábado; null = cerrado ese día
+ * @minItems 7
+ * @maxItems 7
+ * @nullable
+ */
+export type WeekHours = (DayHours | null)[] | null;
+
 export interface PlaceSummary {
   id: string;
   constellation: Constellation;
@@ -246,6 +277,11 @@ export interface PlaceSummary {
   endorsementCount: number;
   /** Tiene beneficio de bienvenida */
   welcome: boolean;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /** @nullable */
+  coverUrl: string | null;
 }
 
 export interface Universe {
@@ -294,6 +330,40 @@ export interface PlaceDetail {
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  landM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  builtM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bedrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bathrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  parking: number | null;
+  photos: PhotoRef[];
 }
 
 export interface EndorseRequest {
@@ -534,6 +604,39 @@ export interface PlaceInput {
      * @nullable
      */
   welcomeOffer: string | null;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  landM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  builtM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bedrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bathrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  parking: number | null;
   verified: boolean;
   active: boolean;
 }
@@ -546,6 +649,7 @@ export type AdminPlace = PlaceInput & {
   isDemo: boolean;
   visitCount: number;
   hasMerchantKey: boolean;
+  photos: PhotoRef[];
 };
 
 export interface DemoResult {

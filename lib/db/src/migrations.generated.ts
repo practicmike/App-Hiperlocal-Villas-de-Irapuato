@@ -70,5 +70,21 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"residents\" ADD CONSTRAINT \"residents_member_code_unique\" UNIQUE(\"member_code\");",
       "ALTER TABLE \"places\" ADD CONSTRAINT \"places_merchant_key_hash_unique\" UNIQUE(\"merchant_key_hash\");"
     ]
+  },
+  {
+    "tag": "0004_fichas",
+    "statements": [
+      "CREATE TABLE \"place_photos\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"position\" integer DEFAULT 0 NOT NULL,\n\t\"mime\" text NOT NULL,\n\t\"width\" integer NOT NULL,\n\t\"height\" integer NOT NULL,\n\t\"data\" \"bytea\" NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"places\" ADD COLUMN \"kind\" text DEFAULT 'comercio' NOT NULL;",
+      "ALTER TABLE \"places\" ADD COLUMN \"delivers\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"places\" ADD COLUMN \"hours\" jsonb;",
+      "ALTER TABLE \"places\" ADD COLUMN \"land_m2\" integer;",
+      "ALTER TABLE \"places\" ADD COLUMN \"built_m2\" integer;",
+      "ALTER TABLE \"places\" ADD COLUMN \"bedrooms\" integer;",
+      "ALTER TABLE \"places\" ADD COLUMN \"bathrooms\" real;",
+      "ALTER TABLE \"places\" ADD COLUMN \"parking\" integer;",
+      "ALTER TABLE \"place_photos\" ADD CONSTRAINT \"place_photos_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE INDEX \"place_photos_place_idx\" ON \"place_photos\" USING btree (\"place_id\",\"position\");"
+    ]
   }
 ];
