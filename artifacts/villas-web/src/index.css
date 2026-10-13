@@ -115,6 +115,12 @@ body {
   100% { transform: scale(2.6); opacity: 0; }
 }
 
+.boot-pulse {
+  animation: boot 1.6s ease-in-out infinite;
+}
+@keyframes boot {
+  50% { transform: scale(1.06); filter: drop-shadow(0 0 18px #6eb5ff88); }
+}
 .gift-ring {
   animation: gift 4s linear infinite;
   transform-origin: 0 0;
@@ -124,7 +130,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gift-ring {
+  .boot-pulse {
+  animation: boot 1.6s ease-in-out infinite;
+}
+@keyframes boot {
+  50% { transform: scale(1.06); filter: drop-shadow(0 0 18px #6eb5ff88); }
+}
+.gift-ring {
     animation: none;
   }
   .star,
@@ -151,4 +163,9 @@ body {
 }
 .pt-safe {
   padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* Horario: sin el ícono de reloj cabe "6:00 p.m." en celulares de 360 px; tocar el campo abre el selector. */
+.time-field::-webkit-calendar-picker-indicator {
+  display: none;
 }

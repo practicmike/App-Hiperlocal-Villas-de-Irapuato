@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Villas · Constelación V</title>
+  <rect width="512" height="512" rx="116" fill="#0b0d1f"/>
+  <defs>
+    <radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#6eb5ff" stop-opacity=".55"/><stop offset="1" stop-color="#6eb5ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g stroke="#a6abd6" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" fill="none">
+    <path d="M118 128 L178 250 L256 392 L334 250 L394 128"/>
+  </g>
+  <circle cx="256" cy="392" r="78" fill="url(#g)"/>
+  <circle cx="118" cy="128" r="30" fill="#E6C882"/>
+  <circle cx="178" cy="250" r="24" fill="#50e3c2"/>
+  <circle cx="334" cy="250" r="24" fill="#e38fc1"/>
+  <circle cx="394" cy="128" r="30" fill="#7d80d9"/>
+  <circle cx="256" cy="392" r="40" fill="#6eb5ff"/>
+  <circle cx="256" cy="392" r="15" fill="#fff" opacity=".85"/>
+</svg>

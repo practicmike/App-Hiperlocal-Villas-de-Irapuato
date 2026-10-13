@@ -11,7 +11,8 @@ import {
   type PlaceDetail,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BadgeCheck, Gift, Heart, KeyRound, MessageCircle, Pencil, ShieldAlert, Sparkles, Star, Users, X } from "lucide-react";
+import { BadgeCheck, Bath, BedDouble, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
+import { openState, weekSummary } from "@/lib/hours";
 import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
 
 interface Match {
@@ -37,17 +38,19 @@ export function PlaceSheet({ placeId, searchId, match, constellations, creatorNa
 
   return (
     <div
-      className="sheet-enter pb-safe absolute inset-x-0 bottom-0 z-30 mx-auto max-w-lg rounded-t-3xl border-t border-white/10 bg-panel/95 px-5 pt-4 shadow-2xl backdrop-blur"
+      className="sheet-enter pb-safe absolute inset-x-0 bottom-0 z-30 mx-auto max-h-[88%] max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-panel/95 px-5 pt-4 shadow-2xl backdrop-blur md:max-w-xl"
       role="dialog"
       aria-label={place?.name ?? "Tarjeta"}
     >
+      <div className="sticky top-0 z-10 flex h-0 justify-end">
       <button
         onClick={onClose}
-        className="absolute right-3 top-3 rounded-full p-2 text-muted hover:bg-white/10"
+        className="-mr-2 h-9 w-9 rounded-full bg-panel/80 p-2 text-muted backdrop-blur hover:bg-white/10"
         aria-label="Cerrar"
       >
         <X size={20} />
       </button>
+      </div>
       {isLoading || !place ? (
         <div className="h-40 animate-pulse" />
       ) : (
@@ -105,8 +108,9 @@ function Card({
   const message = `Hola${place.contactName ? ` ${place.contactName}` : ""}, te encontré en la guía de vecinos de Villas.`;
 
   return (
-    <div className="space-y-4 pr-8">
-      <div>
+    <div className="space-y-4">
+      {place.photos.length > 0 && <Photos photos={place.photos} name={place.name} />}
+      <div className="pr-8">
         <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide" style={{ color: info.color }}>
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: info.color }} />
           {info.name} · {place.category}
@@ -127,14 +131,7 @@ function Card({
         {place.contactName && <p className="text-sm text-muted">Te atiende {place.contactName}</p>}
       </div>
 
-      {(place.priceLabel || place.zone) && (
-        <p className="text-sm">
-          {place.operation && <span className="font-bold capitalize">{place.operation} · </span>}
-          {place.priceLabel && <span className="font-bold" style={{ color: info.color }}>{place.priceLabel}</span>}
-          {place.priceLabel && place.zone && " · "}
-          {place.zone && <span className="text-muted">{place.zone}</span>}
-        </p>
-      )}
+      <Facts place={place} color={info.color} />
 
       {/* Regalo de bienvenida: la invitación a encender una estrella nueva. */}
       {place.welcomeOffer && place.myVisits === 0 && (
@@ -164,7 +161,10 @@ function Card({
         )}
         {place.neighborsServed > 0 && (
           <p className="flex items-center gap-1.5 text-confianza">
-            <Users size={16} /> {place.neighborsServed} {place.neighborsServed === 1 ? "vecino atendido" : "vecinos atendidos"} en Villas
+            <Users size={16} />
+            {place.kind === "oficio"
+              ? `${place.neighborsServed} ${place.neighborsServed === 1 ? "vecino ya lo contrató" : "vecinos ya lo contrataron"} en Villas`
+              : `${place.neighborsServed} ${place.neighborsServed === 1 ? "vecino atendido" : "vecinos atendidos"} en Villas`}
           </p>
         )}
         {recommendedBy && (
@@ -280,5 +280,72 @@ function Complaint({ placeId, creatorName }: { placeId: string; creatorName: str
         Enviar en privado
       </button>
     </form>
+  );
+}
+
+/** Fotos deslizables; la primera es la portada. */
+function Photos({ photos, name }: { photos: PlaceDetail["photos"]; name: string }) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return (
+    <div className="-mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+      {photos.map((p, i) => (
+        <img
+          key={p.id}
+          src={`${base}${p.url}`}
+          alt={i === 0 ? name : `${name}, foto ${i + 1}`}
+          loading={i === 0 ? "eager" : "lazy"}
+          width={p.width}
+          height={p.height}
+          className={`aspect-[4/3] max-h-[38vh] shrink-0 snap-center rounded-2xl bg-space-2 object-cover ${photos.length === 1 ? "w-full" : "w-[85%]"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Datos duros de un vistazo: abierto ahora, a domicilio, precio y, en casas, recámaras y m². */
+function Facts({ place, color }: { place: PlaceDetail; color: string }) {
+  const [showHours, setShowHours] = useState(false);
+  const open = openState(place.hours);
+  const chip = "inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-[13px]";
+  const house = [
+    place.bedrooms != null && { icon: <BedDouble size={15} />, text: `${place.bedrooms} rec.` },
+    place.bathrooms != null && { icon: <Bath size={15} />, text: `${place.bathrooms} baños` },
+    place.parking != null && { icon: <Car size={15} />, text: `${place.parking} autos` },
+    place.landM2 != null && { icon: <Ruler size={15} />, text: `${place.landM2} m² terreno` },
+    place.builtM2 != null && { icon: <Home size={15} />, text: `${place.builtM2} m² const.` },
+  ].filter(Boolean) as Array<{ icon: React.ReactNode; text: string }>;
+  const hasAny = open || place.delivers || place.kind === "oficio" || place.priceLabel || place.zone || place.operation || house.length;
+  if (!hasAny) return null;
+  return (
+    <div className="space-y-2">
+      {(place.priceLabel || place.operation) && (
+        <p className="text-lg font-black" style={{ color }}>
+          {place.operation && <span className="capitalize">{place.operation}</span>}
+          {place.operation && place.priceLabel && " · "}
+          {place.priceLabel}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {open && (
+          <button type="button" onClick={() => setShowHours(!showHours)} className={`${chip} ${open.open ? "text-confianza" : "text-alert"}`}>
+            <Clock size={15} /> {open.text}
+          </button>
+        )}
+        {place.kind === "oficio" && <span className={chip}><Home size={15} /> Va a tu casa</span>}
+        {place.delivers && place.kind !== "oficio" && <span className={chip}><Truck size={15} /> A domicilio</span>}
+        {house.map((h) => (
+          <span key={h.text} className={chip}>{h.icon} {h.text}</span>
+        ))}
+        {place.zone && <span className={`${chip} text-muted`}>{place.zone}</span>}
+      </div>
+      {showHours && (
+        <ul className="rounded-2xl bg-space-2/60 px-4 py-3 text-sm">
+          {weekSummary(place.hours).map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

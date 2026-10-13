@@ -719,6 +719,51 @@ paths:
       responses:
         "204":
           description: Eliminada
+  /admin/places/{id}/photos:
+    post:
+      operationId: adminUploadPhoto
+      tags: [admin]
+      summary: Sube una foto (ya redimensionada en el celular) como binario
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Foto guardada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoRef"
+  /admin/places/{id}/photos/order:
+    put:
+      operationId: adminReorderPhotos
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "204":
+          description: Orden guardado (la primera es la portada)
+  /admin/photos/{id}:
+    delete:
+      operationId: adminDeletePhoto
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Borrada
   /admin/places/{id}/merchant-key:
     post:
       operationId: adminIssueMerchantKey
@@ -1098,7 +1143,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MerchantRecentVisit"
-      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent]
+        kind:
+          $ref: "#/components/schemas/PlaceKind"
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind]
     MerchantRecentVisit:
       type: object
       properties:
@@ -1146,6 +1193,40 @@ components:
         duplicate:
           type: boolean
       required: [firstName, visitsHere, welcomeApplied, welcomeOffer, duplicate]
+    PhotoRef:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+      required: [id, url, width, height]
+    DayHours:
+      type: object
+      properties:
+        open:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        close:
+          type: string
+          pattern: "^([01][0-9]|2[0-4]):[0-5][0-9]$"
+      required: [open, close]
+    WeekHours:
+      type: [array, "null"]
+      description: 7 días de domingo a sábado; null = cerrado ese día
+      minItems: 7
+      maxItems: 7
+      items:
+        anyOf:
+          - $ref: "#/components/schemas/DayHours"
+          - type: "null"
+    PlaceKind:
+      type: string
+      enum: [comercio, oficio]
     PlaceSummary:
       type: object
       properties:
@@ -1166,7 +1247,15 @@ components:
         welcome:
           type: boolean
           description: Tiene beneficio de bienvenida
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome]
+        kind:
+          $ref: "#/components/schemas/PlaceKind"
+        delivers:
+          type: boolean
+        hours:
+          $ref: "#/components/schemas/WeekHours"
+        coverUrl:
+          type: [string, "null"]
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl]
     Universe:
       type: object
       properties:
@@ -1228,7 +1317,47 @@ components:
           description: Vecinos distintos con visita registrada
         myVisits:
           type: integer
+        kind:
+          $ref: "#/components/schemas/PlaceKind"
+        delivers:
+          type: boolean
+        hours:
+          $ref: "#/components/schemas/WeekHours"
+        landM2:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100000
+        builtM2:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100000
+        bedrooms:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 50
+        bathrooms:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 50
+        parking:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 50
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhotoRef"
       required:
+        - photos
+        - kind
+        - delivers
+        - hours
+        - landM2
+        - builtM2
+        - bedrooms
+        - bathrooms
+        - parking
+
         - welcomeOffer
         - neighborsServed
         - myVisits
@@ -1497,6 +1626,32 @@ components:
         welcomeOffer:
           type: [string, "null"]
           maxLength: 80
+        kind:
+          $ref: "#/components/schemas/PlaceKind"
+        delivers:
+          type: boolean
+        hours:
+          $ref: "#/components/schemas/WeekHours"
+        landM2:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100000
+        builtM2:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100000
+        bedrooms:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 50
+        bathrooms:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 50
+        parking:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 50
         verified:
           type: boolean
         active:
@@ -1513,6 +1668,14 @@ components:
         - priceLabel
         - imageUrl
         - welcomeOffer
+        - kind
+        - delivers
+        - hours
+        - landM2
+        - builtM2
+        - bedrooms
+        - bathrooms
+        - parking
         - verified
         - active
     AdminPlace:
@@ -1534,7 +1697,11 @@ components:
               type: integer
             hasMerchantKey:
               type: boolean
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey]
+            photos:
+              type: array
+              items:
+                $ref: "#/components/schemas/PhotoRef"
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos]
     DemoResult:
       type: object
       properties:

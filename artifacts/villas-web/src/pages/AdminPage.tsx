@@ -33,6 +33,9 @@ import {
   useAdminClearVisits,
   useAdminDeleteInvite,
   useAdminDeleteSearch,
+  useAdminDeletePhoto,
+  useAdminReorderPhotos,
+  getGetPlaceQueryKey,
   useAdminClearSearches,
   getAdminListVisitsQueryKey,
   getGetMySkyQueryKey,
@@ -392,6 +395,14 @@ const EMPTY: PlaceInput = {
   priceLabel: null,
   imageUrl: null,
   welcomeOffer: null,
+  kind: "comercio",
+  delivers: false,
+  hours: null,
+  landM2: null,
+  builtM2: null,
+  bedrooms: null,
+  bathrooms: null,
+  parking: null,
   verified: true,
   active: true,
 };
@@ -414,10 +425,22 @@ function Places({ editId }: { editId: string | null }) {
   const [filter, setFilter] = useState("");
   const done = () => {
     setEditing(null);
+    setJustCreated(false);
     void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
     void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
   };
-  const create = useAdminCreatePlace({ mutation: { onSuccess: done } });
+  const [justCreated, setJustCreated] = useState(false);
+  const create = useAdminCreatePlace({
+    mutation: {
+      // Se queda abierta para poder subir fotos a la estrella recién creada.
+      onSuccess: (p) => {
+        setEditing({ id: p.id, form: toInput(p) });
+        setJustCreated(true);
+        void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+        void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
+      },
+    },
+  });
   const update = useAdminUpdatePlace({ mutation: { onSuccess: done } });
   const remove = useAdminDeletePlace({ mutation: { onSuccess: done } });
   const error = create.error ?? update.error ?? remove.error;
@@ -487,8 +510,14 @@ function Places({ editId }: { editId: string | null }) {
             Lo paga el comercio a cambio de un cliente nuevo. Se aplica solo la primera vez que escanea a cada vecino. Vacío = sin regalo.
           </span>
         </label>
-        {current?.isProperty && (
-          <div className="grid grid-cols-2 gap-3">
+        <AdminField
+          label={current?.isProperty ? "Precio" : "Precio o rango (opcional)"}
+          placeholder={current?.isProperty ? "$3.2 M · $14,500 / mes" : "Desde $95 · $28 el kilo · Visita $300"}
+          maxLength={60}
+          {...opt("priceLabel")}
+        />
+        {current?.isProperty ? (
+          <>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-muted">Operación</span>
               <select
@@ -501,8 +530,43 @@ function Places({ editId }: { editId: string | null }) {
                 <option value="renta">Renta</option>
               </select>
             </label>
-            <AdminField label="Precio" placeholder="$3.2 M" maxLength={60} {...opt("priceLabel")} />
-          </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              <NumField label="Recámaras" value={f.bedrooms} onChange={(v) => set("bedrooms", v)} />
+              <NumField label="Baños" step={0.5} value={f.bathrooms} onChange={(v) => set("bathrooms", v)} />
+              <NumField label="Autos" value={f.parking} onChange={(v) => set("parking", v)} />
+              <NumField label="m² terreno" value={f.landM2} onChange={(v) => set("landM2", v)} />
+              <NumField label="m² const." value={f.builtM2} onChange={(v) => set("builtM2", v)} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span className="mb-1 block text-xs font-bold text-muted">¿Cómo atiende?</span>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ["comercio", "Comercio", "El vecino va"],
+                  ["oficio", "Oficio", "Va a casa del vecino"],
+                ] as const).map(([k, t, sub]) => (
+                  <button
+                    type="button"
+                    key={k}
+                    onClick={() => set("kind", k)}
+                    className={`rounded-xl border px-3 py-2 text-left text-sm ${f.kind === k ? "border-primary bg-primary/10" : "border-white/15"}`}
+                  >
+                    <span className="block font-bold">{t}</span>
+                    <span className="block text-xs text-muted">{sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {f.kind === "comercio" && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="accent-[#7d80d9]" checked={f.delivers} onChange={(e) => set("delivers", e.target.checked)} />
+                También entrega a domicilio
+              </label>
+            )}
+            <HoursEditor value={f.hours} onChange={(h) => set("hours", h)} />
+          </>
         )}
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
@@ -514,14 +578,19 @@ function Places({ editId }: { editId: string | null }) {
             Visible en el universo
           </label>
         </div>
+        {editing.id ? (
+          <PhotoManager placeId={editing.id} highlight={justCreated} />
+        ) : (
+          <p className="rounded-xl bg-space-2/60 p-3 text-xs text-muted">Las fotos se agregan después de guardar la estrella.</p>
+        )}
         {editing.id && <MerchantKeyBox placeId={editing.id} placeName={f.name} whatsapp={f.whatsapp} hasKey={!!places?.find((x) => x.id === editing.id)?.hasMerchantKey} />}
         {error && <p className="text-sm text-alert">Revisa los datos: {(error as Error).message}</p>}
         <div className="flex gap-2 pt-2">
           <button disabled={create.isPending || update.isPending} className="rounded-xl bg-primary px-5 py-2.5 font-bold text-space">
             Guardar
           </button>
-          <button type="button" onClick={() => setEditing(null)} className="px-4 text-muted">
-            Cancelar
+          <button type="button" onClick={() => (setEditing(null), setJustCreated(false))} className="px-4 text-muted">
+            {justCreated ? "Listo" : "Cancelar"}
           </button>
           {editing.id && (
             <button
@@ -583,6 +652,14 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,
   welcomeOffer: p.welcomeOffer,
+  kind: p.kind,
+  delivers: p.delivers,
+  hours: p.hours,
+  landM2: p.landM2,
+  builtM2: p.builtM2,
+  bedrooms: p.bedrooms,
+  bathrooms: p.bathrooms,
+  parking: p.parking,
   verified: p.verified,
   active: p.active,
 });
@@ -1219,6 +1296,196 @@ function Visits() {
         </button>
         {msg && <p className="mt-2 text-xs">{msg}</p>}
       </div>
+    </div>
+  );
+}
+
+function NumField({ label, value, onChange, step = 1 }: { label: string; value: number | null; onChange: (v: number | null) => void; step?: number }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-bold text-muted">{label}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        min={0}
+        step={step}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+        className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-primary"
+      />
+    </label>
+  );
+}
+
+const DAYS_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+/** Horario por día (lunes primero). Con él la tarjeta dice "Abierto · cierra 13:00". */
+function HoursEditor({ value, onChange }: { value: PlaceInput["hours"]; onChange: (h: PlaceInput["hours"]) => void }) {
+  const week = value ?? [null, null, null, null, null, null, null];
+  const setDay = (d: number, v: { open: string; close: string } | null) => {
+    const next = [...week];
+    next[d] = v;
+    onChange(next.some(Boolean) ? next : null);
+  };
+  const copyMonday = () => {
+    const mon = week[1];
+    if (!mon) return;
+    onChange(week.map((d, i) => (i >= 1 && i <= 5 ? { ...mon } : d)));
+  };
+  // Ancho flexible: en celulares con reloj de 12 h el campo muestra "6:00 p.m." completo.
+  const time = "time-field min-w-0 flex-1 rounded-lg border border-white/15 bg-space-2 px-1.5 py-1.5 text-sm";
+  return (
+    <div className="rounded-2xl border border-white/10 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-bold text-muted">Horario (opcional)</span>
+        {week[1] && (
+          <button type="button" onClick={copyMonday} className="text-xs font-bold text-primary">
+            Copiar lunes a toda la semana
+          </button>
+        )}
+      </div>
+      <ul className="space-y-1.5">
+        {DAYS_ORDER.map((d) => {
+          const h = week[d];
+          return (
+            <li key={d} className="flex items-center gap-2 text-sm">
+              <label className="flex w-16 shrink-0 items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="accent-[#7d80d9]"
+                  checked={!!h}
+                  onChange={(e) => setDay(d, e.target.checked ? { open: "09:00", close: "18:00" } : null)}
+                />
+                {DAY_NAMES[d]}
+              </label>
+              {h ? (
+                <>
+                  <input type="time" className={time} value={h.open} onChange={(e) => setDay(d, { ...h, open: e.target.value })} />
+                  <span className="text-muted">a</span>
+                  <input type="time" className={time} value={h.close === "24:00" ? "00:00" : h.close} onChange={(e) => setDay(d, { ...h, close: e.target.value })} />
+                </>
+              ) : (
+                <span className="text-xs text-muted">Cerrado</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-[11px] text-muted">Si cierra después de medianoche, pon la hora de cierre del día siguiente (ej. 19:00 a 02:00).</p>
+    </div>
+  );
+}
+
+/** Reduce la foto en el propio celular: máx. 1600 px, WebP (o JPG si el navegador no sabe WebP). */
+async function shrinkPhoto(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+  const bitmap = await createImageBitmap(file).catch(async () => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await img.decode();
+    return img;
+  });
+  const w0 = "width" in bitmap ? bitmap.width : 0;
+  const h0 = "height" in bitmap ? bitmap.height : 0;
+  const scale = Math.min(1, 1600 / Math.max(w0, h0));
+  const width = Math.round(w0 * scale);
+  const height = Math.round(h0 * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")!.drawImage(bitmap as CanvasImageSource, 0, 0, width, height);
+  const toBlob = (type: string, q: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, q));
+  let blob = await toBlob("image/webp", 0.82);
+  if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg", 0.85);
+  if (!blob) throw new Error("No pude procesar la foto.");
+  return { blob, width, height };
+}
+
+function PhotoManager({ placeId, highlight }: { placeId: string; highlight: boolean }) {
+  const qc = useQueryClient();
+  const { data: places } = useAdminListPlaces();
+  const photos = places?.find((p) => p.id === placeId)?.photos ?? [];
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+    void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
+    void qc.invalidateQueries({ queryKey: getGetPlaceQueryKey(placeId) });
+  };
+  const del = useAdminDeletePhoto({ mutation: { onSuccess: refresh } });
+  const reorder = useAdminReorderPhotos({ mutation: { onSuccess: refresh } });
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setErr(null);
+    const room = 5 - photos.length;
+    const list = Array.from(files).slice(0, room);
+    try {
+      for (const [i, file] of list.entries()) {
+        setBusy(`Subiendo ${i + 1} de ${list.length}…`);
+        const { blob, width, height } = await shrinkPhoto(file);
+        const res = await fetch(`${base}/api/admin/places/${placeId}/photos`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": blob.type, "x-width": String(width), "x-height": String(height) },
+          body: blob,
+        });
+        if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { message?: string } | null)?.message ?? "No se pudo subir.");
+      }
+      if (files.length > room) setErr(`Solo caben 5 fotos; subí ${list.length}.`);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+      refresh();
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border p-3 ${highlight ? "border-primary bg-primary/5" : "border-white/10"}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-bold text-muted">Fotos ({photos.length}/5) · la primera es la portada</span>
+      </div>
+      {highlight && photos.length === 0 && <p className="mb-2 text-sm">Guardada. Ahora agrega fotos: con foto, la gente confía más y contacta más.</p>}
+      <div className="flex flex-wrap gap-2">
+        {photos.map((ph, i) => (
+          <div key={ph.id} className="relative">
+            <img src={`${base}${ph.url}`} alt="" className={`h-20 w-20 rounded-xl object-cover ${i === 0 ? "ring-2 ring-primary" : ""}`} />
+            <button
+              type="button"
+              aria-label="Borrar foto"
+              onClick={() => confirm("¿Borrar esta foto?") && del.mutate({ id: ph.id })}
+              className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-space text-xs text-alert shadow"
+            >
+              ✕
+            </button>
+            {i > 0 && (
+              <button
+                type="button"
+                onClick={() => reorder.mutate({ id: placeId, data: { ids: [ph.id, ...photos.filter((x) => x.id !== ph.id).map((x) => x.id)] } })}
+                className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/60 py-0.5 text-[10px] font-bold"
+              >
+                Portada
+              </button>
+            )}
+          </div>
+        ))}
+        {photos.length < 5 && (
+          <button
+            type="button"
+            disabled={!!busy}
+            onClick={() => input.current?.click()}
+            className="grid h-20 w-20 place-items-center rounded-xl border border-dashed border-white/30 text-center text-xs text-muted"
+          >
+            {busy ?? "+ Foto"}
+          </button>
+        )}
+      </div>
+      <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => void upload(e.target.files)} />
+      {err && <p className="mt-2 text-xs text-alert">{err}</p>}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import { Camera, Check, Gift, Store, Star } from "lucide-react";
 import { Shell, errorMessage } from "@/pages/AccessPages";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString("es-MX", { weekday: "short", hour: "2-digit", minute: "2-digit" });
@@ -76,9 +77,12 @@ export function MerchantHomePage() {
 
       <div className="mb-4 rounded-3xl border border-confianza/40 bg-panel p-5">
         <Camera className="mb-2 text-confianza" size={28} />
-        <p className="text-lg font-black">Escanea la credencial del vecino</p>
+        <p className="text-lg font-black">
+          {m.kind === "oficio" ? "Al terminar una chamba, escanea al vecino" : "Escanea la credencial del vecino"}
+        </p>
         <p className="mt-1 text-sm text-ink/80">
-          Abre la cámara normal de tu celular y apunta al código QR que te enseña el vecino. Toca el link que aparece y confirma la visita.
+          Abre la cámara normal de tu celular y apunta al código QR que te enseña el vecino. Toca el link que aparece y confirma
+          {m.kind === "oficio" ? " la chamba. Cada chamba registrada suma a tu historial en Villas." : " la visita."}
         </p>
         <form
           className="mt-4 flex gap-2"
@@ -110,13 +114,13 @@ export function MerchantHomePage() {
 
       <div className="mb-4 grid grid-cols-3 gap-2 text-center">
         <Stat label="Hoy" value={m.todayVisits} />
-        <Stat label="Visitas" value={m.totalVisits} />
+        <Stat label={m.kind === "oficio" ? "Chambas" : "Visitas"} value={m.totalVisits} />
         <Stat label="Vecinos" value={m.neighbors} />
       </div>
 
       {m.recent.length > 0 && (
         <div className="rounded-2xl bg-panel/70 p-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Últimas visitas</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{m.kind === "oficio" ? "Últimas chambas" : "Últimas visitas"}</p>
           <ul className="space-y-1.5 text-sm">
             {m.recent.map((v, i) => (
               <li key={i} className="flex justify-between gap-2">
@@ -130,9 +134,9 @@ export function MerchantHomePage() {
           </ul>
         </div>
       )}
-      <p className="mt-6 text-center text-xs text-muted">
-        Tip: agrega esta página a la pantalla de inicio de tu celular para abrirla rápido.
-      </p>
+      <div className="mt-6">
+        <InstallPrompt reason="Abre el modo comercio a un toque desde la caja." />
+      </div>
     </Shell>
   );
 }
@@ -182,10 +186,11 @@ export function MemberPassPage({ code }: { code: string }) {
       </Shell>
     );
   }
-  return <ConfirmVisit code={code} placeName={merchant.data.placeName} />;
+  return <ConfirmVisit code={code} placeName={merchant.data.placeName} chamba={merchant.data.kind === "oficio"} />;
 }
 
-function ConfirmVisit({ code, placeName }: { code: string; placeName: string }) {
+function ConfirmVisit({ code, placeName, chamba }: { code: string; placeName: string; chamba: boolean }) {
+  const noun = chamba ? "chamba" : "visita";
   const qc = useQueryClient();
   const lookup = useMerchantLookupMember(code, {
     query: { queryKey: getMerchantLookupMemberQueryKey(code), retry: false, staleTime: 0 },
@@ -210,14 +215,19 @@ function ConfirmVisit({ code, placeName }: { code: string; placeName: string }) 
           {done.duplicate ? (
             <>
               <h1 className="mb-2 text-2xl font-black">Ya estaba registrada</h1>
-              <p className="mb-6 text-ink/80">La visita de {done.firstName} ya se contó hace poco. No se suma dos veces.</p>
+              <p className="mb-6 text-ink/80">La {noun} de {done.firstName} ya se contó hace poco. No se suma dos veces.</p>
             </>
           ) : (
             <>
               <h1 className="mb-2 text-2xl font-black">Estrella encendida para {done.firstName}</h1>
               <p className="mb-4 text-ink/80">
-                {done.visitsHere === 1 ? "Es su primera visita a " : `Lleva ${done.visitsHere} visitas en `}
-                {placeName}.
+                {chamba
+                  ? done.visitsHere === 1
+                    ? "Es la primera chamba que te registra."
+                    : `Lleva ${done.visitsHere} chambas contigo.`
+                  : done.visitsHere === 1
+                    ? `Es su primera visita a ${placeName}.`
+                    : `Lleva ${done.visitsHere} visitas en ${placeName}.`}
               </p>
               {done.welcomeApplied && done.welcomeOffer && (
                 <p className="mb-6 flex items-center justify-center gap-2 rounded-2xl bg-[#E6C882]/15 p-4 text-lg font-black text-[#E6C882]">
@@ -253,7 +263,13 @@ function ConfirmVisit({ code, placeName }: { code: string; placeName: string }) 
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-confianza">{placeName}</p>
       <h1 className="mb-1 text-3xl font-black">{m.firstName}</h1>
       <p className="mb-5 text-ink/80">
-        {m.visitsHere === 0 ? "Primera visita a tu comercio." : `Ha venido ${m.visitsHere} ${m.visitsHere === 1 ? "vez" : "veces"}.`}
+        {chamba
+          ? m.visitsHere === 0
+            ? "Primera chamba con este vecino."
+            : `Ya le has hecho ${m.visitsHere} ${m.visitsHere === 1 ? "chamba" : "chambas"}.`
+          : m.visitsHere === 0
+            ? "Primera visita a tu comercio."
+            : `Ha venido ${m.visitsHere} ${m.visitsHere === 1 ? "vez" : "veces"}.`}
       </p>
       {m.welcomeOffer && (
         <p className="mb-5 flex items-center gap-2 rounded-2xl bg-[#E6C882]/15 p-4 font-black text-[#E6C882]">
@@ -262,7 +278,7 @@ function ConfirmVisit({ code, placeName }: { code: string; placeName: string }) 
       )}
       {m.recentlyRecorded && (
         <p className="mb-5 rounded-2xl bg-panel p-3 text-sm text-muted">
-          Ya registraste una visita de {m.firstName} hace menos de 2 horas; no se sumará otra.
+          Ya registraste una {noun} de {m.firstName} hace menos de 2 horas; no se sumará otra.
         </p>
       )}
       {record.isError && <p className="mb-3 text-sm text-alert">{errorMessage(record.error, "No se pudo registrar. Inténtalo de nuevo.")}</p>}
@@ -271,7 +287,7 @@ function ConfirmVisit({ code, placeName }: { code: string; placeName: string }) 
         disabled={record.isPending}
         className="w-full rounded-2xl bg-confianza py-4 text-lg font-black text-space active:scale-[0.98] disabled:opacity-60"
       >
-        {record.isPending ? "Registrando…" : "Confirmar visita"}
+        {record.isPending ? "Registrando…" : chamba ? "Registrar chamba" : "Confirmar visita"}
       </button>
       <Link href="/comercio" className="mt-4 block text-center text-sm text-muted">
         Cancelar

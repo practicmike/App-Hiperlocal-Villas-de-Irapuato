@@ -8,6 +8,8 @@ import {
   timestamp,
   unique,
   index,
+  real,
+  customType,
 } from "drizzle-orm/pg-core";
 import { residentsTable } from "./residents";
 
@@ -28,6 +30,21 @@ export const constellationsTable = pgTable("constellations", {
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Imagen en la base: a la escala de Villas (cientos de fotos) evita depender de otro servicio. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+/** Horario de un día; close menor que open = cierra pasada la medianoche. */
+export interface DayHours {
+  open: string;
+  close: string;
+}
+/** 7 días, de domingo (0) a sábado (6); null = cerrado ese día. */
+export type WeekHours = Array<DayHours | null>;
 
 /** Máximo recomendado: más de 6 alrededor de "Tú" se enciman en un celular. */
 export const MAX_CONSTELLATIONS = 6;
@@ -56,6 +73,18 @@ export const placesTable = pgTable(
     operation: text("operation", { enum: ["venta", "renta"] }),
     priceLabel: text("price_label"),
     imageUrl: text("image_url"),
+    /** comercio = el vecino va; oficio = la persona va a tu casa (plomero, maestra). */
+    kind: text("kind", { enum: ["comercio", "oficio"] }).notNull().default("comercio"),
+    /** Entrega o atiende a domicilio. */
+    delivers: boolean("delivers").notNull().default(false),
+    /** null = sin horario capturado. */
+    hours: jsonb("hours").$type<WeekHours | null>(),
+    // Solo inmuebles.
+    landM2: integer("land_m2"),
+    builtM2: integer("built_m2"),
+    bedrooms: integer("bedrooms"),
+    bathrooms: real("bathrooms"),
+    parking: integer("parking"),
     /** El creador lo conoce y lo verificó en persona. */
     verified: boolean("verified").notNull().default(true),
     active: boolean("active").notNull().default(true),
@@ -120,6 +149,25 @@ export const visitsTable = pgTable(
     index("visits_place_idx").on(t.placeId, t.createdAt),
   ],
 );
+
+/** Fotos de una estrella; la primera (position menor) es la portada. */
+export const placePhotosTable = pgTable(
+  "place_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    mime: text("mime").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("place_photos_place_idx").on(t.placeId, t.position)],
+);
+export const MAX_PHOTOS = 5;
 
 /** Teléfonos del comercio con el modo comercio abierto (solo el hash). */
 export const merchantSessionsTable = pgTable(

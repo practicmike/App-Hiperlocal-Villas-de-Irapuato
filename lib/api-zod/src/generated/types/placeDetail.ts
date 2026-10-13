@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { Constellation } from './constellation';
+import type { PhotoRef } from './photoRef';
 import type { PlaceDetailOperation } from './placeDetailOperation';
+import type { PlaceKind } from './placeKind';
+import type { WeekHours } from './weekHours';
 
 export interface PlaceDetail {
   id: string;
@@ -38,4 +41,38 @@ export interface PlaceDetail {
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  landM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  builtM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bedrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bathrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  parking: number | null;
+  photos: PhotoRef[];
 }

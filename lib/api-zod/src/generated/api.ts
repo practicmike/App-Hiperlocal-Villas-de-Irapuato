@@ -172,7 +172,8 @@ export const MerchantLoginResponse = zod.object({
   "firstName": zod.string(),
   "at": zod.coerce.date(),
   "welcomeApplied": zod.boolean()
-}))
+})),
+  "kind": zod.enum(['comercio', 'oficio'])
 })
 
 
@@ -190,7 +191,8 @@ export const GetMerchantMeResponse = zod.object({
   "firstName": zod.string(),
   "at": zod.coerce.date(),
   "welcomeApplied": zod.boolean()
-}))
+})),
+  "kind": zod.enum(['comercio', 'oficio'])
 })
 
 
@@ -227,6 +229,13 @@ export const MerchantRecordVisitResponse = zod.object({
 /**
  * @summary Todas las estrellas activas
  */
+export const getUniverseResponsePlacesItemHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const getUniverseResponsePlacesItemHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const getUniverseResponsePlacesItemHoursMin = 7;
+export const getUniverseResponsePlacesItemHoursMax = 7;
+
+
+
 export const GetUniverseResponse = zod.object({
   "constellations": zod.array(zod.object({
   "id": zod.string(),
@@ -244,7 +253,14 @@ export const GetUniverseResponse = zod.object({
   "verified": zod.boolean(),
   "sponsored": zod.boolean(),
   "endorsementCount": zod.number().int(),
-  "welcome": zod.boolean().describe('Tiene beneficio de bienvenida')
+  "welcome": zod.boolean().describe('Tiene beneficio de bienvenida'),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(getUniverseResponsePlacesItemHoursItemOneOpenRegExp),
+  "close": zod.string().regex(getUniverseResponsePlacesItemHoursItemOneCloseRegExp)
+}),zod.null()])).min(getUniverseResponsePlacesItemHoursMin).max(getUniverseResponsePlacesItemHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "coverUrl": zod.string().nullable()
 }))
 })
 
@@ -252,6 +268,28 @@ export const GetUniverseResponse = zod.object({
 export const GetPlaceParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
+
+export const getPlaceResponseHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const getPlaceResponseHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const getPlaceResponseHoursMin = 7;
+export const getPlaceResponseHoursMax = 7;
+
+export const getPlaceResponseLandM2Min = 0;
+export const getPlaceResponseLandM2Max = 100000;
+
+export const getPlaceResponseBuiltM2Min = 0;
+export const getPlaceResponseBuiltM2Max = 100000;
+
+export const getPlaceResponseBedroomsMin = 0;
+export const getPlaceResponseBedroomsMax = 50;
+
+export const getPlaceResponseBathroomsMin = 0;
+export const getPlaceResponseBathroomsMax = 50;
+
+export const getPlaceResponseParkingMin = 0;
+export const getPlaceResponseParkingMax = 50;
+
+
 
 export const GetPlaceResponse = zod.object({
   "id": zod.string(),
@@ -273,7 +311,24 @@ export const GetPlaceResponse = zod.object({
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
-  "myVisits": zod.number().int()
+  "myVisits": zod.number().int(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(getPlaceResponseHoursItemOneOpenRegExp),
+  "close": zod.string().regex(getPlaceResponseHoursItemOneCloseRegExp)
+}),zod.null()])).min(getPlaceResponseHoursMin).max(getPlaceResponseHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(getPlaceResponseLandM2Min).max(getPlaceResponseLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(getPlaceResponseBuiltM2Min).max(getPlaceResponseBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(getPlaceResponseBedroomsMin).max(getPlaceResponseBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(getPlaceResponseBathroomsMin).max(getPlaceResponseBathroomsMax).nullable(),
+  "parking": zod.number().int().min(getPlaceResponseParkingMin).max(getPlaceResponseParkingMax).nullable(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 })
 
 
@@ -287,6 +342,28 @@ export const EndorsePlaceParams = zod.object({
 export const EndorsePlaceBody = zod.object({
   "showName": zod.boolean()
 })
+
+export const endorsePlaceResponseHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const endorsePlaceResponseHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const endorsePlaceResponseHoursMin = 7;
+export const endorsePlaceResponseHoursMax = 7;
+
+export const endorsePlaceResponseLandM2Min = 0;
+export const endorsePlaceResponseLandM2Max = 100000;
+
+export const endorsePlaceResponseBuiltM2Min = 0;
+export const endorsePlaceResponseBuiltM2Max = 100000;
+
+export const endorsePlaceResponseBedroomsMin = 0;
+export const endorsePlaceResponseBedroomsMax = 50;
+
+export const endorsePlaceResponseBathroomsMin = 0;
+export const endorsePlaceResponseBathroomsMax = 50;
+
+export const endorsePlaceResponseParkingMin = 0;
+export const endorsePlaceResponseParkingMax = 50;
+
+
 
 export const EndorsePlaceResponse = zod.object({
   "id": zod.string(),
@@ -308,13 +385,52 @@ export const EndorsePlaceResponse = zod.object({
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
-  "myVisits": zod.number().int()
+  "myVisits": zod.number().int(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(endorsePlaceResponseHoursItemOneOpenRegExp),
+  "close": zod.string().regex(endorsePlaceResponseHoursItemOneCloseRegExp)
+}),zod.null()])).min(endorsePlaceResponseHoursMin).max(endorsePlaceResponseHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(endorsePlaceResponseLandM2Min).max(endorsePlaceResponseLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(endorsePlaceResponseBuiltM2Min).max(endorsePlaceResponseBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(endorsePlaceResponseBedroomsMin).max(endorsePlaceResponseBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(endorsePlaceResponseBathroomsMin).max(endorsePlaceResponseBathroomsMax).nullable(),
+  "parking": zod.number().int().min(endorsePlaceResponseParkingMin).max(endorsePlaceResponseParkingMax).nullable(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 })
 
 
 export const RemoveEndorsementParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
+
+export const removeEndorsementResponseHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const removeEndorsementResponseHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const removeEndorsementResponseHoursMin = 7;
+export const removeEndorsementResponseHoursMax = 7;
+
+export const removeEndorsementResponseLandM2Min = 0;
+export const removeEndorsementResponseLandM2Max = 100000;
+
+export const removeEndorsementResponseBuiltM2Min = 0;
+export const removeEndorsementResponseBuiltM2Max = 100000;
+
+export const removeEndorsementResponseBedroomsMin = 0;
+export const removeEndorsementResponseBedroomsMax = 50;
+
+export const removeEndorsementResponseBathroomsMin = 0;
+export const removeEndorsementResponseBathroomsMax = 50;
+
+export const removeEndorsementResponseParkingMin = 0;
+export const removeEndorsementResponseParkingMax = 50;
+
+
 
 export const RemoveEndorsementResponse = zod.object({
   "id": zod.string(),
@@ -336,7 +452,24 @@ export const RemoveEndorsementResponse = zod.object({
   "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
   "welcomeOffer": zod.string().nullable(),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
-  "myVisits": zod.number().int()
+  "myVisits": zod.number().int(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(removeEndorsementResponseHoursItemOneOpenRegExp),
+  "close": zod.string().regex(removeEndorsementResponseHoursItemOneCloseRegExp)
+}),zod.null()])).min(removeEndorsementResponseHoursMin).max(removeEndorsementResponseHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(removeEndorsementResponseLandM2Min).max(removeEndorsementResponseLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(removeEndorsementResponseBuiltM2Min).max(removeEndorsementResponseBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(removeEndorsementResponseBedroomsMin).max(removeEndorsementResponseBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(removeEndorsementResponseBathroomsMin).max(removeEndorsementResponseBathroomsMax).nullable(),
+  "parking": zod.number().int().min(removeEndorsementResponseParkingMin).max(removeEndorsementResponseParkingMax).nullable(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 })
 
 
@@ -586,6 +719,26 @@ export const adminListPlacesResponseOneImageUrlMax = 500;
 
 export const adminListPlacesResponseOneWelcomeOfferMax = 80;
 
+export const adminListPlacesResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const adminListPlacesResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const adminListPlacesResponseOneHoursMin = 7;
+export const adminListPlacesResponseOneHoursMax = 7;
+
+export const adminListPlacesResponseOneLandM2Min = 0;
+export const adminListPlacesResponseOneLandM2Max = 100000;
+
+export const adminListPlacesResponseOneBuiltM2Min = 0;
+export const adminListPlacesResponseOneBuiltM2Max = 100000;
+
+export const adminListPlacesResponseOneBedroomsMin = 0;
+export const adminListPlacesResponseOneBedroomsMax = 50;
+
+export const adminListPlacesResponseOneBathroomsMin = 0;
+export const adminListPlacesResponseOneBathroomsMax = 50;
+
+export const adminListPlacesResponseOneParkingMin = 0;
+export const adminListPlacesResponseOneParkingMax = 50;
+
 
 
 export const AdminListPlacesResponseItem = zod.object({
@@ -600,6 +753,17 @@ export const AdminListPlacesResponseItem = zod.object({
   "priceLabel": zod.string().max(adminListPlacesResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminListPlacesResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminListPlacesResponseOneWelcomeOfferMax).nullable(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(adminListPlacesResponseOneHoursItemOneOpenRegExp),
+  "close": zod.string().regex(adminListPlacesResponseOneHoursItemOneCloseRegExp)
+}),zod.null()])).min(adminListPlacesResponseOneHoursMin).max(adminListPlacesResponseOneHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(adminListPlacesResponseOneLandM2Min).max(adminListPlacesResponseOneLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(adminListPlacesResponseOneBuiltM2Min).max(adminListPlacesResponseOneBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(adminListPlacesResponseOneBedroomsMin).max(adminListPlacesResponseOneBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(adminListPlacesResponseOneBathroomsMin).max(adminListPlacesResponseOneBathroomsMax).nullable(),
+  "parking": zod.number().int().min(adminListPlacesResponseOneParkingMin).max(adminListPlacesResponseOneParkingMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -609,7 +773,13 @@ export const AdminListPlacesResponseItem = zod.object({
   "hasEmbedding": zod.boolean(),
   "isDemo": zod.boolean(),
   "visitCount": zod.number().int(),
-  "hasMerchantKey": zod.boolean()
+  "hasMerchantKey": zod.boolean(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 }))
 export const AdminListPlacesResponse = zod.array(AdminListPlacesResponseItem)
 
@@ -635,6 +805,26 @@ export const adminCreatePlaceBodyImageUrlMax = 500;
 
 export const adminCreatePlaceBodyWelcomeOfferMax = 80;
 
+export const adminCreatePlaceBodyHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const adminCreatePlaceBodyHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const adminCreatePlaceBodyHoursMin = 7;
+export const adminCreatePlaceBodyHoursMax = 7;
+
+export const adminCreatePlaceBodyLandM2Min = 0;
+export const adminCreatePlaceBodyLandM2Max = 100000;
+
+export const adminCreatePlaceBodyBuiltM2Min = 0;
+export const adminCreatePlaceBodyBuiltM2Max = 100000;
+
+export const adminCreatePlaceBodyBedroomsMin = 0;
+export const adminCreatePlaceBodyBedroomsMax = 50;
+
+export const adminCreatePlaceBodyBathroomsMin = 0;
+export const adminCreatePlaceBodyBathroomsMax = 50;
+
+export const adminCreatePlaceBodyParkingMin = 0;
+export const adminCreatePlaceBodyParkingMax = 50;
+
 
 
 export const AdminCreatePlaceBody = zod.object({
@@ -649,6 +839,17 @@ export const AdminCreatePlaceBody = zod.object({
   "priceLabel": zod.string().max(adminCreatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceBodyImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminCreatePlaceBodyWelcomeOfferMax).nullable(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(adminCreatePlaceBodyHoursItemOneOpenRegExp),
+  "close": zod.string().regex(adminCreatePlaceBodyHoursItemOneCloseRegExp)
+}),zod.null()])).min(adminCreatePlaceBodyHoursMin).max(adminCreatePlaceBodyHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(adminCreatePlaceBodyLandM2Min).max(adminCreatePlaceBodyLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(adminCreatePlaceBodyBuiltM2Min).max(adminCreatePlaceBodyBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(adminCreatePlaceBodyBedroomsMin).max(adminCreatePlaceBodyBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(adminCreatePlaceBodyBathroomsMin).max(adminCreatePlaceBodyBathroomsMax).nullable(),
+  "parking": zod.number().int().min(adminCreatePlaceBodyParkingMin).max(adminCreatePlaceBodyParkingMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 })
@@ -674,6 +875,26 @@ export const adminCreatePlaceResponseOneImageUrlMax = 500;
 
 export const adminCreatePlaceResponseOneWelcomeOfferMax = 80;
 
+export const adminCreatePlaceResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const adminCreatePlaceResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const adminCreatePlaceResponseOneHoursMin = 7;
+export const adminCreatePlaceResponseOneHoursMax = 7;
+
+export const adminCreatePlaceResponseOneLandM2Min = 0;
+export const adminCreatePlaceResponseOneLandM2Max = 100000;
+
+export const adminCreatePlaceResponseOneBuiltM2Min = 0;
+export const adminCreatePlaceResponseOneBuiltM2Max = 100000;
+
+export const adminCreatePlaceResponseOneBedroomsMin = 0;
+export const adminCreatePlaceResponseOneBedroomsMax = 50;
+
+export const adminCreatePlaceResponseOneBathroomsMin = 0;
+export const adminCreatePlaceResponseOneBathroomsMax = 50;
+
+export const adminCreatePlaceResponseOneParkingMin = 0;
+export const adminCreatePlaceResponseOneParkingMax = 50;
+
 
 
 export const AdminCreatePlaceResponse = zod.object({
@@ -688,6 +909,17 @@ export const AdminCreatePlaceResponse = zod.object({
   "priceLabel": zod.string().max(adminCreatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminCreatePlaceResponseOneWelcomeOfferMax).nullable(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneOpenRegExp),
+  "close": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneCloseRegExp)
+}),zod.null()])).min(adminCreatePlaceResponseOneHoursMin).max(adminCreatePlaceResponseOneHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(adminCreatePlaceResponseOneLandM2Min).max(adminCreatePlaceResponseOneLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(adminCreatePlaceResponseOneBuiltM2Min).max(adminCreatePlaceResponseOneBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(adminCreatePlaceResponseOneBedroomsMin).max(adminCreatePlaceResponseOneBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(adminCreatePlaceResponseOneBathroomsMin).max(adminCreatePlaceResponseOneBathroomsMax).nullable(),
+  "parking": zod.number().int().min(adminCreatePlaceResponseOneParkingMin).max(adminCreatePlaceResponseOneParkingMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -697,7 +929,13 @@ export const AdminCreatePlaceResponse = zod.object({
   "hasEmbedding": zod.boolean(),
   "isDemo": zod.boolean(),
   "visitCount": zod.number().int(),
-  "hasMerchantKey": zod.boolean()
+  "hasMerchantKey": zod.boolean(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 }))
 
 
@@ -726,6 +964,26 @@ export const adminUpdatePlaceBodyImageUrlMax = 500;
 
 export const adminUpdatePlaceBodyWelcomeOfferMax = 80;
 
+export const adminUpdatePlaceBodyHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const adminUpdatePlaceBodyHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const adminUpdatePlaceBodyHoursMin = 7;
+export const adminUpdatePlaceBodyHoursMax = 7;
+
+export const adminUpdatePlaceBodyLandM2Min = 0;
+export const adminUpdatePlaceBodyLandM2Max = 100000;
+
+export const adminUpdatePlaceBodyBuiltM2Min = 0;
+export const adminUpdatePlaceBodyBuiltM2Max = 100000;
+
+export const adminUpdatePlaceBodyBedroomsMin = 0;
+export const adminUpdatePlaceBodyBedroomsMax = 50;
+
+export const adminUpdatePlaceBodyBathroomsMin = 0;
+export const adminUpdatePlaceBodyBathroomsMax = 50;
+
+export const adminUpdatePlaceBodyParkingMin = 0;
+export const adminUpdatePlaceBodyParkingMax = 50;
+
 
 
 export const AdminUpdatePlaceBody = zod.object({
@@ -740,6 +998,17 @@ export const AdminUpdatePlaceBody = zod.object({
   "priceLabel": zod.string().max(adminUpdatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceBodyImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminUpdatePlaceBodyWelcomeOfferMax).nullable(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(adminUpdatePlaceBodyHoursItemOneOpenRegExp),
+  "close": zod.string().regex(adminUpdatePlaceBodyHoursItemOneCloseRegExp)
+}),zod.null()])).min(adminUpdatePlaceBodyHoursMin).max(adminUpdatePlaceBodyHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(adminUpdatePlaceBodyLandM2Min).max(adminUpdatePlaceBodyLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(adminUpdatePlaceBodyBuiltM2Min).max(adminUpdatePlaceBodyBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(adminUpdatePlaceBodyBedroomsMin).max(adminUpdatePlaceBodyBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(adminUpdatePlaceBodyBathroomsMin).max(adminUpdatePlaceBodyBathroomsMax).nullable(),
+  "parking": zod.number().int().min(adminUpdatePlaceBodyParkingMin).max(adminUpdatePlaceBodyParkingMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 })
@@ -765,6 +1034,26 @@ export const adminUpdatePlaceResponseOneImageUrlMax = 500;
 
 export const adminUpdatePlaceResponseOneWelcomeOfferMax = 80;
 
+export const adminUpdatePlaceResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const adminUpdatePlaceResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
+export const adminUpdatePlaceResponseOneHoursMin = 7;
+export const adminUpdatePlaceResponseOneHoursMax = 7;
+
+export const adminUpdatePlaceResponseOneLandM2Min = 0;
+export const adminUpdatePlaceResponseOneLandM2Max = 100000;
+
+export const adminUpdatePlaceResponseOneBuiltM2Min = 0;
+export const adminUpdatePlaceResponseOneBuiltM2Max = 100000;
+
+export const adminUpdatePlaceResponseOneBedroomsMin = 0;
+export const adminUpdatePlaceResponseOneBedroomsMax = 50;
+
+export const adminUpdatePlaceResponseOneBathroomsMin = 0;
+export const adminUpdatePlaceResponseOneBathroomsMax = 50;
+
+export const adminUpdatePlaceResponseOneParkingMin = 0;
+export const adminUpdatePlaceResponseOneParkingMax = 50;
+
 
 
 export const AdminUpdatePlaceResponse = zod.object({
@@ -779,6 +1068,17 @@ export const AdminUpdatePlaceResponse = zod.object({
   "priceLabel": zod.string().max(adminUpdatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminUpdatePlaceResponseOneWelcomeOfferMax).nullable(),
+  "kind": zod.enum(['comercio', 'oficio']),
+  "delivers": zod.boolean(),
+  "hours": zod.array(zod.union([zod.object({
+  "open": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneOpenRegExp),
+  "close": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneCloseRegExp)
+}),zod.null()])).min(adminUpdatePlaceResponseOneHoursMin).max(adminUpdatePlaceResponseOneHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
+  "landM2": zod.number().int().min(adminUpdatePlaceResponseOneLandM2Min).max(adminUpdatePlaceResponseOneLandM2Max).nullable(),
+  "builtM2": zod.number().int().min(adminUpdatePlaceResponseOneBuiltM2Min).max(adminUpdatePlaceResponseOneBuiltM2Max).nullable(),
+  "bedrooms": zod.number().int().min(adminUpdatePlaceResponseOneBedroomsMin).max(adminUpdatePlaceResponseOneBedroomsMax).nullable(),
+  "bathrooms": zod.number().min(adminUpdatePlaceResponseOneBathroomsMin).max(adminUpdatePlaceResponseOneBathroomsMax).nullable(),
+  "parking": zod.number().int().min(adminUpdatePlaceResponseOneParkingMin).max(adminUpdatePlaceResponseOneParkingMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -788,7 +1088,13 @@ export const AdminUpdatePlaceResponse = zod.object({
   "hasEmbedding": zod.boolean(),
   "isDemo": zod.boolean(),
   "visitCount": zod.number().int(),
-  "hasMerchantKey": zod.boolean()
+  "hasMerchantKey": zod.boolean(),
+  "photos": zod.array(zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+}))
 }))
 
 
@@ -892,6 +1198,39 @@ export const AdminRemoveConstellationBody = zod.object({
 })
 
 export const AdminRemoveConstellationResponse = zod.void()
+
+
+/**
+ * @summary Sube una foto (ya redimensionada en el celular) como binario
+ */
+export const AdminUploadPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminUploadPhotoResponse = zod.object({
+  "id": zod.string(),
+  "url": zod.string(),
+  "width": zod.number().int(),
+  "height": zod.number().int()
+})
+
+
+export const AdminReorderPhotosParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminReorderPhotosBody = zod.object({
+  "ids": zod.array(zod.string())
+})
+
+export const AdminReorderPhotosResponse = zod.void()
+
+
+export const AdminDeletePhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeletePhotoResponse = zod.void()
 
 
 /**

@@ -3,6 +3,8 @@ import {
   useGetCreator,
   useGetMe,
   useGetSetupStatus,
+  useGetMerchantMe,
+  getGetMerchantMeQueryKey,
   getGetCreatorQueryKey,
   getGetMeQueryKey,
   getGetSetupStatusQueryKey,
@@ -40,9 +42,16 @@ function Main() {
     query: { queryKey: getGetMeQueryKey(), retry: false, staleTime: 5 * 60_000 },
   });
 
-  if (setup.isLoading || creator.isLoading || (me.isLoading && !me.isError)) {
-    return <div className="grid h-full place-items-center text-sm text-muted">Villas…</div>;
+  // App instalada abierta en el teléfono de un comercio (sin cuenta de vecino): directo al modo comercio.
+  const fromApp = new URLSearchParams(window.location.search).get("fuente") === "app";
+  const merchant = useGetMerchantMe({
+    query: { queryKey: getGetMerchantMeQueryKey(), enabled: fromApp && me.isError, retry: false, staleTime: 60_000 },
+  });
+
+  if (setup.isLoading || creator.isLoading || (me.isLoading && !me.isError) || (fromApp && me.isError && merchant.isLoading)) {
+    return <BootSplash />;
   }
+  if (fromApp && !me.data && merchant.data) return <Redirect to="/comercio" replace />;
   // Sitio sin terminar de configurar o API que no responde: decir qué falta, no un error genérico.
   if (setup.isError || !creator.data) return <NeedsSetup problem={null} />;
   if (setup.data && (!setup.data.tablesReady || !setup.data.hasAdmin || setup.data.problem)) {
@@ -62,5 +71,17 @@ function Main() {
         <UniversePage me={me.data ?? null} creator={creator.data} />
       </Route>
     </Switch>
+  );
+}
+
+/** Mismo splash que index.html, para que no haya salto al montar React. */
+function BootSplash() {
+  return (
+    <div className="grid h-full place-items-center" style={{ background: "radial-gradient(circle at 50% 45%, #1d2160 0%, #0b0d1f 62%)" }}>
+      <div className="text-center">
+        <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" className="boot-pulse mx-auto h-24 w-24 rounded-[22px]" />
+        <p className="mt-4 text-[22px] font-black tracking-wide">villas</p>
+      </div>
+    </div>
   );
 }

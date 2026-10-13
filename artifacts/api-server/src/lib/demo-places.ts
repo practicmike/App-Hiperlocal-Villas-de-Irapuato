@@ -60,8 +60,62 @@ const SEEDS: Seed[] = [
   { constellation: "cuidar", name: "Fisioterapia en Casa", category: "Fisioterapia", contactName: "Lic. Andrés", description: "Fisioterapia y rehabilitación a domicilio: lesiones deportivas, dolor de espalda, recuperación después de cirugía y terapia para adultos mayores. Llevo camilla y equipo. Sesiones de una hora." },
 ];
 
+// ----------------------------------------------- datos de ficha completa
+type DayH = { open: string; close: string } | null;
+/** dom, lun…sáb */
+const week = (weekday: DayH, sat: DayH = weekday, sun: DayH = null): DayH[] => [sun, weekday, weekday, weekday, weekday, weekday, sat];
+const h = (open: string, close: string) => ({ open, close });
+const thuSun = (o: string, c: string): DayH[] => [h(o, c), null, null, null, h(o, c), h(o, c), h(o, c)];
+
+const EXTRA: Record<string, Partial<NewPlace>> = {
+  // Oficios: van a tu casa.
+  "Plomería Don Beto": { kind: "oficio", delivers: true, priceLabel: "Visita desde $300", hours: week(h("08:00", "19:00"), h("09:00", "15:00"), h("10:00", "14:00")) },
+  "Electricidad Hernández": { kind: "oficio", delivers: true, priceLabel: "Diagnóstico $350", hours: week(h("09:00", "18:00"), h("09:00", "14:00")) },
+  "Jardines Verdes": { kind: "oficio", delivers: true, priceLabel: "Desde $450 por visita", hours: week(h("08:00", "16:00"), h("08:00", "13:00")) },
+  "Climas del Bajío": { kind: "oficio", delivers: true, priceLabel: "Mantenimiento $650", hours: week(h("09:00", "18:00"), h("09:00", "14:00")) },
+  "Carpintería Luna": { kind: "oficio", delivers: true, hours: week(h("09:00", "18:00"), h("09:00", "13:00")) },
+  "Limpieza Express": { kind: "oficio", delivers: true, priceLabel: "Desde $900 por casa", hours: week(h("08:00", "17:00"), h("08:00", "14:00")) },
+  "Pinturas Torres": { kind: "oficio", delivers: true, hours: week(h("08:00", "18:00"), h("08:00", "14:00")) },
+  "Herrería El Yunque": { kind: "oficio", delivers: true, hours: week(h("09:00", "18:00"), h("09:00", "14:00")) },
+  "Cerrajería 24 h": { kind: "oficio", delivers: true, priceLabel: "Apertura desde $350", hours: [h("00:00", "24:00"), h("00:00", "24:00"), h("00:00", "24:00"), h("00:00", "24:00"), h("00:00", "24:00"), h("00:00", "24:00"), h("00:00", "24:00")] },
+  "Fumigaciones Sanas": { kind: "oficio", delivers: true, priceLabel: "Desde $700", hours: week(h("09:00", "18:00"), h("09:00", "14:00")) },
+  "Fisioterapia en Casa": { kind: "oficio", delivers: true, priceLabel: "Sesión $500", hours: week(h("08:00", "20:00"), h("09:00", "14:00")) },
+  "Regularización Profe Jorge": { kind: "oficio", priceLabel: "$250 la hora", hours: week(h("16:00", "20:00"), h("10:00", "14:00")) },
+  "Piano y guitarra Do Re Mi": { kind: "oficio", priceLabel: "$1,200 al mes", hours: week(h("15:00", "20:00"), h("10:00", "13:00")) },
+  // Comercios: tú vas (algunos también entregan).
+  "Lavandería Burbujas": { delivers: true, priceLabel: "$28 el kilo", hours: week(h("08:00", "20:00"), h("08:00", "15:00")) },
+  "Taquería La Privada": { delivers: true, priceLabel: "Taco $22", hours: thuSun("19:00", "24:00") },
+  "Pizzas del Parque": { delivers: true, priceLabel: "Grande desde $189", hours: thuSun("18:00", "23:00") },
+  "Café Andador": { priceLabel: "Desayuno desde $95", hours: week(h("08:00", "13:00"), h("08:00", "14:00"), h("09:00", "14:00")) },
+  "Pastelería Doña Lupe": { delivers: true, priceLabel: "Pastel desde $380", hours: week(h("10:00", "19:00"), h("10:00", "17:00")) },
+  "Tortillería La Güera": { priceLabel: "$24 el kilo", hours: week(h("07:00", "15:00"), h("07:00", "15:00"), h("07:00", "13:00")) },
+  "Comida Casera Doña Mary": { delivers: true, priceLabel: "Comida corrida $110", hours: week(h("12:00", "16:00"), null) },
+  "Farmacia Villas": { delivers: true, hours: week(h("08:00", "22:00"), h("08:00", "22:00"), h("08:00", "22:00")) },
+  "Veterinaria Patitas": { delivers: true, priceLabel: "Consulta $350", hours: week(h("09:00", "19:00"), h("09:00", "15:00")) },
+  "Consultorio Dra. Salazar": { delivers: true, priceLabel: "Consulta $450", hours: week(h("09:00", "19:00"), h("09:00", "14:00")) },
+  "Dental Sonrisa": { priceLabel: "Limpieza $600", hours: week(h("10:00", "19:00"), h("10:00", "14:00")) },
+  "Colegio Montessori Villas": { priceLabel: "Colegiatura desde $4,800", hours: week(h("08:00", "17:00"), null) },
+  "Inglés para niños Kids Club": { priceLabel: "$1,400 al mes", hours: week(h("15:00", "19:00"), null) },
+  "Guardería Pequeños Pasos": { priceLabel: "$3,900 al mes", hours: week(h("07:00", "18:00"), null) },
+  // Casas: datos para que el match sea preciso.
+  "Casa en Privada Encino": { bedrooms: 3, bathrooms: 2.5, parking: 2, landM2: 160, builtM2: 180 },
+  "Casa en Privada Fresno": { bedrooms: 2, bathrooms: 1.5, parking: 2, landM2: 120, builtM2: 110 },
+  "Casa con roof garden": { bedrooms: 4, bathrooms: 3, parking: 2, landM2: 180, builtM2: 260 },
+  "Casa esquina Privada Cedro": { bedrooms: 3, bathrooms: 2, parking: 2, landM2: 200, builtM2: 170 },
+  "Casa amueblada Privada Olmo": { bedrooms: 3, bathrooms: 2, parking: 2, landM2: 140, builtM2: 160 },
+  "Casa de un piso Privada Roble": { bedrooms: 2, bathrooms: 1, parking: 1, landM2: 150, builtM2: 95 },
+  "Casa frente a área verde": { bedrooms: 3, bathrooms: 2.5, parking: 2, landM2: 150, builtM2: 170 },
+  "Casa con alberca Sección Sur": { bedrooms: 4, bathrooms: 4, parking: 3, landM2: 400, builtM2: 380 },
+  "Casa remodelada Privada Pino": { bedrooms: 3, bathrooms: 2, parking: 2, landM2: 160, builtM2: 175 },
+  "Departamento en planta alta": { bedrooms: 2, bathrooms: 1, parking: 1, builtM2: 75 },
+};
+
 export const DEMO_PLACES: NewPlace[] = SEEDS.map((s, i) => ({
+  kind: "comercio" as const,
+  delivers: false,
+  hours: null,
   ...s,
+  ...EXTRA[s.name],
   whatsapp: wa(i + 1),
   verified: true,
   active: true,

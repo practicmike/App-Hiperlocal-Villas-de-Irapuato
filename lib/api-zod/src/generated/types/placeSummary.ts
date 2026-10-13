@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { Constellation } from './constellation';
+import type { PlaceKind } from './placeKind';
+import type { WeekHours } from './weekHours';
 
 export interface PlaceSummary {
   id: string;
@@ -17,4 +19,9 @@ export interface PlaceSummary {
   endorsementCount: number;
   /** Tiene beneficio de bienvenida */
   welcome: boolean;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /** @nullable */
+  coverUrl: string | null;
 }

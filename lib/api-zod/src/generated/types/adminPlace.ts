@@ -5,6 +5,7 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { PhotoRef } from './photoRef';
 import type { PlaceInput } from './placeInput';
 
 export type AdminPlace = PlaceInput & {
@@ -15,4 +16,5 @@ export type AdminPlace = PlaceInput & {
   isDemo: boolean;
   visitCount: number;
   hasMerchantKey: boolean;
+  photos: PhotoRef[];
 };

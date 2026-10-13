@@ -7,6 +7,8 @@
  */
 import type { Constellation } from './constellation';
 import type { PlaceInputOperation } from './placeInputOperation';
+import type { PlaceKind } from './placeKind';
+import type { WeekHours } from './weekHours';
 
 export interface PlaceInput {
   constellation: Constellation;
@@ -54,6 +56,39 @@ export interface PlaceInput {
      * @nullable
      */
   welcomeOffer: string | null;
+  kind: PlaceKind;
+  delivers: boolean;
+  hours: WeekHours | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  landM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     * @nullable
+     */
+  builtM2: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bedrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  bathrooms: number | null;
+  /**
+     * @minimum 0
+     * @maximum 50
+     * @nullable
+     */
+  parking: number | null;
   verified: boolean;
   active: boolean;
 }
