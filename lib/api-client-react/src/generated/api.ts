@@ -27,6 +27,9 @@ import type {
   AdminPlace,
   AdminResident,
   AdminSearch,
+  AdminVisit,
+  ClearVisitsRequest,
+  ClearVisitsResult,
   ComplaintRequest,
   ConstellationInput,
   ContactRequest,
@@ -49,6 +52,7 @@ import type {
   RecordVisitRequest,
   RemoveConstellationRequest,
   ReorderRequest,
+  ResidentUpdate,
   SearchRequest,
   SearchResult,
   SetupRequest,
@@ -1961,6 +1965,470 @@ export function useAdminListResidents<TData = Awaited<ReturnType<typeof adminLis
 
 
 
+
+export const getAdminUpdateResidentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/residents/${id}`
+}
+
+export const adminUpdateResident = async (id: string,
+    residentUpdate: ResidentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminUpdateResidentUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateResidentMutationKey = () => ['adminUpdateResident'] as const;
+
+export const getAdminUpdateResidentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResident>>, TError,AdminUpdateResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResident>>, TError,AdminUpdateResidentMutationVariables, TContext> => {
+
+const mutationKey = getAdminUpdateResidentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateResident>>, AdminUpdateResidentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateResident(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateResidentMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateResident>>>
+    export type AdminUpdateResidentMutationBody = BodyType<ResidentUpdate>
+    export type AdminUpdateResidentMutationError = ErrorType<ErrorResponse>
+    export type AdminUpdateResidentMutationVariables = {id: string;data: BodyType<ResidentUpdate>}
+
+    export const useAdminUpdateResident = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResident>>, TError,AdminUpdateResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateResident>>,
+        TError,
+        AdminUpdateResidentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminUpdateResidentMutationOptions(options));
+    }
+
+export const getAdminDeleteResidentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/residents/${id}`
+}
+
+/**
+ * @summary Borra al vecino y todo su rastro (visitas, recomendaciones, quejas, sesiones)
+ */
+export const adminDeleteResident = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteResidentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteResidentMutationKey = () => ['adminDeleteResident'] as const;
+
+export const getAdminDeleteResidentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResident>>, TError,AdminDeleteResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResident>>, TError,AdminDeleteResidentMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteResidentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteResident>>, AdminDeleteResidentMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteResident(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteResidentMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteResident>>>
+
+    export type AdminDeleteResidentMutationError = ErrorType<ErrorResponse>
+    export type AdminDeleteResidentMutationVariables = {id: string}
+
+    /**
+ * @summary Borra al vecino y todo su rastro (visitas, recomendaciones, quejas, sesiones)
+ */
+export const useAdminDeleteResident = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResident>>, TError,AdminDeleteResidentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteResident>>,
+        TError,
+        AdminDeleteResidentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteResidentMutationOptions(options));
+    }
+
+export const getAdminDeleteInviteUrl = (code: string,) => {
+
+
+
+
+  return `/api/admin/invites/${code}`
+}
+
+/**
+ * @summary Borra un código de invitación que nadie ha usado
+ */
+export const adminDeleteInvite = async (code: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteInviteUrl(code),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteInviteMutationKey = () => ['adminDeleteInvite'] as const;
+
+export const getAdminDeleteInviteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInvite>>, TError,AdminDeleteInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInvite>>, TError,AdminDeleteInviteMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteInviteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteInvite>>, AdminDeleteInviteMutationVariables> = (props) => {
+          const {code} = props ?? {};
+
+          return  adminDeleteInvite(code,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteInviteMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteInvite>>>
+
+    export type AdminDeleteInviteMutationError = ErrorType<unknown>
+    export type AdminDeleteInviteMutationVariables = {code: string}
+
+    /**
+ * @summary Borra un código de invitación que nadie ha usado
+ */
+export const useAdminDeleteInvite = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInvite>>, TError,AdminDeleteInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteInvite>>,
+        TError,
+        AdminDeleteInviteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteInviteMutationOptions(options));
+    }
+
+export const getAdminListVisitsUrl = () => {
+
+
+
+
+  return `/api/admin/visits`
+}
+
+/**
+ * @summary Historial de credenciales escaneadas (últimas 500)
+ */
+export const adminListVisits = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminVisit[]> => {
+
+  return customFetch<AdminVisit[]>(getAdminListVisitsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListVisitsQueryKey = () => {
+    return [
+    `/api/admin/visits`
+    ] as const;
+    }
+
+
+export const getAdminListVisitsQueryOptions = <TData = Awaited<ReturnType<typeof adminListVisits>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListVisits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListVisitsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListVisits>>> = ({ signal }) => adminListVisits({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListVisits>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListVisitsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListVisits>>>
+export type AdminListVisitsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Historial de credenciales escaneadas (últimas 500)
+ */
+
+export function useAdminListVisits<TData = Awaited<ReturnType<typeof adminListVisits>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListVisits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListVisitsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminDeleteVisitUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/visits/${id}`
+}
+
+export const adminDeleteVisit = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteVisitUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteVisitMutationKey = () => ['adminDeleteVisit'] as const;
+
+export const getAdminDeleteVisitMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteVisit>>, TError,AdminDeleteVisitMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteVisit>>, TError,AdminDeleteVisitMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteVisitMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteVisit>>, AdminDeleteVisitMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteVisit(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteVisitMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteVisit>>>
+
+    export type AdminDeleteVisitMutationError = ErrorType<unknown>
+    export type AdminDeleteVisitMutationVariables = {id: string}
+
+    export const useAdminDeleteVisit = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteVisit>>, TError,AdminDeleteVisitMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteVisit>>,
+        TError,
+        AdminDeleteVisitMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteVisitMutationOptions(options));
+    }
+
+export const getAdminClearVisitsUrl = () => {
+
+
+
+
+  return `/api/admin/visits/clear`
+}
+
+/**
+ * @summary Borra visitas en bloque (de un vecino, de un comercio o todas)
+ */
+export const adminClearVisits = async (clearVisitsRequest: ClearVisitsRequest, options?: Parameters<typeof customFetch>[1]): Promise<ClearVisitsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClearVisitsResult>(getAdminClearVisitsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clearVisitsRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminClearVisitsMutationKey = () => ['adminClearVisits'] as const;
+
+export const getAdminClearVisitsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearVisits>>, TError,AdminClearVisitsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminClearVisits>>, TError,AdminClearVisitsMutationVariables, TContext> => {
+
+const mutationKey = getAdminClearVisitsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminClearVisits>>, AdminClearVisitsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminClearVisits(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminClearVisitsMutationResult = NonNullable<Awaited<ReturnType<typeof adminClearVisits>>>
+    export type AdminClearVisitsMutationBody = BodyType<ClearVisitsRequest>
+    export type AdminClearVisitsMutationError = ErrorType<unknown>
+    export type AdminClearVisitsMutationVariables = {data: BodyType<ClearVisitsRequest>}
+
+    /**
+ * @summary Borra visitas en bloque (de un vecino, de un comercio o todas)
+ */
+export const useAdminClearVisits = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearVisits>>, TError,AdminClearVisitsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminClearVisits>>,
+        TError,
+        AdminClearVisitsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminClearVisitsMutationOptions(options));
+    }
 
 export const getAdminApproveResidentUrl = (id: string,) => {
 

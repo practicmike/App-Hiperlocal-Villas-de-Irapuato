@@ -426,6 +426,85 @@ export const AdminListResidentsResponseItem = zod.object({
 export const AdminListResidentsResponse = zod.array(AdminListResidentsResponseItem)
 
 
+export const AdminUpdateResidentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const adminUpdateResidentBodyNameMin = 2;
+export const adminUpdateResidentBodyNameMax = 80;
+
+export const adminUpdateResidentBodyPhoneMin = 10;
+export const adminUpdateResidentBodyPhoneMax = 20;
+
+export const adminUpdateResidentBodyZoneMax = 80;
+
+
+
+export const AdminUpdateResidentBody = zod.object({
+  "name": zod.string().min(adminUpdateResidentBodyNameMin).max(adminUpdateResidentBodyNameMax),
+  "phone": zod.string().min(adminUpdateResidentBodyPhoneMin).max(adminUpdateResidentBodyPhoneMax),
+  "zone": zod.string().max(adminUpdateResidentBodyZoneMax).nullable()
+})
+
+export const AdminUpdateResidentResponse = zod.void()
+
+
+/**
+ * @summary Borra al vecino y todo su rastro (visitas, recomendaciones, quejas, sesiones)
+ */
+export const AdminDeleteResidentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteResidentResponse = zod.void()
+
+
+/**
+ * @summary Borra un código de invitación que nadie ha usado
+ */
+export const AdminDeleteInviteParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const AdminDeleteInviteResponse = zod.void()
+
+
+/**
+ * @summary Historial de credenciales escaneadas (últimas 500)
+ */
+export const AdminListVisitsResponseItem = zod.object({
+  "id": zod.string(),
+  "at": zod.coerce.date(),
+  "residentId": zod.string(),
+  "residentName": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "welcomeApplied": zod.boolean(),
+  "welcomeOffer": zod.string().nullable()
+})
+export const AdminListVisitsResponse = zod.array(AdminListVisitsResponseItem)
+
+
+export const AdminDeleteVisitParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteVisitResponse = zod.void()
+
+
+/**
+ * @summary Borra visitas en bloque (de un vecino, de un comercio o todas)
+ */
+export const AdminClearVisitsBody = zod.object({
+  "residentId": zod.string().nullable(),
+  "placeId": zod.string().nullable()
+})
+
+export const AdminClearVisitsResponse = zod.object({
+  "removed": zod.number().int()
+})
+
+
 /**
  * @summary Aprobar y generar su llave personal
  */

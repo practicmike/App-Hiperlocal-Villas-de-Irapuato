@@ -26,6 +26,14 @@ import {
   useAdminReorderConstellations,
   useAdminSuggestConstellation,
   useAdminIssueMerchantKey,
+  useAdminUpdateResident,
+  useAdminDeleteResident,
+  useAdminListVisits,
+  useAdminDeleteVisit,
+  useAdminClearVisits,
+  useAdminDeleteInvite,
+  getAdminListVisitsQueryKey,
+  getGetMySkyQueryKey,
   getAdminListConstellationsQueryKey,
   type AdminConstellation,
   type ConstellationInput,
@@ -45,11 +53,12 @@ import {
 import { ArrowLeft, Copy, MessageCircle } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 
-type Tab = "resumen" | "vecinos" | "lugares" | "constelaciones" | "busquedas" | "quejas";
+type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "constelaciones" | "busquedas" | "quejas";
 const TABS: Array<[Tab, string]> = [
   ["resumen", "Resumen"],
   ["vecinos", "Vecinos"],
   ["lugares", "Estrellas"],
+  ["visitas", "Visitas"],
   ["constelaciones", "Constelaciones"],
   ["busquedas", "Búsquedas"],
   ["quejas", "Quejas"],
@@ -91,6 +100,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
         {tab === "resumen" && <Overview />}
         {tab === "vecinos" && <Residents me={me} />}
         {tab === "lugares" && <Places editId={editId} />}
+        {tab === "visitas" && <Visits />}
         {tab === "constelaciones" && <Constellations />}
         {tab === "busquedas" && <Searches />}
         {tab === "quejas" && <Complaints />}
@@ -179,6 +189,15 @@ function Residents({ me }: { me: string }) {
   const approve = useAdminApproveResident({ mutation: { onSuccess: (k) => (setKey(k), refresh()) } });
   const regen = useAdminRegenerateKey({ mutation: { onSuccess: (k) => setKey(k) } });
   const block = useAdminBlockResident({ mutation: { onSuccess: refresh } });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const remove = useAdminDeleteResident({
+    mutation: {
+      onSuccess: () => {
+        refresh();
+        void qc.invalidateQueries({ queryKey: getAdminListVisitsQueryKey() });
+      },
+    },
+  });
   const invite = useAdminCreateInvite({
     mutation: {
       onSuccess: () => {
@@ -188,6 +207,9 @@ function Residents({ me }: { me: string }) {
     },
   });
   const unusedInvites = invites?.filter((i) => !i.usedBy) ?? [];
+  const dropInvite = useAdminDeleteInvite({
+    mutation: { onSuccess: () => void qc.invalidateQueries({ queryKey: getAdminListInvitesQueryKey() }) },
+  });
 
   return (
     <div className="space-y-8">
@@ -231,6 +253,13 @@ function Residents({ me }: { me: string }) {
                 >
                   Compartir
                 </a>
+                <button
+                  aria-label={`Borrar código ${i.code}`}
+                  onClick={() => dropInvite.mutate({ code: i.code })}
+                  className="shrink-0 rounded-full px-2 text-alert/70"
+                >
+                  ✕
+                </button>
               </li>
             ))}
           </ul>
@@ -259,10 +288,14 @@ function Residents({ me }: { me: string }) {
                   <StatusPill status={r.status} />
                 </div>
                 {r.status === "approved" && <KeyStatus r={r} />}
+                {editingId === r.id && <ResidentEdit r={r} onDone={() => (setEditingId(null), refresh())} />}
                 {r.role === "admin" && (
                   <div className="mt-3">
                     <button onClick={() => regen.mutate({ id: r.id })} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold">
                       Nueva llave para mí (otro teléfono o computadora)
+                    </button>
+                    <button onClick={() => setEditingId(editingId === r.id ? null : r.id)} className="ml-2 rounded-full px-3 py-1.5 text-xs text-muted">
+                      Editar
                     </button>
                   </div>
                 )}
@@ -289,6 +322,20 @@ function Residents({ me }: { me: string }) {
                     <a href={whatsappLink(r.phone, `Hola ${r.name.split(" ")[0]}, soy ${me}, de la guía de vecinos de Villas.`)} target="_blank" rel="noopener noreferrer" className="rounded-full px-3 py-1.5 text-xs text-confianza">
                       WhatsApp
                     </a>
+                    <button onClick={() => setEditingId(editingId === r.id ? null : r.id)} className="rounded-full px-3 py-1.5 text-xs text-muted">
+                      Editar
+                    </button>
+                    <button
+                      disabled={remove.isPending}
+                      onClick={() =>
+                        confirm(
+                          `¿Borrar a ${r.name} para siempre? Se borran también sus visitas, recomendaciones, quejas y búsquedas. Para alguien real que ya no debe entrar, mejor usa "Bloquear".`,
+                        ) && remove.mutate({ id: r.id })
+                      }
+                      className="rounded-full px-3 py-1.5 text-xs text-alert/70"
+                    >
+                      Borrar
+                    </button>
                   </div>
                 )}
               </li>
@@ -1009,6 +1056,144 @@ function MerchantKeyBox({ placeId, placeName, whatsapp, hasKey }: { placeId: str
           <p className="text-[11px] text-muted">Se muestra una sola vez. Si se pierde, genera otro.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function ResidentEdit({ r, onDone }: { r: AdminResident; onDone: () => void }) {
+  const [f, setF] = useState({ name: r.name, phone: r.phone.replace(/^52(?=\d{10}$)/, ""), zone: r.zone ?? "" });
+  const save = useAdminUpdateResident({ mutation: { onSuccess: onDone } });
+  return (
+    <form
+      className="mt-3 space-y-2 rounded-xl bg-space-2/70 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.mutate({ id: r.id, data: { name: f.name, phone: f.phone, zone: f.zone || null } });
+      }}
+    >
+      <AdminField label="Nombre" required minLength={2} maxLength={80} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      <div className="grid grid-cols-2 gap-2">
+        <AdminField label="WhatsApp (10 dígitos)" required inputMode="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <AdminField label="Privada o sección" maxLength={80} value={f.zone} onChange={(e) => setF({ ...f, zone: e.target.value })} />
+      </div>
+      {save.isError && <p className="text-xs text-alert">{errorText(save.error, "No se pudo guardar.")}</p>}
+      <div className="flex gap-2">
+        <button disabled={save.isPending} className="rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-space">Guardar</button>
+        <button type="button" onClick={onDone} className="px-3 text-xs text-muted">Cancelar</button>
+      </div>
+    </form>
+  );
+}
+
+const errorText = (err: unknown, fallback: string) =>
+  (err as { data?: { message?: string } } | null)?.data?.message ?? fallback;
+
+// ------------------------------------------------------------------ visitas
+/** Historial de credenciales escaneadas y regalos dados, con limpieza de pruebas. */
+function Visits() {
+  const qc = useQueryClient();
+  const { data } = useAdminListVisits();
+  const [onlyGifts, setOnlyGifts] = useState(false);
+  const [place, setPlace] = useState("");
+  const [resident, setResident] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: getAdminListVisitsQueryKey() });
+    void qc.invalidateQueries({ queryKey: getAdminOverviewQueryKey() });
+    void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+    void qc.invalidateQueries({ queryKey: getGetMySkyQueryKey() });
+  };
+  const del = useAdminDeleteVisit({ mutation: { onSuccess: refresh } });
+  const clear = useAdminClearVisits({
+    mutation: {
+      onSuccess: (r) => {
+        setMsg(`Borradas ${r.removed} visitas.`);
+        refresh();
+      },
+    },
+  });
+  if (!data) return <Loading />;
+
+  const places = [...new Map(data.map((v) => [v.placeId, v.placeName])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const residents = [...new Map(data.map((v) => [v.residentId, v.residentName])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const shown = data.filter(
+    (v) => (!onlyGifts || v.welcomeApplied) && (!place || v.placeId === place) && (!resident || v.residentId === resident),
+  );
+  const gifts = shown.filter((v) => v.welcomeApplied).length;
+  const neighbors = new Set(shown.map((v) => v.residentId)).size;
+  const shops = new Set(shown.map((v) => v.placeId)).size;
+  const scope = resident || place;
+  const select = "min-w-0 flex-1 rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm";
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Visitas" value={shown.length} />
+        <Stat label="Regalos dados" value={gifts} accent="#E6C882" />
+        <Stat label="Vecinos" value={neighbors} accent="#6eb5ff" />
+        <Stat label="Comercios" value={shops} accent="#50e3c2" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <select value={place} onChange={(e) => setPlace(e.target.value)} className={select}>
+          <option value="">Todos los comercios</option>
+          {places.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+        </select>
+        <select value={resident} onChange={(e) => setResident(e.target.value)} className={select}>
+          <option value="">Todos los vecinos</option>
+          {residents.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+        </select>
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="accent-[#E6C882]" checked={onlyGifts} onChange={(e) => setOnlyGifts(e.target.checked)} />
+        Solo visitas con regalo de bienvenida
+      </label>
+
+      {shown.length === 0 ? (
+        <Empty text="Aún no hay credenciales escaneadas. Aparecen aquí en cuanto un comercio confirma una visita." />
+      ) : (
+        <ul className="space-y-2">
+          {shown.map((v) => (
+            <li key={v.id} className="flex items-start gap-3 rounded-2xl bg-panel p-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">
+                  {v.residentName} <span className="font-normal text-muted">en</span> {v.placeName}
+                </p>
+                <p className="text-xs text-muted">{fmtDate(v.at)}</p>
+                {v.welcomeApplied && <p className="mt-1 text-xs font-bold text-[#E6C882]">Regalo: {v.welcomeOffer}</p>}
+              </div>
+              <button
+                aria-label="Borrar visita"
+                disabled={del.isPending}
+                onClick={() => confirm("¿Borrar esta visita? La estrella se apaga en el cielo del vecino si era la única.") && del.mutate({ id: v.id })}
+                className="rounded-full px-2 py-1 text-alert/70 hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="rounded-2xl border border-alert/30 bg-alert/5 p-3 text-sm">
+        <p className="mb-1 font-bold text-alert">Limpiar pruebas</p>
+        <p className="mb-2 text-xs text-muted">
+          {scope
+            ? "Borra las visitas del filtro elegido (comercio y/o vecino). Si borras la primera visita de un vecino, el regalo se le vuelve a ofrecer."
+            : "Sin filtro borra TODAS las visitas. Úsalo solo mientras pruebas, antes de arrancar con vecinos reales."}
+        </p>
+        <button
+          disabled={clear.isPending}
+          onClick={() => {
+            const label = scope ? `las visitas filtradas` : `TODAS las visitas (${data.length})`;
+            if (confirm(`¿Borrar ${label}? No se puede deshacer.`))
+              clear.mutate({ data: { residentId: resident || null, placeId: place || null } });
+          }}
+          className="rounded-full border border-alert/50 px-4 py-1.5 text-xs font-bold text-alert"
+        >
+          {scope ? "Borrar visitas del filtro" : "Borrar todas las visitas"}
+        </button>
+        {msg && <p className="mt-2 text-xs">{msg}</p>}
+      </div>
     </div>
   );
 }

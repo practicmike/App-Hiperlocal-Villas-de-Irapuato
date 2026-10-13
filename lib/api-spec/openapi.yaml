@@ -420,6 +420,97 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdminResident"
+  /admin/residents/{id}:
+    put:
+      operationId: adminUpdateResident
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResidentUpdate"
+      responses:
+        "204":
+          description: Actualizado
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: adminDeleteResident
+      tags: [admin]
+      summary: Borra al vecino y todo su rastro (visitas, recomendaciones, quejas, sesiones)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Borrado
+        "400":
+          description: No se puede borrar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/invites/{code}:
+    delete:
+      operationId: adminDeleteInvite
+      tags: [admin]
+      summary: Borra un código de invitación que nadie ha usado
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Borrado
+  /admin/visits:
+    get:
+      operationId: adminListVisits
+      tags: [admin]
+      summary: Historial de credenciales escaneadas (últimas 500)
+      responses:
+        "200":
+          description: Visitas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminVisit"
+  /admin/visits/{id}:
+    delete:
+      operationId: adminDeleteVisit
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Borrada
+  /admin/visits/clear:
+    post:
+      operationId: adminClearVisits
+      tags: [admin]
+      summary: Borra visitas en bloque (de un vecino, de un comercio o todas)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearVisitsRequest"
+      responses:
+        "200":
+          description: Cuántas se borraron
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearVisitsResult"
   /admin/residents/{id}/approve:
     post:
       operationId: adminApproveResident
@@ -1231,6 +1322,56 @@ components:
         - searchesNoResult30d
         - openComplaints
         - guestSearches30d
+    ResidentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        zone:
+          type: [string, "null"]
+          maxLength: 80
+      required: [name, phone, zone]
+    AdminVisit:
+      type: object
+      properties:
+        id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        residentId:
+          type: string
+        residentName:
+          type: string
+        placeId:
+          type: string
+        placeName:
+          type: string
+        welcomeApplied:
+          type: boolean
+        welcomeOffer:
+          type: [string, "null"]
+      required: [id, at, residentId, residentName, placeId, placeName, welcomeApplied, welcomeOffer]
+    ClearVisitsRequest:
+      type: object
+      properties:
+        residentId:
+          type: [string, "null"]
+        placeId:
+          type: [string, "null"]
+      required: [residentId, placeId]
+    ClearVisitsResult:
+      type: object
+      properties:
+        removed:
+          type: integer
+      required: [removed]
     AdminResident:
       type: object
       properties:
