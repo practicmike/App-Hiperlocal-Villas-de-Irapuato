@@ -4,12 +4,16 @@ import {
   useGetUniverse,
   useGetMySky,
   getGetMySkyQueryKey,
+  useListNews,
+  getListNewsQueryKey,
   useSearch,
   type Creator,
   type Me,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { Crosshair, List, Orbit, Search, Settings2, X, MessageCircle, KeyRound, QrCode } from "lucide-react";
+import { Crosshair, List, Orbit, Search, Settings2, X, MessageCircle, KeyRound, QrCode, Sparkles, ShoppingBag } from "lucide-react";
+import { NewsSheet } from "@/components/NewsSheet";
+import { getPickup, setPickup, type PendingPickup } from "@/lib/pickup";
 import { UniverseCanvas, type UniverseHandle, type Level } from "@/components/UniverseCanvas";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
@@ -50,6 +54,18 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
   // Atajo del ícono instalado ("Mi credencial") o link directo: abre la credencial.
   const [meOpen, setMeOpen] = useState(() => !guest && new URLSearchParams(window.location.search).has("credencial"));
   const [showIntro, setShowIntro] = useState(() => !introSeen());
+  const news = useListNews({ query: { queryKey: getListNewsQueryKey(), refetchOnWindowFocus: true, staleTime: 60_000 } }).data ?? [];
+  const [newsOpen, setNewsOpen] = useState(false);
+  const [pickup, setPickupState] = useState<PendingPickup | null>(() => getPickup());
+  useEffect(() => {
+    const on = () => setPickupState(getPickup());
+    window.addEventListener("villas-pickup", on);
+    window.addEventListener("focus", on);
+    return () => {
+      window.removeEventListener("villas-pickup", on);
+      window.removeEventListener("focus", on);
+    };
+  }, []);
   const [level, setLevel] = useState<Level>("far");
   const canvas = useRef<UniverseHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +220,18 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           {search.isError && !tooManyGuestSearches && <span className="text-alert">No pude buscar. Revisa tu conexión.</span>}
         </div>
 
+        {/* Hoy en Villas: lo nuevo del día, a un toque. */}
+        {!result && news.length > 0 && view === "universe" && (
+          <div className="pointer-events-auto mx-auto mt-2 flex max-w-lg justify-center">
+            <button
+              onClick={() => setNewsOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ai/50 bg-panel/80 px-3 py-1 text-xs font-bold text-ai backdrop-blur"
+            >
+              <Sparkles size={13} /> Hoy en Villas · {news.length} {news.length === 1 ? "novedad" : "novedades"}
+            </button>
+          </div>
+        )}
+
         {/* Visitante: invitación discreta a unirse. */}
         {guest && !result && (
           <div className="pointer-events-auto mx-auto mt-2 flex max-w-lg justify-center">
@@ -236,7 +264,31 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
 
       {/* Controles mínimos abajo. */}
       <nav className="pb-safe pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4">
-        {!guest && !showIntro && !selectedId && !meOpen && <InstallPrompt />}
+        {pickup && !selectedId && !meOpen ? (
+          <div className="sheet-enter pointer-events-auto mx-auto mb-3 flex w-full max-w-lg items-center gap-3 rounded-2xl border border-[#25D366]/50 bg-panel/95 p-3 shadow-2xl backdrop-blur">
+            <ShoppingBag size={20} className="shrink-0 text-[#25D366]" />
+            <p className="min-w-0 flex-1 text-sm">
+              Tu pedido en <b>{pickup.placeName}</b>
+            </p>
+            <a
+              href={whatsappLink(
+                pickup.whatsapp,
+                `Hola${pickup.contactName ? ` ${pickup.contactName}` : ""}, ya estoy afuera para recoger mi pedido. Soy ${meFirst}, de Villas.`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setPickup(null)}
+              className="shrink-0 rounded-full bg-[#25D366] px-4 py-2 text-xs font-black text-[#0b3d1f]"
+            >
+              Ya llegué
+            </a>
+            <button onClick={() => setPickup(null)} className="rounded-full p-1 text-muted" aria-label="Quitar pedido">
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          !guest && !showIntro && !selectedId && !meOpen && <InstallPrompt />
+        )}
         <div className="flex items-end justify-between">
         <div className="pointer-events-auto flex gap-2">
           <button
@@ -309,6 +361,17 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
             autoSelected.current = false;
             setSelectedId(null);
           }}
+        />
+      )}
+      {newsOpen && (
+        <NewsSheet
+          news={news}
+          constellations={cById}
+          onOpen={(id) => {
+            setNewsOpen(false);
+            select(id);
+          }}
+          onClose={() => setNewsOpen(false)}
         />
       )}
       {showIntro && <Intro creator={creator} guest={guest} onDone={() => setShowIntro(false)} />}

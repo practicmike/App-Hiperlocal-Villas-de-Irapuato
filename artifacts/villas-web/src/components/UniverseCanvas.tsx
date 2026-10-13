@@ -341,6 +341,10 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                 <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={unlit ? 0.12 : 0.35 + pos.glow * 0.65} />
                 <circle r={core} fill={color} opacity={unlit ? 0.42 : 1} />
                 {!unlit && <circle r={core * 0.38} fill="white" opacity={0.75} />}
+                {/* Novedad del día: la estrella late. */}
+                {p.hasNews && !pos.dimmed && (
+                  <circle className="news-ring" r={core + 3} fill="none" stroke={color} strokeWidth={2} />
+                )}
                 {/* Estrella por descubrir con regalo de bienvenida. */}
                 {unlit && p.welcome && (
                   <circle className="gift-ring" r={core + 4} fill="none" stroke="#E6C882" strokeWidth={1.4} strokeDasharray="2 3" />

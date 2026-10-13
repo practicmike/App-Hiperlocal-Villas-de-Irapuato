@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { MerchantRecentVisit } from './merchantRecentVisit';
+import type { NewsItem } from './newsItem';
 import type { PlaceKind } from './placeKind';
 
 export interface MerchantMe {
@@ -18,4 +19,5 @@ export interface MerchantMe {
   neighbors: number;
   recent: MerchantRecentVisit[];
   kind: PlaceKind;
+  news: NewsItem | null;
 }

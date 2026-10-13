@@ -8,6 +8,7 @@ import {
   searchesTable,
   complaintsTable,
   placePhotosTable,
+  newsTable,
 } from "@workspace/db";
 import {
   GetPlaceParams,
@@ -24,6 +25,7 @@ import { requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
 import { photosByPlace } from "../lib/photos";
+import { activeNews } from "../lib/news";
 import { embed } from "../lib/ai";
 import { aiMatch, AI_MAX_CANDIDATES } from "../lib/ai-match";
 import {
@@ -72,7 +74,8 @@ router.get("/universe", async (_req, res) => {
       .orderBy(placesTable.createdAt),
     endorsementCounts(),
   ]);
-  const photos = await photosByPlace(places.map((p) => p.id));
+  const [photos, news] = await Promise.all([photosByPlace(places.map((p) => p.id)), activeNews()]);
+  const withNews = new Set(news.map((n) => n.placeId));
   res.json({
     constellations,
     places: places.map(({ welcomeOffer, ...p }) => ({
@@ -80,8 +83,29 @@ router.get("/universe", async (_req, res) => {
       endorsementCount: counts.get(p.id) ?? 0,
       welcome: !!welcomeOffer,
       coverUrl: photos.get(p.id)?.[0]?.url ?? null,
+      hasNews: withNews.has(p.id),
     })),
   });
+});
+
+router.get("/news", async (_req, res) => {
+  res.json(await activeNews());
+});
+
+router.get("/news/:id/photo", async (req, res) => {
+  const { id } = GetPlaceParams.parse(req.params);
+  const [n] = await db
+    .select({ mime: newsTable.photoMime, data: newsTable.photoData })
+    .from(newsTable)
+    .where(eq(newsTable.id, id))
+    .limit(1);
+  if (!n?.data || !n.mime) {
+    res.status(404).json({ message: "Foto no encontrada." });
+    return;
+  }
+  res.setHeader("content-type", n.mime);
+  res.setHeader("cache-control", "public, max-age=86400, s-maxage=86400");
+  res.end(n.data);
 });
 
 /** Foto pública (también la ven los visitantes): caché de un año, el id nunca cambia. */

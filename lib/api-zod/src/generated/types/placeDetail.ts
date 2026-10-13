@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { Constellation } from './constellation';
+import type { NewsItem } from './newsItem';
 import type { PhotoRef } from './photoRef';
 import type { PlaceDetailOperation } from './placeDetailOperation';
 import type { PlaceKind } from './placeKind';
@@ -43,6 +44,8 @@ export interface PlaceDetail {
   myVisits: number;
   kind: PlaceKind;
   delivers: boolean;
+  pickup: boolean;
+  news: NewsItem | null;
   hours: WeekHours | null;
   /**
      * @minimum 0

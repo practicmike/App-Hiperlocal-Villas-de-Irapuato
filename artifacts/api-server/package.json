@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/lib/search-core.test.ts"
+    "test": "node --import tsx --test src/lib/search-core.test.ts src/lib/hours.test.ts"
   },
   "dependencies": {
     "@vercel/functions": "^3.9.11",

@@ -48,6 +48,10 @@ import {
   AdminReorderPhotosParams,
   AdminReorderPhotosBody,
   AdminDeletePhotoParams,
+  AdminPublishNewsParams,
+  AdminPublishNewsBody,
+  AdminRemoveNewsParams,
+  AdminNewsPhotoParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
@@ -56,6 +60,7 @@ import { endorsementCounts, refreshEmbedding } from "../lib/places";
 import { issueMerchantKey } from "../lib/merchant";
 import { photosByPlace, photoUrl, sniffImage, type PhotoRef } from "../lib/photos";
 import { cleanHours } from "../lib/hours";
+import { activeNews, publishNews, removeNews, setNewsPhoto } from "../lib/news";
 import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
 import { embedMany, suggestConstellation } from "../lib/ai";
 import { placeEmbeddingText } from "../lib/search-core";
@@ -380,6 +385,7 @@ const toAdminPlace = (
   hasMerchantKey: p.merchantKeyHash !== null,
   kind: p.kind,
   delivers: p.delivers,
+  pickup: p.pickup,
   hours: p.hours ?? null,
   landM2: p.landM2,
   builtM2: p.builtM2,
@@ -411,6 +417,7 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
     welcomeOffer: blank(body.welcomeOffer),
     kind: body.kind,
     delivers: body.delivers,
+    pickup: isProperty ? false : body.pickup,
     hours: isProperty ? null : cleanHours(body.hours),
     landM2: isProperty ? (body.landM2 ?? null) : null,
     builtM2: isProperty ? (body.builtM2 ?? null) : null,
@@ -591,6 +598,38 @@ router.post("/admin/constellations/:cid/remove", async (req, res) => {
 });
 
 /** La IA sugiere constelación y giro; el creador decide. */
+// --------------------------------------------------------- hoy en villas
+router.get("/admin/news", async (_req, res) => {
+  res.json(await activeNews());
+});
+
+router.post("/admin/places/:id/news", async (req, res) => {
+  const { id } = AdminPublishNewsParams.parse(req.params);
+  const { text } = AdminPublishNewsBody.parse(req.body);
+  const [place] = await db.select({ id: placesTable.id }).from(placesTable).where(eq(placesTable.id, id)).limit(1);
+  if (!place) {
+    res.status(404).json({ message: "Lugar no encontrado." });
+    return;
+  }
+  res.status(201).json(await publishNews(id, text));
+});
+
+router.delete("/admin/news/:id", async (req, res) => {
+  const { id } = AdminRemoveNewsParams.parse(req.params);
+  await removeNews({ id });
+  res.status(204).end();
+});
+
+router.post("/admin/news/:id/photo", express.raw({ type: () => true, limit: "3mb" }), async (req, res) => {
+  const { id } = AdminNewsPhotoParams.parse(req.params);
+  const item = await setNewsPhoto(id, req.body);
+  if (!item) {
+    res.status(400).json({ message: "Eso no parece una foto (JPG, PNG o WebP)." });
+    return;
+  }
+  res.json(item);
+});
+
 // ------------------------------------------------------------------ fotos
 /**
  * Sube una foto como binario. El celular la manda ya reducida; aquí solo se
@@ -696,7 +735,7 @@ router.post("/admin/demo-places", async (_req, res) => {
     demos.filter((p) => existing.has(p.whatsapp)).map((p) =>
       db
         .update(placesTable)
-        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, kind: p.kind, delivers: p.delivers, hours: p.hours ?? null, landM2: p.landM2 ?? null, builtM2: p.builtM2 ?? null, bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, parking: p.parking ?? null, embedding: null, updatedAt: new Date() })
+        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, kind: p.kind, delivers: p.delivers, pickup: p.pickup ?? false, hours: p.hours ?? null, landM2: p.landM2 ?? null, builtM2: p.builtM2 ?? null, bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, parking: p.parking ?? null, embedding: null, updatedAt: new Date() })
         .where(eq(placesTable.whatsapp, p.whatsapp))
         .returning(),
     ),

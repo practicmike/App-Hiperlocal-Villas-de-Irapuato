@@ -3,6 +3,7 @@ import { waitUntil } from "@vercel/functions";
 import { db, placesTable, endorsementsTable, residentsTable, visitsTable, type Place } from "@workspace/db";
 import { embed } from "./ai";
 import { photosByPlace } from "./photos";
+import { activeNews } from "./news";
 import { placeEmbeddingText } from "./search-core";
 import { logger } from "./logger";
 
@@ -67,6 +68,8 @@ export async function placeDetail(place: Place, viewerId: string | null) {
     myVisits: Number(v?.mine ?? 0),
     kind: place.kind,
     delivers: place.delivers,
+    pickup: place.pickup,
+    news: (await activeNews([place.id]))[0] ?? null,
     hours: place.hours ?? null,
     landM2: place.landM2,
     builtM2: place.builtM2,

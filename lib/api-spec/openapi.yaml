@@ -294,6 +294,124 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Universe"
+  /news:
+    get:
+      operationId: listNews
+      tags: [universe]
+      summary: Hoy en Villas (novedades vigentes)
+      responses:
+        "200":
+          description: Novedades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsItem"
+  /merchant/news:
+    post:
+      operationId: merchantPublishNews
+      tags: [merchant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsInput"
+      responses:
+        "201":
+          description: Publicada (reemplaza la anterior)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsItem"
+    delete:
+      operationId: merchantRemoveNews
+      tags: [merchant]
+      responses:
+        "204":
+          description: Quitada
+  /merchant/news/{id}/photo:
+    post:
+      operationId: merchantNewsPhoto
+      tags: [merchant]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Foto agregada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsItem"
+  /admin/news:
+    get:
+      operationId: adminListNews
+      tags: [admin]
+      responses:
+        "200":
+          description: Novedades vigentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsItem"
+  /admin/places/{id}/news:
+    post:
+      operationId: adminPublishNews
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsInput"
+      responses:
+        "201":
+          description: Publicada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsItem"
+  /admin/news/{id}:
+    delete:
+      operationId: adminRemoveNews
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Quitada
+  /admin/news/{id}/photo:
+    post:
+      operationId: adminNewsPhoto
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Foto agregada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsItem"
   /places/{id}:
     get:
       operationId: getPlace
@@ -1145,7 +1263,11 @@ components:
             $ref: "#/components/schemas/MerchantRecentVisit"
         kind:
           $ref: "#/components/schemas/PlaceKind"
-      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind]
+        news:
+          anyOf:
+            - $ref: "#/components/schemas/NewsItem"
+            - type: "null"
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news]
     MerchantRecentVisit:
       type: object
       properties:
@@ -1227,6 +1349,36 @@ components:
     PlaceKind:
       type: string
       enum: [comercio, oficio]
+    NewsItem:
+      type: object
+      properties:
+        id:
+          type: string
+        placeId:
+          type: string
+        placeName:
+          type: string
+        constellation:
+          type: string
+        text:
+          type: string
+        photoUrl:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required: [id, placeId, placeName, constellation, text, photoUrl, createdAt, expiresAt]
+    NewsInput:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 3
+          maxLength: 140
+      required: [text]
     PlaceSummary:
       type: object
       properties:
@@ -1255,7 +1407,9 @@ components:
           $ref: "#/components/schemas/WeekHours"
         coverUrl:
           type: [string, "null"]
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl]
+        hasNews:
+          type: boolean
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews]
     Universe:
       type: object
       properties:
@@ -1321,6 +1475,12 @@ components:
           $ref: "#/components/schemas/PlaceKind"
         delivers:
           type: boolean
+        pickup:
+          type: boolean
+        news:
+          anyOf:
+            - $ref: "#/components/schemas/NewsItem"
+            - type: "null"
         hours:
           $ref: "#/components/schemas/WeekHours"
         landM2:
@@ -1351,6 +1511,8 @@ components:
         - photos
         - kind
         - delivers
+        - pickup
+        - news
         - hours
         - landM2
         - builtM2
@@ -1630,6 +1792,8 @@ components:
           $ref: "#/components/schemas/PlaceKind"
         delivers:
           type: boolean
+        pickup:
+          type: boolean
         hours:
           $ref: "#/components/schemas/WeekHours"
         landM2:
@@ -1670,6 +1834,7 @@ components:
         - welcomeOffer
         - kind
         - delivers
+        - pickup
         - hours
         - landM2
         - builtM2

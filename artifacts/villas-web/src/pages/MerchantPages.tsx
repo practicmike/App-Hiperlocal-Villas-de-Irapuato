@@ -13,8 +13,13 @@ import {
   useMerchantLookupMember,
   getMerchantLookupMemberQueryKey,
   useMerchantRecordVisit,
+  merchantPublishNews,
+  merchantRemoveNews,
+  getListNewsQueryKey,
+  getGetUniverseQueryKey,
   type VisitResult,
 } from "@workspace/api-client-react";
+import { NewsComposer } from "@/components/NewsComposer";
 import { Camera, Check, Gift, Store, Star } from "lucide-react";
 import { Shell, errorMessage } from "@/pages/AccessPages";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -64,6 +69,7 @@ export function MerchantKeyPage({ token }: { token: string }) {
 /** /comercio: la pantalla de la caja. */
 export function MerchantHomePage() {
   const [, navigate] = useLocation();
+  const qc = useQueryClient();
   const { data: m, isLoading, isError } = useMerchant();
   const [code, setCode] = useState("");
 
@@ -101,6 +107,21 @@ export function MerchantHomePage() {
           />
           <button className="rounded-xl bg-confianza px-4 text-sm font-black text-space">Buscar</button>
         </form>
+      </div>
+
+      <div className="mb-4">
+        <NewsComposer
+          current={m.news}
+          publish={(text) => merchantPublishNews({ text })}
+          photoPath={(id) => `/api/merchant/news/${id}/photo`}
+          remove={() => merchantRemoveNews()}
+          onChange={() => {
+            void qc.invalidateQueries({ queryKey: getGetMerchantMeQueryKey() });
+            void qc.invalidateQueries({ queryKey: getListNewsQueryKey() });
+            void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
+          }}
+          examples={m.kind === "oficio" ? "Esta semana tengo espacio el jueves · Promoción en mantenimiento" : undefined}
+        />
       </div>
 
       {m.welcomeOffer && (

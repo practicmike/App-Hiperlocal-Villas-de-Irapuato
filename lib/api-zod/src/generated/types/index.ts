@@ -42,6 +42,8 @@ export * from './merchantKey';
 export * from './merchantMe';
 export * from './merchantRecentVisit';
 export * from './meRole';
+export * from './newsInput';
+export * from './newsItem';
 export * from './photoRef';
 export * from './placeDetail';
 export * from './placeDetailOperation';

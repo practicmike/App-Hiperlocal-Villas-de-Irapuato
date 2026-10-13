@@ -4,7 +4,7 @@
  * - Páginas: siempre de la red; si no hay señal, la última versión guardada.
  * - API: siempre de la red (datos al día, sesiones seguras).
  */
-const VERSION = "villas-v1";
+const VERSION = "villas-v2";
 const SHELL = "/index.html";
 
 self.addEventListener("install", (e) => {
