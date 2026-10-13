@@ -12,7 +12,36 @@ import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zo
 import "d3-transition";
 import type { PlaceSummary } from "@workspace/api-client-react";
 import { FALLBACK, byId, type Constellation } from "@/lib/constellations";
-import { NEBULA_SIZE, matchBounds, nebulaCenter, worldRadius, type StarPos } from "@/lib/layout";
+import { NEBULA_SIZE, matchBounds, nebulaCenter, nebulaRadius, worldRadius, type StarPos } from "@/lib/layout";
+
+/**
+ * Trazo de cada constelación: árbol de expansión mínima (Prim) entre sus estrellas.
+ * Une cada estrella con su vecina más cercana sin cruces largos, como un mapa estelar.
+ */
+function constellationLines(points: Array<{ x: number; y: number }>): Array<[number, number, number, number]> {
+  const n = points.length;
+  if (n < 2) return [];
+  const inTree = new Array<boolean>(n).fill(false);
+  const best = new Array<number>(n).fill(Infinity);
+  const from = new Array<number>(n).fill(-1);
+  best[0] = 0;
+  const out: Array<[number, number, number, number]> = [];
+  for (let k = 0; k < n; k++) {
+    let u = -1;
+    for (let i = 0; i < n; i++) if (!inTree[i] && (u === -1 || best[i]! < best[u]!)) u = i;
+    inTree[u] = true;
+    if (from[u]! >= 0) out.push([points[from[u]!]!.x, points[from[u]!]!.y, points[u]!.x, points[u]!.y]);
+    for (let v = 0; v < n; v++) {
+      if (inTree[v]) continue;
+      const d = (points[u]!.x - points[v]!.x) ** 2 + (points[u]!.y - points[v]!.y) ** 2;
+      if (d < best[v]!) {
+        best[v] = d;
+        from[v] = u;
+      }
+    }
+  }
+  return out;
+}
 
 /** Nivel de zoom relativo a la vista completa: decide qué se muestra. */
 export type Level = "far" | "mid" | "near";
@@ -69,6 +98,20 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
   levelCbRef.current = onLevelChange;
 
   const cById = useMemo(() => byId(constellations), [constellations]);
+  // Las líneas se calculan con las posiciones "en casa"; durante una búsqueda se desvanecen.
+  const homeRef = useRef(positions);
+  if (!searching) homeRef.current = positions;
+  const lines = useMemo(() => {
+    const home = homeRef.current;
+    return constellations.map((c) => ({
+      id: c.id,
+      color: c.color,
+      segs: constellationLines(
+        places.filter((p) => p.constellation === c.id).map((p) => home.get(p.id)).filter((x): x is StarPos => !!x),
+      ),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [constellations, places, searching ? null : positions]);
   const n = constellations.length;
   const nRef = useRef(n);
   nRef.current = n;
@@ -239,6 +282,30 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
       </defs>
 
       <g ref={worldRef}>
+        {/* Órbitas alrededor de "Tú": la misma idea del logo. */}
+        <g style={{ opacity: level === "near" ? 0 : 1, transition: "opacity 400ms ease" }} pointerEvents="none">
+          <circle r={nebulaRadius(constellations.length)} fill="none" stroke="#a6abd6" strokeOpacity={0.14} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          <circle r={nebulaRadius(constellations.length) * 0.46} fill="none" stroke="#a6abd6" strokeOpacity={0.09} strokeWidth={1} strokeDasharray="2 6" vectorEffect="non-scaling-stroke" />
+        </g>
+        {/* Trazo de cada constelación. */}
+        <g style={{ opacity: searching ? 0 : 1, transition: "opacity 400ms ease" }} pointerEvents="none">
+          {lines.map((l) =>
+            l.segs.map(([x1, y1, x2, y2], i) => (
+              <line
+                key={`${l.id}-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={l.color}
+                strokeOpacity={0.28}
+                strokeWidth={1}
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            )),
+          )}
+        </g>
         {/* Nebulosas: el nivel "lejos" muestra Villas completo, una por constelación. */}
         {constellations.map((info) => {
           const c = info.id;
@@ -261,7 +328,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                 >
                   {/* Arriba: el texto crece hacia afuera para no tapar sus estrellas. */}
                   <text className="nebula-label" textAnchor="middle" fill={info.color} y={labelAbove ? -16 : 0}>
-                    {info.name}
+                    {info.name.toLocaleUpperCase("es-MX")}
                   </text>
                   {/* Lejos solo el nombre; la pista aparece al acercarte a la constelación. */}
                   {level === "mid" && info.hint && (
@@ -338,16 +405,27 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
               <g className="star-body">
                 {/* Área táctil generosa: dedos, no cursores. */}
                 <circle r={22} fill="transparent" />
-                <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={unlit ? 0.12 : 0.35 + pos.glow * 0.65} />
-                <circle r={core} fill={color} opacity={unlit ? 0.42 : 1} />
-                {!unlit && <circle r={core * 0.38} fill="white" opacity={0.75} />}
+                {unlit ? (
+                  // Por descubrir: solo el aro, como el hueco de una estampa en el álbum.
+                  <>
+                    {/* Fondo opaco para que el trazo de la constelación no se vea dentro del aro. */}
+                    <circle r={core * 0.82} fill="#11143a" />
+                    <circle r={core * 0.82} fill={color} fillOpacity={0.12} stroke={color} strokeOpacity={0.85} strokeWidth={1.6} />
+                  </>
+                ) : (
+                  <>
+                    <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={0.35 + pos.glow * 0.65} />
+                    <circle r={core} fill={color} />
+                    <circle r={core * 0.38} fill="white" opacity={0.75} />
+                  </>
+                )}
                 {/* Novedad del día: la estrella late. */}
                 {p.hasNews && !pos.dimmed && (
                   <circle className="news-ring" r={core + 3} fill="none" stroke={color} strokeWidth={2} />
                 )}
-                {/* Estrella por descubrir con regalo de bienvenida. */}
+                {/* Regalo de bienvenida: un destello dorado quieto (solo la novedad se mueve). */}
                 {unlit && p.welcome && (
-                  <circle className="gift-ring" r={core + 4} fill="none" stroke="#E6C882" strokeWidth={1.4} strokeDasharray="2 3" />
+                  <circle cx={core * 0.78} cy={-core * 0.78} r={2.8} fill="#E6C882" stroke="#0b0d1f" strokeWidth={1.2} />
                 )}
                 <circle
                   className="star-ring"
