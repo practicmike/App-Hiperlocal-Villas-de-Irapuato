@@ -32,6 +32,8 @@ import {
   useAdminDeleteVisit,
   useAdminClearVisits,
   useAdminDeleteInvite,
+  useAdminDeleteSearch,
+  useAdminClearSearches,
   getAdminListVisitsQueryKey,
   getGetMySkyQueryKey,
   getAdminListConstellationsQueryKey,
@@ -670,17 +672,39 @@ function AdminField({ label, ...props }: { label: string } & React.InputHTMLAttr
 function Searches() {
   const qc = useQueryClient();
   const { data } = useAdminListSearches();
-  const handled = useAdminMarkSearchHandled({
-    mutation: { onSuccess: () => void qc.invalidateQueries({ queryKey: getAdminListSearchesQueryKey() }) },
-  });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: getAdminListSearchesQueryKey() });
+    void qc.invalidateQueries({ queryKey: getAdminOverviewQueryKey() });
+  };
+  const handled = useAdminMarkSearchHandled({ mutation: { onSuccess: refresh } });
+  const del = useAdminDeleteSearch({ mutation: { onSuccess: refresh } });
+  const clear = useAdminClearSearches({ mutation: { onSuccess: refresh } });
   if (!data) return <Loading />;
   if (data.length === 0) return <Empty text="Aún no hay búsquedas." />;
   return (
+    <div className="space-y-3">
+    <div className="flex justify-end">
+      <button
+        disabled={clear.isPending}
+        onClick={() => confirm(`¿Borrar TODAS las búsquedas (${data.length})? Las métricas del resumen arrancan de cero.`) && clear.mutate()}
+        className="rounded-full border border-alert/50 px-4 py-1.5 text-xs font-bold text-alert"
+      >
+        Borrar todas
+      </button>
+    </div>
     <ul className="space-y-2">
       {data.map((s) => {
         const pending = s.resultCount === 0 && !s.handled;
         return (
-          <li key={s.id} className={`rounded-2xl p-4 text-sm ${pending ? "border border-casas/50 bg-casas/10" : "bg-panel"}`}>
+          <li key={s.id} className={`relative rounded-2xl p-4 pr-10 text-sm ${pending ? "border border-casas/50 bg-casas/10" : "bg-panel"}`}>
+            <button
+              aria-label="Borrar búsqueda"
+              disabled={del.isPending}
+              onClick={() => del.mutate({ id: s.id })}
+              className="absolute right-2 top-2 rounded-full px-2 py-1 text-alert/70 hover:bg-white/10"
+            >
+              ✕
+            </button>
             <p className="font-bold">«{s.query}»</p>
             {s.refinedQuery && <p className="text-xs text-ai">IA: {s.refinedQuery}</p>}
             <p className="mt-1 text-xs text-muted">
@@ -708,6 +732,7 @@ function Searches() {
         );
       })}
     </ul>
+    </div>
   );
 }
 

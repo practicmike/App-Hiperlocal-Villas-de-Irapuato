@@ -967,6 +967,21 @@ export const AdminListSearchesResponseItem = zod.object({
 export const AdminListSearchesResponse = zod.array(AdminListSearchesResponseItem)
 
 
+export const AdminDeleteSearchParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteSearchResponse = zod.void()
+
+
+/**
+ * @summary Borra todas las búsquedas (para limpiar pruebas)
+ */
+export const AdminClearSearchesResponse = zod.object({
+  "removed": zod.number().int()
+})
+
+
 export const AdminMarkSearchHandledParams = zod.object({
   "id": zod.coerce.string().uuid()
 })

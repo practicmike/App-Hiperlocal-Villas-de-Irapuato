@@ -3897,6 +3897,148 @@ export function useAdminListSearches<TData = Awaited<ReturnType<typeof adminList
 
 
 
+export const getAdminDeleteSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/searches/${id}`
+}
+
+export const adminDeleteSearch = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteSearchUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteSearchMutationKey = () => ['adminDeleteSearch'] as const;
+
+export const getAdminDeleteSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSearch>>, TError,AdminDeleteSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSearch>>, TError,AdminDeleteSearchMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteSearch>>, AdminDeleteSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteSearchMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteSearch>>>
+
+    export type AdminDeleteSearchMutationError = ErrorType<unknown>
+    export type AdminDeleteSearchMutationVariables = {id: string}
+
+    export const useAdminDeleteSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSearch>>, TError,AdminDeleteSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteSearch>>,
+        TError,
+        AdminDeleteSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteSearchMutationOptions(options));
+    }
+
+export const getAdminClearSearchesUrl = () => {
+
+
+
+
+  return `/api/admin/searches/clear`
+}
+
+/**
+ * @summary Borra todas las búsquedas (para limpiar pruebas)
+ */
+export const adminClearSearches = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClearVisitsResult> => {
+
+  return customFetch<ClearVisitsResult>(getAdminClearSearchesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminClearSearchesMutationKey = () => ['adminClearSearches'] as const;
+
+export const getAdminClearSearchesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearSearches>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminClearSearches>>, TError,void, TContext> => {
+
+const mutationKey = getAdminClearSearchesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminClearSearches>>, void> = () => {
+
+
+          return  adminClearSearches(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminClearSearchesMutationResult = NonNullable<Awaited<ReturnType<typeof adminClearSearches>>>
+
+    export type AdminClearSearchesMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Borra todas las búsquedas (para limpiar pruebas)
+ */
+export const useAdminClearSearches = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminClearSearches>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminClearSearches>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAdminClearSearchesMutationOptions(options));
+    }
+
 export const getAdminMarkSearchHandledUrl = (id: string,) => {
 
 

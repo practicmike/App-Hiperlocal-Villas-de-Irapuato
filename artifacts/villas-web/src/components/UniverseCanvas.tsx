@@ -72,16 +72,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
   const n = constellations.length;
   const nRef = useRef(n);
   nRef.current = n;
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of places) m.set(p.constellation, (m.get(p.constellation) ?? 0) + 1);
-    return m;
-  }, [places]);
-  const litCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    if (lit) for (const p of places) if (lit.has(p.id)) m.set(p.constellation, (m.get(p.constellation) ?? 0) + 1);
-    return m;
-  }, [places, lit]);
+
 
   /** Aplica el zoom directo al DOM: cero renders de React por cuadro. */
   const apply = useCallback((t: ZoomTransform) => {
@@ -271,14 +262,12 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                   <text className="nebula-label" textAnchor="middle" fill={info.color} y={labelAbove ? -16 : 0}>
                     {info.name}
                   </text>
-                  <text className="nebula-sub" textAnchor="middle" y={labelAbove ? 0 : 17}>
-                    {/* Con 5+ constelaciones la pista no cabe lejos; aparece al acercarte. */}
-                    {lit && level === "far"
-                      ? `${litCounts.get(c) ?? 0} de ${counts.get(c) ?? 0} encendidas`
-                      : constellations.length <= 4 || level === "mid"
-                        ? `${counts.get(c) ?? 0} · ${info.hint}`
-                        : `${counts.get(c) ?? 0} estrellas`}
-                  </text>
+                  {/* Lejos solo el nombre; la pista aparece al acercarte a la constelación. */}
+                  {level === "mid" && info.hint && (
+                    <text className="nebula-sub" textAnchor="middle" y={labelAbove ? 0 : 17}>
+                      {info.hint}
+                    </text>
+                  )}
                 </g>
               </g>
             </g>
