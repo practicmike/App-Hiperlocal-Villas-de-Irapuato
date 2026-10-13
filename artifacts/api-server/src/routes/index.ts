@@ -4,6 +4,7 @@ import setupRouter from "./setup";
 import authRouter from "./auth";
 import universeRouter from "./universe";
 import adminRouter from "./admin";
+import merchantRouter from "./merchant";
 
 const router: IRouter = Router();
 
@@ -11,6 +12,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(setupRouter);
 router.use(authRouter);
+router.use(merchantRouter);
 router.use(universeRouter);
 router.use(adminRouter);
 

@@ -28,6 +28,11 @@ export const residentsTable = pgTable("residents", {
   inviteCode: text("invite_code"),
   /** Permiso para mostrar su nombre junto a sus recomendaciones. */
   showNameOnEndorsements: boolean("show_name_on_endorsements").notNull().default(false),
+  /**
+   * Código de su credencial (va dentro del QR). No abre sesión: solo identifica
+   * al vecino ante un comercio para registrar su visita.
+   */
+  memberCode: text("member_code").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });

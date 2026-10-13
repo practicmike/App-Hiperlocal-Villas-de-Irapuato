@@ -60,6 +60,7 @@ router.get("/universe", async (_req, res) => {
         category: placesTable.category,
         verified: placesTable.verified,
         sponsored: placesTable.sponsored,
+        welcomeOffer: placesTable.welcomeOffer,
       })
       .from(placesTable)
       .where(eq(placesTable.active, true))
@@ -68,7 +69,11 @@ router.get("/universe", async (_req, res) => {
   ]);
   res.json({
     constellations,
-    places: places.map((p) => ({ ...p, endorsementCount: counts.get(p.id) ?? 0 })),
+    places: places.map(({ welcomeOffer, ...p }) => ({
+      ...p,
+      endorsementCount: counts.get(p.id) ?? 0,
+      welcome: !!welcomeOffer,
+    })),
   });
 });
 

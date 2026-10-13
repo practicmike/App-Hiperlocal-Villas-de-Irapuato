@@ -11,7 +11,7 @@ import {
   type PlaceDetail,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BadgeCheck, Heart, KeyRound, MessageCircle, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
+import { BadgeCheck, Gift, Heart, KeyRound, MessageCircle, Pencil, ShieldAlert, Sparkles, Star, Users, X } from "lucide-react";
 import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
 
 interface Match {
@@ -136,12 +136,35 @@ function Card({
         </p>
       )}
 
+      {/* Regalo de bienvenida: la invitación a encender una estrella nueva. */}
+      {place.welcomeOffer && place.myVisits === 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-[#E6C882]/50 bg-[#E6C882]/10 p-3">
+          <Gift size={20} className="mt-0.5 shrink-0 text-[#E6C882]" />
+          <div className="text-sm">
+            <p className="font-bold text-[#E6C882]">Tu primera visita: {place.welcomeOffer}</p>
+            <p className="text-xs text-muted">
+              {place.locked ? "Para vecinos de Villas con credencial." : "Enseña tu credencial al pagar y se aplica solo."}
+            </p>
+          </div>
+        </div>
+      )}
+      {place.myVisits > 0 && (
+        <p className="flex items-center gap-1.5 text-sm font-bold text-me">
+          <Star size={16} fill="currentColor" /> Ya la encendiste · {place.myVisits} {place.myVisits === 1 ? "visita" : "visitas"}
+        </p>
+      )}
+
       {place.description && <p className="text-[15px] leading-relaxed text-ink/90">{place.description}</p>}
 
       <div className="space-y-1 text-sm">
         {place.verified && (
           <p className="flex items-center gap-1.5 text-me">
             <BadgeCheck size={16} /> {firstName} lo conoce en persona
+          </p>
+        )}
+        {place.neighborsServed > 0 && (
+          <p className="flex items-center gap-1.5 text-confianza">
+            <Users size={16} /> {place.neighborsServed} {place.neighborsServed === 1 ? "vecino atendido" : "vecinos atendidos"} en Villas
           </p>
         )}
         {recommendedBy && (

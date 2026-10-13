@@ -1,5 +1,5 @@
 import type { PlaceSummary } from "@workspace/api-client-react";
-import { Heart, BadgeCheck } from "lucide-react";
+import { Heart, BadgeCheck, Gift } from "lucide-react";
 import type { Constellation } from "@/lib/constellations";
 
 /** Vista en lista: misma información, sin 3D ni gestos. Accesible por teclado y lector. */
@@ -59,6 +59,7 @@ export function ListView({
                       {showPercent && scores?.has(p.id) && (
                         <span className="shrink-0 text-sm font-black text-ai">{Math.round(scores.get(p.id)! * 100)}%</span>
                       )}
+                      {p.welcome && <Gift size={15} className="text-[#E6C882]" aria-label="Regalo en tu primera visita" />}
                       {p.verified && <BadgeCheck size={16} className="text-me" aria-label="Verificado" />}
                       {p.endorsementCount > 0 && (
                         <span className="flex items-center gap-1 text-xs text-alert">

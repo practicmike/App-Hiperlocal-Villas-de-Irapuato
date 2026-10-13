@@ -173,6 +173,69 @@ export interface UpdateMeRequest {
   showNameOnEndorsements: boolean;
 }
 
+export interface SkyVisit {
+  placeId: string;
+  count: number;
+  lastAt: string;
+}
+
+export interface Sky {
+  memberCode: string;
+  visits: SkyVisit[];
+}
+
+export interface MerchantKey {
+  token: string;
+  whatsapp: string;
+  placeName: string;
+}
+
+export interface MerchantRecentVisit {
+  firstName: string;
+  at: string;
+  welcomeApplied: boolean;
+}
+
+export interface MerchantMe {
+  placeId: string;
+  placeName: string;
+  /** @nullable */
+  welcomeOffer: string | null;
+  todayVisits: number;
+  totalVisits: number;
+  neighbors: number;
+  recent: MerchantRecentVisit[];
+}
+
+export interface MemberLookup {
+  firstName: string;
+  visitsHere: number;
+  /**
+     * Solo si es su primera visita y el comercio tiene beneficio
+     * @nullable
+     */
+  welcomeOffer: string | null;
+  /** Ya se registró una visita en las últimas 2 horas */
+  recentlyRecorded: boolean;
+}
+
+export interface RecordVisitRequest {
+  /**
+     * @minLength 4
+     * @maxLength 20
+     */
+  code: string;
+}
+
+export interface VisitResult {
+  firstName: string;
+  visitsHere: number;
+  welcomeApplied: boolean;
+  /** @nullable */
+  welcomeOffer: string | null;
+  duplicate: boolean;
+}
+
 export interface PlaceSummary {
   id: string;
   constellation: Constellation;
@@ -181,6 +244,8 @@ export interface PlaceSummary {
   verified: boolean;
   sponsored: boolean;
   endorsementCount: number;
+  /** Tiene beneficio de bienvenida */
+  welcome: boolean;
 }
 
 export interface Universe {
@@ -224,6 +289,11 @@ export interface PlaceDetail {
   endorsedByMe: boolean;
   /** true para visitantes sin llave (sin contacto ni nombres de vecinos) */
   locked: boolean;
+  /** @nullable */
+  welcomeOffer: string | null;
+  /** Vecinos distintos con visita registrada */
+  neighborsServed: number;
+  myVisits: number;
 }
 
 export interface EndorseRequest {
@@ -292,6 +362,7 @@ export interface AdminOverview {
   searchesNoResult30d: number;
   openComplaints: number;
   guestSearches30d: number;
+  visits30d: number;
 }
 
 export type AdminResidentRole = typeof AdminResidentRole[keyof typeof AdminResidentRole];
@@ -417,6 +488,11 @@ export interface PlaceInput {
      * @nullable
      */
   imageUrl: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  welcomeOffer: string | null;
   verified: boolean;
   active: boolean;
 }
@@ -427,6 +503,8 @@ export type AdminPlace = PlaceInput & {
   endorsementCount: number;
   hasEmbedding: boolean;
   isDemo: boolean;
+  visitCount: number;
+  hasMerchantKey: boolean;
 };
 
 export interface DemoResult {

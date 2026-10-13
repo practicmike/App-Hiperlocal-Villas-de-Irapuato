@@ -68,6 +68,10 @@ export const placesTable = pgTable(
     /** Embedding de text-embedding-3-small; null si no hay OPENAI_API_KEY. */
     embedding: jsonb("embedding").$type<number[] | null>(),
     whatsappClicks: integer("whatsapp_clicks").notNull().default(0),
+    /** Beneficio para la primera visita desde el universo: "Primer café 2x1". */
+    welcomeOffer: text("welcome_offer"),
+    /** Hash del link del modo comercio; null = sin modo comercio. */
+    merchantKeyHash: text("merchant_key_hash").unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -92,6 +96,46 @@ export const endorsementsTable = pgTable(
   (t) => [unique("endorsements_place_resident").on(t.placeId, t.residentId)],
 );
 
+/**
+ * Visita registrada: el comercio escaneó la credencial del vecino.
+ * Es lo que enciende la estrella en el cielo de ese vecino.
+ */
+export const visitsTable = pgTable(
+  "visits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    residentId: uuid("resident_id")
+      .notNull()
+      .references(() => residentsTable.id),
+    /** Se aplicó el beneficio de bienvenida en esta visita (solo la primera). */
+    welcomeApplied: boolean("welcome_applied").notNull().default(false),
+    welcomeOffer: text("welcome_offer"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("visits_resident_idx").on(t.residentId),
+    index("visits_place_idx").on(t.placeId, t.createdAt),
+  ],
+);
+
+/** Teléfonos del comercio con el modo comercio abierto (solo el hash). */
+export const merchantSessionsTable = pgTable(
+  "merchant_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [index("merchant_sessions_place_idx").on(t.placeId)],
+);
+
 export type Place = typeof placesTable.$inferSelect;
 export type NewPlace = typeof placesTable.$inferInsert;
+export type Visit = typeof visitsTable.$inferSelect;
 export type ConstellationRow = typeof constellationsTable.$inferSelect;

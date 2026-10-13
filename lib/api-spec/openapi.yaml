@@ -173,6 +173,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/Me"
 
+  /me/sky:
+    get:
+      operationId: getMySky
+      tags: [auth]
+      summary: Credencial del vecino y estrellas que ya encendió
+      responses:
+        "200":
+          description: Cielo personal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sky"
+        "401":
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # -------------------------------------------------------------- comercio
+  /merchant/login:
+    post:
+      operationId: merchantLogin
+      tags: [merchant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyLoginRequest"
+      responses:
+        "200":
+          description: Modo comercio abierto en este teléfono
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MerchantMe"
+        "401":
+          description: Link inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /merchant/logout:
+    post:
+      operationId: merchantLogout
+      tags: [merchant]
+      responses:
+        "204":
+          description: Cerrado
+  /merchant/me:
+    get:
+      operationId: getMerchantMe
+      tags: [merchant]
+      responses:
+        "200":
+          description: Comercio con modo comercio abierto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MerchantMe"
+        "401":
+          description: Sin modo comercio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /merchant/members/{code}:
+    get:
+      operationId: merchantLookupMember
+      tags: [merchant]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Vecino de la credencial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberLookup"
+        "404":
+          description: Credencial no válida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /merchant/visits:
+    post:
+      operationId: merchantRecordVisit
+      tags: [merchant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordVisitRequest"
+      responses:
+        "200":
+          description: Visita registrada (o ya registrada hace poco)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitResult"
+
   # -------------------------------------------------------------- universe
   /universe:
     get:
@@ -520,6 +628,20 @@ paths:
       responses:
         "204":
           description: Eliminada
+  /admin/places/{id}/merchant-key:
+    post:
+      operationId: adminIssueMerchantKey
+      tags: [admin]
+      summary: Crea (o reemplaza) el link del modo comercio
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Link nuevo; el anterior deja de funcionar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MerchantKey"
   /admin/places/suggest:
     post:
       operationId: adminSuggestConstellation
@@ -814,6 +936,104 @@ components:
         showNameOnEndorsements:
           type: boolean
       required: [showNameOnEndorsements]
+    Sky:
+      type: object
+      properties:
+        memberCode:
+          type: string
+        visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkyVisit"
+      required: [memberCode, visits]
+    SkyVisit:
+      type: object
+      properties:
+        placeId:
+          type: string
+        count:
+          type: integer
+        lastAt:
+          type: string
+          format: date-time
+      required: [placeId, count, lastAt]
+    MerchantKey:
+      type: object
+      properties:
+        token:
+          type: string
+        whatsapp:
+          type: string
+        placeName:
+          type: string
+      required: [token, whatsapp, placeName]
+    MerchantMe:
+      type: object
+      properties:
+        placeId:
+          type: string
+        placeName:
+          type: string
+        welcomeOffer:
+          type: [string, "null"]
+        todayVisits:
+          type: integer
+        totalVisits:
+          type: integer
+        neighbors:
+          type: integer
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/MerchantRecentVisit"
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent]
+    MerchantRecentVisit:
+      type: object
+      properties:
+        firstName:
+          type: string
+        at:
+          type: string
+          format: date-time
+        welcomeApplied:
+          type: boolean
+      required: [firstName, at, welcomeApplied]
+    MemberLookup:
+      type: object
+      properties:
+        firstName:
+          type: string
+        visitsHere:
+          type: integer
+        welcomeOffer:
+          type: [string, "null"]
+          description: Solo si es su primera visita y el comercio tiene beneficio
+        recentlyRecorded:
+          type: boolean
+          description: Ya se registró una visita en las últimas 2 horas
+      required: [firstName, visitsHere, welcomeOffer, recentlyRecorded]
+    RecordVisitRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 4
+          maxLength: 20
+      required: [code]
+    VisitResult:
+      type: object
+      properties:
+        firstName:
+          type: string
+        visitsHere:
+          type: integer
+        welcomeApplied:
+          type: boolean
+        welcomeOffer:
+          type: [string, "null"]
+        duplicate:
+          type: boolean
+      required: [firstName, visitsHere, welcomeApplied, welcomeOffer, duplicate]
     PlaceSummary:
       type: object
       properties:
@@ -831,7 +1051,10 @@ components:
           type: boolean
         endorsementCount:
           type: integer
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount]
+        welcome:
+          type: boolean
+          description: Tiene beneficio de bienvenida
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome]
     Universe:
       type: object
       properties:
@@ -886,7 +1109,17 @@ components:
         locked:
           type: boolean
           description: true para visitantes sin llave (sin contacto ni nombres de vecinos)
+        welcomeOffer:
+          type: [string, "null"]
+        neighborsServed:
+          type: integer
+          description: Vecinos distintos con visita registrada
+        myVisits:
+          type: integer
       required:
+        - welcomeOffer
+        - neighborsServed
+        - myVisits
         - id
         - constellation
         - name
@@ -985,7 +1218,10 @@ components:
           type: integer
         guestSearches30d:
           type: integer
+        visits30d:
+          type: integer
       required:
+        - visits30d
         - residentsApproved
         - residentsPending
         - residentsByInvite
@@ -1096,6 +1332,9 @@ components:
         imageUrl:
           type: [string, "null"]
           maxLength: 500
+        welcomeOffer:
+          type: [string, "null"]
+          maxLength: 80
         verified:
           type: boolean
         active:
@@ -1111,6 +1350,7 @@ components:
         - operation
         - priceLabel
         - imageUrl
+        - welcomeOffer
         - verified
         - active
     AdminPlace:
@@ -1128,7 +1368,11 @@ components:
               type: boolean
             isDemo:
               type: boolean
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo]
+            visitCount:
+              type: integer
+            hasMerchantKey:
+              type: boolean
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey]
     DemoResult:
       type: object
       properties:

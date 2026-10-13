@@ -39,7 +39,6 @@ app.use(
 // Sin CORS: la web y la API viven en el mismo dominio, así nadie más puede usar la sesión.
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
-app.use(loadSession);
 
 // Sin base configurada, solo responden las rutas que ayudan a configurarla.
 const WORKS_WITHOUT_DB = new Set(["/api/healthz", "/api/creator", "/api/setup/status", "/api/setup"]);
@@ -68,6 +67,9 @@ app.use(async (_req: Request, _res: Response, next: NextFunction) => {
   }
 });
 
+// La sesión se carga después de migrar: así la primera visita tras un despliegue
+// con columnas nuevas no pierde la sesión del vecino.
+app.use(loadSession);
 app.use("/api", router);
 
 app.use("/api", (_req: Request, res: Response) => {

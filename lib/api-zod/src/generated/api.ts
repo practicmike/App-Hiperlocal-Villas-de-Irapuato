@@ -140,6 +140,91 @@ export const UpdateMeResponse = zod.object({
 
 
 /**
+ * @summary Credencial del vecino y estrellas que ya encendió
+ */
+export const GetMySkyResponse = zod.object({
+  "memberCode": zod.string(),
+  "visits": zod.array(zod.object({
+  "placeId": zod.string(),
+  "count": zod.number().int(),
+  "lastAt": zod.coerce.date()
+}))
+})
+
+
+export const merchantLoginBodyTokenMin = 20;
+export const merchantLoginBodyTokenMax = 200;
+
+
+
+export const MerchantLoginBody = zod.object({
+  "token": zod.string().min(merchantLoginBodyTokenMin).max(merchantLoginBodyTokenMax)
+})
+
+export const MerchantLoginResponse = zod.object({
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "welcomeOffer": zod.string().nullable(),
+  "todayVisits": zod.number().int(),
+  "totalVisits": zod.number().int(),
+  "neighbors": zod.number().int(),
+  "recent": zod.array(zod.object({
+  "firstName": zod.string(),
+  "at": zod.coerce.date(),
+  "welcomeApplied": zod.boolean()
+}))
+})
+
+
+export const MerchantLogoutResponse = zod.void()
+
+
+export const GetMerchantMeResponse = zod.object({
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "welcomeOffer": zod.string().nullable(),
+  "todayVisits": zod.number().int(),
+  "totalVisits": zod.number().int(),
+  "neighbors": zod.number().int(),
+  "recent": zod.array(zod.object({
+  "firstName": zod.string(),
+  "at": zod.coerce.date(),
+  "welcomeApplied": zod.boolean()
+}))
+})
+
+
+export const MerchantLookupMemberParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const MerchantLookupMemberResponse = zod.object({
+  "firstName": zod.string(),
+  "visitsHere": zod.number().int(),
+  "welcomeOffer": zod.string().nullable().describe('Solo si es su primera visita y el comercio tiene beneficio'),
+  "recentlyRecorded": zod.boolean().describe('Ya se registró una visita en las últimas 2 horas')
+})
+
+
+export const merchantRecordVisitBodyCodeMin = 4;
+export const merchantRecordVisitBodyCodeMax = 20;
+
+
+
+export const MerchantRecordVisitBody = zod.object({
+  "code": zod.string().min(merchantRecordVisitBodyCodeMin).max(merchantRecordVisitBodyCodeMax)
+})
+
+export const MerchantRecordVisitResponse = zod.object({
+  "firstName": zod.string(),
+  "visitsHere": zod.number().int(),
+  "welcomeApplied": zod.boolean(),
+  "welcomeOffer": zod.string().nullable(),
+  "duplicate": zod.boolean()
+})
+
+
+/**
  * @summary Todas las estrellas activas
  */
 export const GetUniverseResponse = zod.object({
@@ -158,7 +243,8 @@ export const GetUniverseResponse = zod.object({
   "category": zod.string(),
   "verified": zod.boolean(),
   "sponsored": zod.boolean(),
-  "endorsementCount": zod.number().int()
+  "endorsementCount": zod.number().int(),
+  "welcome": zod.boolean().describe('Tiene beneficio de bienvenida')
 }))
 })
 
@@ -184,7 +270,10 @@ export const GetPlaceResponse = zod.object({
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
   "endorsedByMe": zod.boolean(),
-  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
+  "welcomeOffer": zod.string().nullable(),
+  "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myVisits": zod.number().int()
 })
 
 
@@ -216,7 +305,10 @@ export const EndorsePlaceResponse = zod.object({
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
   "endorsedByMe": zod.boolean(),
-  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
+  "welcomeOffer": zod.string().nullable(),
+  "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myVisits": zod.number().int()
 })
 
 
@@ -241,7 +333,10 @@ export const RemoveEndorsementResponse = zod.object({
   "endorsementCount": zod.number().int(),
   "endorserNames": zod.array(zod.string()).describe('Solo vecinos que dieron permiso de mostrar su nombre'),
   "endorsedByMe": zod.boolean(),
-  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)')
+  "locked": zod.boolean().describe('true para visitantes sin llave (sin contacto ni nombres de vecinos)'),
+  "welcomeOffer": zod.string().nullable(),
+  "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myVisits": zod.number().int()
 })
 
 
@@ -309,7 +404,8 @@ export const AdminOverviewResponse = zod.object({
   "searchesWithContact30d": zod.number().int(),
   "searchesNoResult30d": zod.number().int(),
   "openComplaints": zod.number().int(),
-  "guestSearches30d": zod.number().int()
+  "guestSearches30d": zod.number().int(),
+  "visits30d": zod.number().int()
 })
 
 
@@ -409,6 +505,8 @@ export const adminListPlacesResponseOnePriceLabelMax = 60;
 
 export const adminListPlacesResponseOneImageUrlMax = 500;
 
+export const adminListPlacesResponseOneWelcomeOfferMax = 80;
+
 
 
 export const AdminListPlacesResponseItem = zod.object({
@@ -422,6 +520,7 @@ export const AdminListPlacesResponseItem = zod.object({
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminListPlacesResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminListPlacesResponseOneImageUrlMax).nullable(),
+  "welcomeOffer": zod.string().max(adminListPlacesResponseOneWelcomeOfferMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -429,7 +528,9 @@ export const AdminListPlacesResponseItem = zod.object({
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
   "hasEmbedding": zod.boolean(),
-  "isDemo": zod.boolean()
+  "isDemo": zod.boolean(),
+  "visitCount": zod.number().int(),
+  "hasMerchantKey": zod.boolean()
 }))
 export const AdminListPlacesResponse = zod.array(AdminListPlacesResponseItem)
 
@@ -453,6 +554,8 @@ export const adminCreatePlaceBodyPriceLabelMax = 60;
 
 export const adminCreatePlaceBodyImageUrlMax = 500;
 
+export const adminCreatePlaceBodyWelcomeOfferMax = 80;
+
 
 
 export const AdminCreatePlaceBody = zod.object({
@@ -466,6 +569,7 @@ export const AdminCreatePlaceBody = zod.object({
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminCreatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceBodyImageUrlMax).nullable(),
+  "welcomeOffer": zod.string().max(adminCreatePlaceBodyWelcomeOfferMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 })
@@ -489,6 +593,8 @@ export const adminCreatePlaceResponseOnePriceLabelMax = 60;
 
 export const adminCreatePlaceResponseOneImageUrlMax = 500;
 
+export const adminCreatePlaceResponseOneWelcomeOfferMax = 80;
+
 
 
 export const AdminCreatePlaceResponse = zod.object({
@@ -502,6 +608,7 @@ export const AdminCreatePlaceResponse = zod.object({
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminCreatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceResponseOneImageUrlMax).nullable(),
+  "welcomeOffer": zod.string().max(adminCreatePlaceResponseOneWelcomeOfferMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -509,7 +616,9 @@ export const AdminCreatePlaceResponse = zod.object({
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
   "hasEmbedding": zod.boolean(),
-  "isDemo": zod.boolean()
+  "isDemo": zod.boolean(),
+  "visitCount": zod.number().int(),
+  "hasMerchantKey": zod.boolean()
 }))
 
 
@@ -536,6 +645,8 @@ export const adminUpdatePlaceBodyPriceLabelMax = 60;
 
 export const adminUpdatePlaceBodyImageUrlMax = 500;
 
+export const adminUpdatePlaceBodyWelcomeOfferMax = 80;
+
 
 
 export const AdminUpdatePlaceBody = zod.object({
@@ -549,6 +660,7 @@ export const AdminUpdatePlaceBody = zod.object({
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminUpdatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceBodyImageUrlMax).nullable(),
+  "welcomeOffer": zod.string().max(adminUpdatePlaceBodyWelcomeOfferMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 })
@@ -572,6 +684,8 @@ export const adminUpdatePlaceResponseOnePriceLabelMax = 60;
 
 export const adminUpdatePlaceResponseOneImageUrlMax = 500;
 
+export const adminUpdatePlaceResponseOneWelcomeOfferMax = 80;
+
 
 
 export const AdminUpdatePlaceResponse = zod.object({
@@ -585,6 +699,7 @@ export const AdminUpdatePlaceResponse = zod.object({
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminUpdatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceResponseOneImageUrlMax).nullable(),
+  "welcomeOffer": zod.string().max(adminUpdatePlaceResponseOneWelcomeOfferMax).nullable(),
   "verified": zod.boolean(),
   "active": zod.boolean()
 }).and(zod.object({
@@ -592,7 +707,9 @@ export const AdminUpdatePlaceResponse = zod.object({
   "whatsappClicks": zod.number().int(),
   "endorsementCount": zod.number().int(),
   "hasEmbedding": zod.boolean(),
-  "isDemo": zod.boolean()
+  "isDemo": zod.boolean(),
+  "visitCount": zod.number().int(),
+  "hasMerchantKey": zod.boolean()
 }))
 
 
@@ -696,6 +813,20 @@ export const AdminRemoveConstellationBody = zod.object({
 })
 
 export const AdminRemoveConstellationResponse = zod.void()
+
+
+/**
+ * @summary Crea (o reemplaza) el link del modo comercio
+ */
+export const AdminIssueMerchantKeyParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminIssueMerchantKeyResponse = zod.object({
+  "token": zod.string(),
+  "whatsapp": zod.string(),
+  "placeName": zod.string()
+})
 
 
 /**

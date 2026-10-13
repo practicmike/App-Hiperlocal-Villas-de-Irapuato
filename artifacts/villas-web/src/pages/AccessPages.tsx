@@ -13,12 +13,12 @@ import { KeyRound, MessageCircle } from "lucide-react";
 import { CreatorAvatar } from "@/components/CreatorSheet";
 import { whatsappLink } from "@/lib/constellations";
 
-const errorMessage = (err: unknown, fallback: string) => {
+export const errorMessage = (err: unknown, fallback: string) => {
   const data = (err as { data?: { message?: string } } | null)?.data;
   return data?.message ?? fallback;
 };
 
-function Shell({ children }: { children: React.ReactNode }) {
+export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-full overflow-y-auto">
       <div className="sky" aria-hidden />
