@@ -96,8 +96,6 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onLevelChange?: (level: Level) => void;
-  /** Al acercarse mucho, la estrella más cercana al centro abre su tarjeta. */
-  onApproach?: (id: string | null) => void;
   /** Nombre de pila del vecino: va en el centro del universo, en lugar de "Tú". */
   meLabel: string;
   onMeClick?: () => void;
@@ -112,7 +110,7 @@ const STAR_R = 7;
 const DURATION = 750;
 
 export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function UniverseCanvas(
-  { constellations, places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick, lit = null },
+  { constellations, places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, meLabel, onMeClick, lit = null },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -124,8 +122,10 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
   positionsRef.current = positions;
   const [level, setLevel] = useState<Level>("far");
   const levelRef = useRef<Level>("far");
-  const approachRef = useRef(onApproach);
-  approachRef.current = onApproach;
+  const searchingRef = useRef(searching);
+  searchingRef.current = searching;
+  const showPercentRef = useRef(showPercent);
+  showPercentRef.current = showPercent;
   const levelCbRef = useRef(onLevelChange);
   levelCbRef.current = onLevelChange;
 
@@ -176,26 +176,56 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     }
   }, []);
 
-  /** Estrella más cercana al centro de la pantalla cuando ya estás muy cerca. */
-  const checkApproach = useCallback(() => {
-    if (levelRef.current !== "near") {
-      approachRef.current?.(null);
-      return;
-    }
+  /**
+   * Nombres sin amontonarse (como en un mapa): al terminar cada zoom se acomodan
+   * de la estrella más importante a la menos, y un nombre que chocaría con otro
+   * ya puesto se oculta hasta que te acerques más.
+   */
+  const [labelIds, setLabelIds] = useState<Set<string>>(new Set());
+  const placesRef = useRef(places);
+  placesRef.current = places;
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const declutter = useCallback(() => {
     const t = transformRef.current;
     const { w, h } = sizeRef.current;
-    let best: string | null = null;
-    let bestD = 64;
-    for (const [id, p] of positionsRef.current) {
-      if (p.dimmed) continue;
-      const d = Math.hypot(t.x + p.x * t.k - w / 2, t.y + p.y * t.k - h * 0.4);
-      if (d < bestD) {
-        bestD = d;
-        best = id;
-      }
+    const lvl = levelRef.current;
+    if (lvl === "far" && !searchingRef.current) {
+      setLabelIds((prev) => (prev.size ? new Set() : prev));
+      return;
     }
-    approachRef.current?.(best);
+    const boxes: Array<[number, number, number, number]> = [];
+    const out = new Set<string>();
+    const ranked = placesRef.current
+      .map((p) => ({ p, pos: positionsRef.current.get(p.id) }))
+      .filter((x): x is { p: PlaceSummary; pos: StarPos } => !!x.pos && !x.pos.dimmed)
+      .map(({ p, pos }) => ({
+        p,
+        x: t.x + pos.x * t.k,
+        y: t.y + pos.y * t.k,
+        score: (p.id === selectedRef.current ? 1e6 : 0) + pos.glow * 1000 + p.neighbors + p.endorsementCount * 2,
+      }))
+      .filter((s) => s.x > -80 && s.x < w + 80 && s.y > -40 && s.y < h + 40)
+      .sort((a, b) => b.score - a.score);
+    const twoLines = lvl === "near" || showPercentRef.current;
+    for (const s of ranked) {
+      const chars = lvl === "near" ? s.p.name.length : Math.min(s.p.name.length, 17);
+      const bw = chars * 7.2 + 10;
+      const bh = twoLines ? 32 : 18;
+      const x1 = s.x - bw / 2;
+      const y1 = s.y + 14;
+      const hit = boxes.some(([a, b, c, d]) => x1 < c && x1 + bw > a && y1 < d && y1 + bh > b);
+      if (hit) continue;
+      boxes.push([x1, y1, x1 + bw, y1 + bh]);
+      out.add(s.p.id);
+    }
+    setLabelIds(out);
   }, []);
+  // También al cambiar la búsqueda o la selección (tras la animación de las estrellas).
+  useEffect(() => {
+    const id = setTimeout(declutter, DURATION + 60);
+    return () => clearTimeout(id);
+  }, [declutter, positions, searching, selectedId, places]);
 
   const transformTo = useCallback((t: ZoomTransform, animate = true) => {
     const svg = svgRef.current;
@@ -248,7 +278,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     if (!svg) return;
     const z = zoom<SVGSVGElement, unknown>()
       .on("zoom", (e: { transform: ZoomTransform }) => apply(e.transform))
-      .on("end", () => checkApproach());
+      .on("end", () => declutter());
     zoomRef.current = z;
     const sel = select(svg).call(z).on("dblclick.zoom", null);
 
@@ -268,7 +298,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
       ro.disconnect();
       sel.on(".zoom", null);
     };
-  }, [apply, checkApproach, homeTransform]);
+  }, [apply, declutter, homeTransform]);
 
   // Si cambia el número de constelaciones, se reencuadra el mundo completo.
   useEffect(() => {
@@ -445,7 +475,7 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
           const popularity = p.neighbors + p.endorsementCount * 2;
           const core = STAR_R * (0.75 + pos.glow * 0.55) + Math.min(Math.log2(1 + popularity) * 1.3, 5);
           const icon = level !== "far" ? categoryIcon(p.category, p.name) : null;
-          const labelOn = showNames && !pos.dimmed;
+          const labelOn = showNames && !pos.dimmed && labelIds.has(p.id);
           // En búsqueda manda el match; fuera de ella, tu cielo personal.
           const unlit = !!lit && !searching && !lit.has(p.id);
           return (
