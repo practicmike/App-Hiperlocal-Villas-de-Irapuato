@@ -40,13 +40,18 @@ interface Props {
   /** Nombre de pila del vecino: va en el centro del universo, en lugar de "Tú". */
   meLabel: string;
   onMeClick?: () => void;
+  /**
+   * Cielo personal: estrellas donde el vecino ya compró (brillan) frente a las que
+   * le faltan (tenues). null = visitante: todo el universo se ve encendido.
+   */
+  lit?: Set<string> | null;
 }
 
 const STAR_R = 7;
 const DURATION = 750;
 
 export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function UniverseCanvas(
-  { constellations, places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick },
+  { constellations, places, positions, searching, showPercent = false, selectedId, onSelect, onLevelChange, onApproach, meLabel, onMeClick, lit = null },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -72,6 +77,11 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
     for (const p of places) m.set(p.constellation, (m.get(p.constellation) ?? 0) + 1);
     return m;
   }, [places]);
+  const litCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    if (lit) for (const p of places) if (lit.has(p.id)) m.set(p.constellation, (m.get(p.constellation) ?? 0) + 1);
+    return m;
+  }, [places, lit]);
 
   /** Aplica el zoom directo al DOM: cero renders de React por cuadro. */
   const apply = useCallback((t: ZoomTransform) => {
@@ -263,9 +273,11 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
                   </text>
                   <text className="nebula-sub" textAnchor="middle" y={labelAbove ? 0 : 17}>
                     {/* Con 5+ constelaciones la pista no cabe lejos; aparece al acercarte. */}
-                    {constellations.length <= 4 || level === "mid"
-                      ? `${counts.get(c) ?? 0} · ${info.hint}`
-                      : `${counts.get(c) ?? 0} estrellas`}
+                    {lit && level === "far"
+                      ? `${litCounts.get(c) ?? 0} de ${counts.get(c) ?? 0} encendidas`
+                      : constellations.length <= 4 || level === "mid"
+                        ? `${counts.get(c) ?? 0} · ${info.hint}`
+                        : `${counts.get(c) ?? 0} estrellas`}
                   </text>
                 </g>
               </g>
@@ -309,6 +321,8 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
           const selected = p.id === selectedId;
           const core = STAR_R * (0.75 + pos.glow * 0.55) + Math.min(p.endorsementCount, 6) * 0.35;
           const labelOn = showNames && !pos.dimmed;
+          // En búsqueda manda el match; fuera de ella, tu cielo personal.
+          const unlit = !!lit && !searching && !lit.has(p.id);
           return (
             <g
               key={p.id}
@@ -334,9 +348,13 @@ export const UniverseCanvas = forwardRef<UniverseHandle, Props>(function Univers
               <g className="star-body">
                 {/* Área táctil generosa: dedos, no cursores. */}
                 <circle r={22} fill="transparent" />
-                <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={0.35 + pos.glow * 0.65} />
-                <circle r={core} fill={color} />
-                <circle r={core * 0.38} fill="white" opacity={0.75} />
+                <circle r={core * 2.8} fill={`url(#halo-${cById.has(p.constellation) ? p.constellation : FALLBACK.id})`} opacity={unlit ? 0.12 : 0.35 + pos.glow * 0.65} />
+                <circle r={core} fill={color} opacity={unlit ? 0.42 : 1} />
+                {!unlit && <circle r={core * 0.38} fill="white" opacity={0.75} />}
+                {/* Estrella por descubrir con regalo de bienvenida. */}
+                {unlit && p.welcome && (
+                  <circle className="gift-ring" r={core + 4} fill="none" stroke="#E6C882" strokeWidth={1.4} strokeDasharray="2 3" />
+                )}
                 <circle
                   className="star-ring"
                   r={core + 5}

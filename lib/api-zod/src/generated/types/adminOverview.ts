@@ -16,4 +16,5 @@ export interface AdminOverview {
   searchesNoResult30d: number;
   openComplaints: number;
   guestSearches30d: number;
+  visits30d: number;
 }

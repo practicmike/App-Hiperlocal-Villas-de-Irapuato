@@ -11,6 +11,7 @@ import { UniversePage } from "@/pages/UniversePage";
 import { LandingPage, KeyLoginPage } from "@/pages/AccessPages";
 import { AdminPage } from "@/pages/AdminPage";
 import { NeedsSetup, SetupPage } from "@/pages/SetupPage";
+import { MerchantHomePage, MerchantKeyPage, MemberPassPage } from "@/pages/MerchantPages";
 
 export default function App() {
   return (
@@ -18,6 +19,10 @@ export default function App() {
       {/* Siempre accesibles, aunque el sitio no esté configurado. */}
       <Route path="/setup" component={SetupPage} />
       <Route path="/llave/:token">{(p) => <KeyLoginPage token={p.token} />}</Route>
+      {/* Modo comercio y credencial: no cargan el universo, solo lo necesario en la caja. */}
+      <Route path="/comercio/:token">{(p) => <MerchantKeyPage token={p.token} />}</Route>
+      <Route path="/comercio" component={MerchantHomePage} />
+      <Route path="/v/:code">{(p) => <MemberPassPage code={p.code} />}</Route>
       <Route>
         <Main />
       </Route>

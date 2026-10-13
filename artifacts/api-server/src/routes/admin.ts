@@ -13,6 +13,7 @@ import {
   placesTable,
   searchesTable,
   complaintsTable,
+  visitsTable,
   type Place,
 } from "@workspace/db";
 import {
@@ -31,11 +32,13 @@ import {
   AdminRemoveConstellationParams,
   AdminRemoveConstellationBody,
   AdminSuggestConstellationBody,
+  AdminIssueMerchantKeyParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
 import { requireAdmin, issueAccessKey, normalizePhone } from "../lib/auth";
 import { endorsementCounts, refreshEmbedding } from "../lib/places";
+import { issueMerchantKey } from "../lib/merchant";
 import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
 import { embedMany, suggestConstellation } from "../lib/ai";
 import { placeEmbeddingText } from "../lib/search-core";
@@ -73,6 +76,10 @@ router.get("/admin/overview", async (_req, res) => {
     .select({ n: sql<number>`count(*)::int` })
     .from(complaintsTable)
     .where(eq(complaintsTable.resolved, false));
+  const [v] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(visitsTable)
+    .where(gte(visitsTable.createdAt, since));
 
   res.json({
     residentsApproved: r!.approved,
@@ -84,6 +91,7 @@ router.get("/admin/overview", async (_req, res) => {
     searchesNoResult30d: s!.empty,
     openComplaints: c!.n,
     guestSearches30d: s!.guests,
+    visits30d: v!.n,
   });
 });
 
@@ -205,7 +213,16 @@ router.post("/admin/invites", async (req, res) => {
 });
 
 // ----------------------------------------------------------------- lugares
-const toAdminPlace = (p: Place, counts: Map<string, number>) => ({
+/** Visitas registradas por lugar, en una sola consulta. */
+async function visitCounts(): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ placeId: visitsTable.placeId, n: sql<number>`count(*)::int` })
+    .from(visitsTable)
+    .groupBy(visitsTable.placeId);
+  return new Map(rows.map((r) => [r.placeId, r.n]));
+}
+
+const toAdminPlace = (p: Place, counts: Map<string, number>, visits: Map<string, number> = new Map()) => ({
   id: p.id,
   constellation: p.constellation,
   name: p.name,
@@ -223,6 +240,9 @@ const toAdminPlace = (p: Place, counts: Map<string, number>) => ({
   endorsementCount: counts.get(p.id) ?? 0,
   hasEmbedding: Array.isArray(p.embedding) && p.embedding.length > 0,
   isDemo: p.whatsapp.startsWith(DEMO_WHATSAPP_PREFIX),
+  welcomeOffer: p.welcomeOffer,
+  visitCount: visits.get(p.id) ?? 0,
+  hasMerchantKey: p.merchantKeyHash !== null,
 });
 
 async function constellationById(id: string) {
@@ -244,17 +264,19 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
     operation: isProperty ? (body.operation ?? null) : null,
     priceLabel: isProperty ? blank(body.priceLabel) : null,
     imageUrl: blank(body.imageUrl),
+    welcomeOffer: blank(body.welcomeOffer),
     verified: body.verified,
     active: body.active,
   };
 }
 
 router.get("/admin/places", async (_req, res) => {
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, visits] = await Promise.all([
     db.select().from(placesTable).orderBy(desc(placesTable.updatedAt)),
     endorsementCounts(),
+    visitCounts(),
   ]);
-  res.json(rows.map((p) => toAdminPlace(p, counts)));
+  res.json(rows.map((p) => toAdminPlace(p, counts, visits)));
 });
 
 router.post("/admin/places", async (req, res) => {
@@ -287,7 +309,7 @@ router.put("/admin/places/:id", async (req, res) => {
     return;
   }
   refreshEmbedding(place);
-  res.json(toAdminPlace(place, await endorsementCounts()));
+  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts()));
 });
 
 router.delete("/admin/places/:id", async (req, res) => {
@@ -416,6 +438,18 @@ router.post("/admin/constellations/:cid/remove", async (req, res) => {
 });
 
 /** La IA sugiere constelación y giro; el creador decide. */
+/** Link del modo comercio. Generar uno nuevo apaga el anterior en todos sus teléfonos. */
+router.post("/admin/places/:id/merchant-key", async (req, res) => {
+  const { id } = AdminIssueMerchantKeyParams.parse(req.params);
+  const [place] = await db.select().from(placesTable).where(eq(placesTable.id, id)).limit(1);
+  if (!place) {
+    res.status(404).json({ message: "Lugar no encontrado." });
+    return;
+  }
+  const token = await issueMerchantKey(place.id);
+  res.json({ token, whatsapp: place.whatsapp, placeName: place.name });
+});
+
 router.post("/admin/places/suggest", async (req, res) => {
   const body = AdminSuggestConstellationBody.parse(req.body);
   const [cs, cats] = await Promise.all([
@@ -444,7 +478,7 @@ router.post("/admin/demo-places", async (_req, res) => {
     demos.filter((p) => existing.has(p.whatsapp)).map((p) =>
       db
         .update(placesTable)
-        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, embedding: null, updatedAt: new Date() })
+        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, embedding: null, updatedAt: new Date() })
         .where(eq(placesTable.whatsapp, p.whatsapp))
         .returning(),
     ),

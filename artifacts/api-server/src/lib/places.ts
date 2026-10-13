@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
-import { db, placesTable, endorsementsTable, residentsTable, type Place } from "@workspace/db";
+import { db, placesTable, endorsementsTable, residentsTable, visitsTable, type Place } from "@workspace/db";
 import { embed } from "./ai";
 import { placeEmbeddingText } from "./search-core";
 import { logger } from "./logger";
@@ -29,6 +29,15 @@ export async function placeDetail(place: Place, viewerId: string | null) {
     .innerJoin(residentsTable, eq(endorsementsTable.residentId, residentsTable.id))
     .where(eq(endorsementsTable.placeId, place.id))
     .orderBy(endorsementsTable.createdAt);
+  const [v] = await db
+    .select({
+      neighbors: sql<number>`count(distinct ${visitsTable.residentId})::int`,
+      mine: viewerId
+        ? sql<number>`count(*) filter (where ${visitsTable.residentId} = ${viewerId})::int`
+        : sql<number>`0`,
+    })
+    .from(visitsTable)
+    .where(eq(visitsTable.placeId, place.id));
 
   const full = {
     id: place.id,
@@ -52,6 +61,9 @@ export async function placeDetail(place: Place, viewerId: string | null) {
       .slice(0, 5),
     endorsedByMe: viewerId !== null && endorsements.some((e) => e.residentId === viewerId),
     locked: false,
+    welcomeOffer: place.welcomeOffer,
+    neighborsServed: v?.neighbors ?? 0,
+    myVisits: Number(v?.mine ?? 0),
   };
   if (viewerId !== null) return full;
   return {

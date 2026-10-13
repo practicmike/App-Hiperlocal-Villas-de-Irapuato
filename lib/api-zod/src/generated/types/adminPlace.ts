@@ -13,4 +13,6 @@ export type AdminPlace = PlaceInput & {
   endorsementCount: number;
   hasEmbedding: boolean;
   isDemo: boolean;
+  visitCount: number;
+  hasMerchantKey: boolean;
 };

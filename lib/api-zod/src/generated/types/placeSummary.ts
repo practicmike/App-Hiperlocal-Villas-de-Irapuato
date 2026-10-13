@@ -15,4 +15,6 @@ export interface PlaceSummary {
   verified: boolean;
   sponsored: boolean;
   endorsementCount: number;
+  /** Tiene beneficio de bienvenida */
+  welcome: boolean;
 }

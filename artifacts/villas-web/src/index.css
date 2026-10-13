@@ -115,7 +115,18 @@ body {
   100% { transform: scale(2.6); opacity: 0; }
 }
 
+.gift-ring {
+  animation: gift 4s linear infinite;
+  transform-origin: 0 0;
+}
+@keyframes gift {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .gift-ring {
+    animation: none;
+  }
   .star,
   .label-wrap {
     transition: none;

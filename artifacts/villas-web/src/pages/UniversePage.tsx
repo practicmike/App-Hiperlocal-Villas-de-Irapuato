@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   useGetUniverse,
+  useGetMySky,
+  getGetMySkyQueryKey,
   useSearch,
   type Creator,
   type Me,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { Crosshair, List, Orbit, Search, Settings2, X, MessageCircle, KeyRound } from "lucide-react";
+import { Crosshair, List, Orbit, Search, Settings2, X, MessageCircle, KeyRound, QrCode } from "lucide-react";
 import { UniverseCanvas, type UniverseHandle, type Level } from "@/components/UniverseCanvas";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
@@ -27,6 +29,15 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
   const places = data?.places ?? [];
   const constellations = useMemo(() => placeConstellations(data?.constellations ?? []), [data]);
   const cById = useMemo(() => byId(constellations), [constellations]);
+  // Cielo personal: se refresca al volver a la app (por si acaban de escanear tu credencial).
+  const sky = useGetMySky({
+    query: { queryKey: getGetMySkyQueryKey(), enabled: !guest, refetchOnWindowFocus: true, staleTime: 20_000 },
+  });
+  const lit = useMemo(
+    () => (guest ? null : new Set((sky.data?.visits ?? []).map((v) => v.placeId))),
+    [guest, sky.data],
+  );
+  const litCount = useMemo(() => (lit ? places.filter((p) => lit.has(p.id)).length : 0), [lit, places]);
 
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -120,6 +131,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           onSelect={select}
           onLevelChange={setLevel}
           meLabel={meFirst}
+          lit={lit}
           onMeClick={() => (guest ? navigate("/unirme") : setMeOpen(true))}
           onApproach={(id) => {
             if (id && !selectedId) {
@@ -179,7 +191,11 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
             </>
           )}
           {!search.isPending && !result && !isLoading && level === "far" && view === "universe" && (
-            <>{guest ? "Pellizca para acercarte o toca una constelación" : `Hola, ${meFirst} · pellizca para acercarte o toca una constelación`}</>
+            <>
+              {guest
+                ? "Pellizca para acercarte o toca una constelación"
+                : `Hola, ${meFirst} · tu cielo: ${litCount} de ${places.length} encendidas`}
+            </>
           )}
           {tooManyGuestSearches && (
             <span className="text-casas">Llegaste al límite de búsquedas de la vista previa. Únete para buscar sin límite.</span>
@@ -230,6 +246,14 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
             {view === "universe" ? <List size={16} /> : <Orbit size={16} />}
             {view === "universe" ? "Lista" : "Universo"}
           </button>
+          {!guest && (
+            <button
+              onClick={() => setMeOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-panel/90 px-4 py-2.5 text-sm font-bold shadow-lg backdrop-blur"
+            >
+              <QrCode size={16} /> Credencial
+            </button>
+          )}
           {me?.role === "admin" && (
             <Link
               href="/panel"
@@ -284,7 +308,16 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
         />
       )}
       {creatorOpen && <CreatorSheet creator={creator} onClose={() => setCreatorOpen(false)} />}
-      {meOpen && me && <MeSheet me={me} creatorFirstName={firstName} onClose={() => setMeOpen(false)} />}
+      {meOpen && me && (
+        <MeSheet
+          me={me}
+          creatorFirstName={firstName}
+          memberCode={sky.data?.memberCode ?? null}
+          litCount={litCount}
+          total={places.length}
+          onClose={() => setMeOpen(false)}
+        />
+      )}
     </div>
   );
 }

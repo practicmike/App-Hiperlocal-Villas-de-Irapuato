@@ -25,6 +25,7 @@ import {
   useAdminRemoveConstellation,
   useAdminReorderConstellations,
   useAdminSuggestConstellation,
+  useAdminIssueMerchantKey,
   getAdminListConstellationsQueryKey,
   type AdminConstellation,
   type ConstellationInput,
@@ -112,6 +113,7 @@ function Overview() {
           <Stat label="Búsquedas → WhatsApp" value={`${pct}%`} hint={`${o.searchesWithContact30d} de ${o.searches30d}`} accent="#50e3c2" />
           <Stat label="Búsquedas sin resultado" value={o.searchesNoResult30d} hint="Lo que falta en Villas" accent="#e6c882" />
           <Stat label="Búsquedas de visitantes" value={o.guestSearches30d} hint="Gente sin llave probando" accent="#c38cf3" />
+          <Stat label="Visitas registradas" value={o.visits30d} hint="Credenciales escaneadas en comercios" accent="#6eb5ff" />
         </div>
       </section>
       <section className="grid grid-cols-3 gap-3">
@@ -340,6 +342,7 @@ const EMPTY: PlaceInput = {
   operation: null,
   priceLabel: null,
   imageUrl: null,
+  welcomeOffer: null,
   verified: true,
   active: true,
 };
@@ -379,7 +382,7 @@ function Places({ editId }: { editId: string | null }) {
       value: f[k],
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(k, e.target.value),
     });
-    const opt = (k: "contactName" | "zone" | "priceLabel" | "imageUrl") => ({
+    const opt = (k: "contactName" | "zone" | "priceLabel" | "imageUrl" | "welcomeOffer") => ({
       value: f[k] ?? "",
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(k, e.target.value || null),
     });
@@ -423,6 +426,18 @@ function Places({ editId }: { editId: string | null }) {
           <AdminField label="Quién atiende" maxLength={80} {...opt("contactName")} />
         </div>
         <AdminField label="Zona o privada" maxLength={80} {...opt("zone")} />
+        <label className="block">
+          <span className="mb-1 block text-xs font-bold text-muted">Regalo de bienvenida (primera visita con credencial)</span>
+          <input
+            maxLength={80}
+            placeholder="Primer café 2x1 · 10% en tu primera compra"
+            {...opt("welcomeOffer")}
+            className="w-full rounded-xl border border-[#E6C882]/40 bg-space-2 px-3 py-2 text-sm outline-none focus:border-[#E6C882]"
+          />
+          <span className="mt-1 block text-[11px] text-muted">
+            Lo paga el comercio a cambio de un cliente nuevo. Se aplica solo la primera vez que escanea a cada vecino. Vacío = sin regalo.
+          </span>
+        </label>
         {current?.isProperty && (
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
@@ -450,6 +465,7 @@ function Places({ editId }: { editId: string | null }) {
             Visible en el universo
           </label>
         </div>
+        {editing.id && <MerchantKeyBox placeId={editing.id} placeName={f.name} whatsapp={f.whatsapp} hasKey={!!places?.find((x) => x.id === editing.id)?.hasMerchantKey} />}
         {error && <p className="text-sm text-alert">Revisa los datos: {(error as Error).message}</p>}
         <div className="flex gap-2 pt-2">
           <button disabled={create.isPending || update.isPending} className="rounded-xl bg-primary px-5 py-2.5 font-bold text-space">
@@ -517,6 +533,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   operation: p.operation,
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,
+  welcomeOffer: p.welcomeOffer,
   verified: p.verified,
   active: p.active,
 });
@@ -582,7 +599,9 @@ function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: 
           <span className="block truncate font-bold">{p.name}</span>
           <span className="block truncate text-xs text-muted">
             {p.isDemo && <span className="font-bold text-casas">Ejemplo · </span>}
-            {p.category} · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
+            {p.category} · {p.visitCount} visitas · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
+            {p.welcomeOffer && <span className="text-[#E6C882]"> · regalo</span>}
+            {p.hasMerchantKey && <span className="text-confianza"> · comercio</span>}
             {p.hasEmbedding && <span className="text-ai"> · IA</span>}
           </span>
         </span>
@@ -934,6 +953,60 @@ function Constellations() {
               Cancelar
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Link del modo comercio: se manda por WhatsApp al negocio, una vez. */
+function MerchantKeyBox({ placeId, placeName, whatsapp, hasKey }: { placeId: string; placeName: string; whatsapp: string; hasKey: boolean }) {
+  const qc = useQueryClient();
+  const [link, setLink] = useState<string | null>(null);
+  const issue = useAdminIssueMerchantKey({
+    mutation: {
+      onSuccess: (k) => {
+        setLink(`${window.location.origin}${import.meta.env.BASE_URL}comercio/${k.token}`);
+        void qc.invalidateQueries({ queryKey: getAdminListPlacesQueryKey() });
+      },
+    },
+  });
+  const msg = (l: string) =>
+    `Hola, ya estás en el universo de Villas como «${placeName}». Abre este link en el celular de tu negocio: ${l}\n\nCuando un vecino te enseñe su credencial, apunta la cámara de tu celular a su código QR y confirma la visita. Así se enciende tu estrella en su cielo y le aplicas tu regalo de bienvenida.`;
+  return (
+    <div className="rounded-2xl border border-confianza/30 bg-confianza/5 p-3 text-sm">
+      <p className="font-bold text-confianza">Modo comercio</p>
+      <p className="mb-2 text-xs text-muted">
+        {hasKey
+          ? "Este comercio ya tiene su link. Generar uno nuevo apaga el anterior en todos sus teléfonos."
+          : "Genera su link y mándaselo por WhatsApp. Con él escanea las credenciales de los vecinos, sin instalar nada."}
+      </p>
+      {!link ? (
+        <button
+          type="button"
+          disabled={issue.isPending}
+          onClick={() => (!hasKey || confirm("¿Generar un link nuevo? El anterior dejará de funcionar.")) && issue.mutate({ id: placeId })}
+          className="rounded-full bg-confianza px-4 py-1.5 text-xs font-bold text-space"
+        >
+          {hasKey ? "Generar link nuevo" : "Generar link de comercio"}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <p className="break-all rounded-xl bg-space-2 p-2 font-mono text-[11px]">{link}</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={whatsappLink(whatsapp, msg(link))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 text-xs font-bold text-[#0b3d1f]"
+            >
+              <MessageCircle size={14} /> Mandar por WhatsApp
+            </a>
+            <button type="button" onClick={() => void navigator.clipboard?.writeText(link)} className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold">
+              <Copy size={14} /> Copiar
+            </button>
+          </div>
+          <p className="text-[11px] text-muted">Se muestra una sola vez. Si se pierde, genera otro.</p>
         </div>
       )}
     </div>

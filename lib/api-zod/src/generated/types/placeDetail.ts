@@ -33,4 +33,9 @@ export interface PlaceDetail {
   endorsedByMe: boolean;
   /** true para visitantes sin llave (sin contacto ni nombres de vecinos) */
   locked: boolean;
+  /** @nullable */
+  welcomeOffer: string | null;
+  /** Vecinos distintos con visita registrada */
+  neighborsServed: number;
+  myVisits: number;
 }

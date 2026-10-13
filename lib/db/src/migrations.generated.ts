@@ -52,5 +52,23 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "-- Red de seguridad: cualquier valor desconocido va a Antojos antes de la llave foránea.\nUPDATE \"places\" SET \"constellation\" = 'antojos' WHERE \"constellation\" NOT IN (SELECT \"id\" FROM \"constellations\");",
       "ALTER TABLE \"places\" ADD CONSTRAINT \"places_constellation_constellations_id_fk\" FOREIGN KEY (\"constellation\") REFERENCES \"public\".\"constellations\"(\"id\") ON DELETE no action ON UPDATE cascade;"
     ]
+  },
+  {
+    "tag": "0003_pasaporte",
+    "statements": [
+      "CREATE TABLE \"merchant_sessions\" (\n\t\"token_hash\" text PRIMARY KEY NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"last_used_at\" timestamp with time zone\n);",
+      "CREATE TABLE \"visits\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"resident_id\" uuid NOT NULL,\n\t\"welcome_applied\" boolean DEFAULT false NOT NULL,\n\t\"welcome_offer\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"residents\" ADD COLUMN \"member_code\" text;",
+      "ALTER TABLE \"places\" ADD COLUMN \"welcome_offer\" text;",
+      "ALTER TABLE \"places\" ADD COLUMN \"merchant_key_hash\" text;",
+      "ALTER TABLE \"merchant_sessions\" ADD CONSTRAINT \"merchant_sessions_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"visits\" ADD CONSTRAINT \"visits_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"visits\" ADD CONSTRAINT \"visits_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE no action ON UPDATE no action;",
+      "CREATE INDEX \"merchant_sessions_place_idx\" ON \"merchant_sessions\" USING btree (\"place_id\");",
+      "CREATE INDEX \"visits_resident_idx\" ON \"visits\" USING btree (\"resident_id\");",
+      "CREATE INDEX \"visits_place_idx\" ON \"visits\" USING btree (\"place_id\",\"created_at\");",
+      "ALTER TABLE \"residents\" ADD CONSTRAINT \"residents_member_code_unique\" UNIQUE(\"member_code\");",
+      "ALTER TABLE \"places\" ADD CONSTRAINT \"places_merchant_key_hash_unique\" UNIQUE(\"merchant_key_hash\");"
+    ]
   }
 ];

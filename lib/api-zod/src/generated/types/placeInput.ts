@@ -49,6 +49,11 @@ export interface PlaceInput {
      * @nullable
      */
   imageUrl: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  welcomeOffer: string | null;
   verified: boolean;
   active: boolean;
 }
