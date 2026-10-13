@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { AdminLeadSource } from './adminLeadSource';
+import type { AdminLeadVia } from './adminLeadVia';
 
 export interface AdminLead {
   id: string;
   placeId: string;
   placeName: string;
   source: AdminLeadSource;
+  via: AdminLeadVia;
   /** @nullable */
   name: string | null;
   /** @nullable */

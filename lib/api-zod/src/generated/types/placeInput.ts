@@ -59,6 +59,7 @@ export interface PlaceInput {
   kind: PlaceKind;
   delivers: boolean;
   pickup: boolean;
+  directContact: boolean;
   hours: WeekHours | null;
   /**
      * @minimum 0

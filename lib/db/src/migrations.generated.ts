@@ -107,5 +107,12 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "CREATE INDEX \"leads_created_idx\" ON \"leads\" USING btree (\"created_at\");",
       "ALTER TABLE \"places\" ADD CONSTRAINT \"places_slug_unique\" UNIQUE(\"slug\");"
     ]
+  },
+  {
+    "tag": "0007_via",
+    "statements": [
+      "ALTER TABLE \"leads\" ADD COLUMN \"via\" text DEFAULT 'vendedor' NOT NULL;",
+      "ALTER TABLE \"places\" ADD COLUMN \"direct_contact\" boolean DEFAULT false NOT NULL;"
+    ]
   }
 ];

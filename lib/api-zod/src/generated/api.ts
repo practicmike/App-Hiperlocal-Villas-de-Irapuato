@@ -455,6 +455,7 @@ export const GetSharedPlaceResponse = zod.object({
   "welcomeOffer": zod.string().nullable(),
   "slug": zod.string().nullish(),
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
+  "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -515,6 +516,7 @@ export const AdminListLeadsResponseItem = zod.object({
   "placeId": zod.string(),
   "placeName": zod.string(),
   "source": zod.enum(['casa', 'link']),
+  "via": zod.enum(['vendedor', 'creador']),
   "name": zod.string().nullable(),
   "phone": zod.string().nullable(),
   "createdAt": zod.coerce.date()
@@ -581,6 +583,7 @@ export const GetPlaceResponse = zod.object({
   "welcomeOffer": zod.string().nullable(),
   "slug": zod.string().nullish(),
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
+  "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -668,6 +671,7 @@ export const EndorsePlaceResponse = zod.object({
   "welcomeOffer": zod.string().nullable(),
   "slug": zod.string().nullish(),
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
+  "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -748,6 +752,7 @@ export const RemoveEndorsementResponse = zod.object({
   "welcomeOffer": zod.string().nullable(),
   "slug": zod.string().nullish(),
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
+  "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
@@ -1064,6 +1069,7 @@ export const AdminListPlacesResponseItem = zod.object({
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
+  "directContact": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminListPlacesResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminListPlacesResponseOneHoursItemOneCloseRegExp)
@@ -1153,6 +1159,7 @@ export const AdminCreatePlaceBody = zod.object({
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
+  "directContact": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminCreatePlaceBodyHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminCreatePlaceBodyHoursItemOneCloseRegExp)
@@ -1224,6 +1231,7 @@ export const AdminCreatePlaceResponse = zod.object({
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
+  "directContact": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneCloseRegExp)
@@ -1316,6 +1324,7 @@ export const AdminUpdatePlaceBody = zod.object({
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
+  "directContact": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminUpdatePlaceBodyHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminUpdatePlaceBodyHoursItemOneCloseRegExp)
@@ -1387,6 +1396,7 @@ export const AdminUpdatePlaceResponse = zod.object({
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
+  "directContact": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneCloseRegExp)

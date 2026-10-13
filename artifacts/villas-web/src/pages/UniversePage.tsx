@@ -355,6 +355,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
           }
           constellations={cById}
           creatorName={creator.name}
+          creatorWhatsapp={creator.whatsapp}
           meName={me?.name ?? ""}
           isAdmin={me?.role === "admin"}
           onClose={() => {

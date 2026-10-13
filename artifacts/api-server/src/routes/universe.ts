@@ -122,7 +122,13 @@ router.post("/places/:id/lead", rateLimit("lead", 20, 60 * 60_000), async (req, 
   }
   const digits = body.phone ? normalizePhone(body.phone) : "";
   const phone = digits.length >= 12 && digits.length <= 15 ? digits : null;
-  await db.insert(leadsTable).values({ placeId: id, source: body.source, name, phone });
+  const [c] = await db
+    .select({ isProperty: constellationsTable.isProperty })
+    .from(constellationsTable)
+    .where(eq(constellationsTable.id, place.constellation))
+    .limit(1);
+  const via = c?.isProperty && !place.directContact ? "creador" : "vendedor";
+  await db.insert(leadsTable).values({ placeId: id, source: body.source, via, name, phone });
   await db
     .update(placesTable)
     .set({ whatsappClicks: sql`${placesTable.whatsappClicks} + 1` })

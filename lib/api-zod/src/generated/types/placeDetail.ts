@@ -43,6 +43,8 @@ export interface PlaceDetail {
   slug?: string | null;
   /** Visitante en una casa o link público; se le pide su nombre antes de escribir */
   leadForm?: boolean;
+  /** Visitante en una casa sin contacto directo; escribe al creador, que lo presenta */
+  viaCreator?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
   myVisits: number;
