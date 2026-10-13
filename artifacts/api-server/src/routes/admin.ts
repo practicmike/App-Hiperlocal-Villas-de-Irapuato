@@ -41,6 +41,7 @@ import {
   AdminDeleteVisitParams,
   AdminClearVisitsBody,
   AdminDeleteInviteParams,
+  AdminDeleteSearchParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
@@ -654,6 +655,18 @@ router.get("/admin/searches", async (_req, res) => {
       createdAt: s.createdAt.toISOString(),
     })),
   );
+});
+
+router.delete("/admin/searches/:id", async (req, res) => {
+  const { id } = AdminDeleteSearchParams.parse(req.params);
+  await db.delete(searchesTable).where(eq(searchesTable.id, id));
+  res.status(204).end();
+});
+
+/** Limpia todas las búsquedas (pruebas); las métricas del resumen arrancan de cero. */
+router.post("/admin/searches/clear", async (_req, res) => {
+  const removed = await db.delete(searchesTable).returning({ id: searchesTable.id });
+  res.json({ removed: removed.length });
 });
 
 router.post("/admin/searches/:id/handled", async (req, res) => {

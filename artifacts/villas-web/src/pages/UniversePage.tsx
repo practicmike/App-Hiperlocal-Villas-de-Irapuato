@@ -190,12 +190,9 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
               )}
             </>
           )}
-          {!search.isPending && !result && !isLoading && level === "far" && view === "universe" && (
-            <>
-              {guest
-                ? "Pellizca para acercarte o toca una constelación"
-                : `Hola, ${meFirst} · tu cielo: ${litCount} de ${places.length} encendidas`}
-            </>
+          {/* Solo al visitante nuevo le hace falta la pista; el vecino ya conoce su universo. */}
+          {guest && !search.isPending && !result && !isLoading && level === "far" && view === "universe" && (
+            <>Pellizca para acercarte o toca una constelación</>
           )}
           {tooManyGuestSearches && (
             <span className="text-casas">Llegaste al límite de búsquedas de la vista previa. Únete para buscar sin límite.</span>

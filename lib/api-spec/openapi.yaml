@@ -787,6 +787,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdminSearch"
+  /admin/searches/{id}:
+    delete:
+      operationId: adminDeleteSearch
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Borrada
+  /admin/searches/clear:
+    post:
+      operationId: adminClearSearches
+      tags: [admin]
+      summary: Borra todas las búsquedas (para limpiar pruebas)
+      responses:
+        "200":
+          description: Cuántas se borraron
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearVisitsResult"
   /admin/searches/{id}/handled:
     post:
       operationId: adminMarkSearchHandled
