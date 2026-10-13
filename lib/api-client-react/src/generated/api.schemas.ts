@@ -365,6 +365,47 @@ export interface AdminOverview {
   visits30d: number;
 }
 
+export interface ResidentUpdate {
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
+  name: string;
+  /**
+     * @minLength 10
+     * @maxLength 20
+     */
+  phone: string;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  zone: string | null;
+}
+
+export interface AdminVisit {
+  id: string;
+  at: string;
+  residentId: string;
+  residentName: string;
+  placeId: string;
+  placeName: string;
+  welcomeApplied: boolean;
+  /** @nullable */
+  welcomeOffer: string | null;
+}
+
+export interface ClearVisitsRequest {
+  /** @nullable */
+  residentId: string | null;
+  /** @nullable */
+  placeId: string | null;
+}
+
+export interface ClearVisitsResult {
+  removed: number;
+}
+
 export type AdminResidentRole = typeof AdminResidentRole[keyof typeof AdminResidentRole];
 
 

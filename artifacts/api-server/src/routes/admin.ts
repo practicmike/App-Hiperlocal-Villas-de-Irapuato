@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
-import { desc, eq, gte, isNull, like, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, like, ne, or, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import {
   db,
@@ -14,6 +14,8 @@ import {
   searchesTable,
   complaintsTable,
   visitsTable,
+  sessionsTable,
+  endorsementsTable,
   type Place,
 } from "@workspace/db";
 import {
@@ -33,6 +35,12 @@ import {
   AdminRemoveConstellationBody,
   AdminSuggestConstellationBody,
   AdminIssueMerchantKeyParams,
+  AdminUpdateResidentParams,
+  AdminUpdateResidentBody,
+  AdminDeleteResidentParams,
+  AdminDeleteVisitParams,
+  AdminClearVisitsBody,
+  AdminDeleteInviteParams,
   AdminMarkSearchHandledParams,
   AdminResolveComplaintParams,
 } from "@workspace/api-zod";
@@ -210,6 +218,119 @@ router.post("/admin/invites", async (req, res) => {
     usedBy: null,
     createdAt: invite!.createdAt.toISOString(),
   });
+});
+
+/** Corregir nombre, WhatsApp o privada de un vecino. */
+router.put("/admin/residents/:id", async (req, res) => {
+  const { id } = AdminUpdateResidentParams.parse(req.params);
+  const body = AdminUpdateResidentBody.parse(req.body);
+  const phone = normalizePhone(body.phone);
+  if (phone.length < 12) {
+    res.status(400).json({ message: "Revisa el WhatsApp (10 dígitos)." });
+    return;
+  }
+  const [dup] = await db
+    .select({ id: residentsTable.id })
+    .from(residentsTable)
+    .where(and(eq(residentsTable.phone, phone), ne(residentsTable.id, id)))
+    .limit(1);
+  if (dup) {
+    res.status(400).json({ message: "Ese WhatsApp ya lo tiene otro vecino." });
+    return;
+  }
+  const [row] = await db
+    .update(residentsTable)
+    .set({ name: body.name.trim(), phone, zone: body.zone?.trim() || null })
+    .where(eq(residentsTable.id, id))
+    .returning({ id: residentsTable.id });
+  if (!row) {
+    res.status(404).json({ message: "Vecino no encontrado." });
+    return;
+  }
+  res.status(204).end();
+});
+
+/**
+ * Borrar a un vecino por completo (pruebas, duplicados). Para alguien real que
+ * ya no debe entrar es mejor "Bloquear": conserva el historial.
+ */
+router.delete("/admin/residents/:id", async (req, res) => {
+  const { id } = AdminDeleteResidentParams.parse(req.params);
+  const [target] = await db.select().from(residentsTable).where(eq(residentsTable.id, id)).limit(1);
+  if (!target) {
+    res.status(404).json({ message: "Vecino no encontrado." });
+    return;
+  }
+  if (target.role === "admin" || target.id === req.resident!.id) {
+    res.status(400).json({ message: "No puedes borrar la cuenta del creador." });
+    return;
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(sessionsTable).where(eq(sessionsTable.residentId, id));
+    await tx.delete(accessKeysTable).where(eq(accessKeysTable.residentId, id));
+    await tx.delete(endorsementsTable).where(eq(endorsementsTable.residentId, id));
+    await tx.delete(visitsTable).where(eq(visitsTable.residentId, id));
+    await tx.delete(complaintsTable).where(eq(complaintsTable.residentId, id));
+    await tx.delete(searchesTable).where(eq(searchesTable.residentId, id));
+    // Su código de invitación ya usado se borra (no debe volver a servir);
+    // los que él creó y nadie usó, también; los que sí se usaron pasan al creador.
+    await tx
+      .delete(invitesTable)
+      .where(or(eq(invitesTable.usedById, id), and(eq(invitesTable.createdById, id), isNull(invitesTable.usedById))));
+    await tx.update(invitesTable).set({ createdById: req.resident!.id }).where(eq(invitesTable.createdById, id));
+    await tx.update(residentsTable).set({ invitedById: null }).where(eq(residentsTable.invitedById, id));
+    await tx.delete(residentsTable).where(eq(residentsTable.id, id));
+  });
+  res.status(204).end();
+});
+
+/** Solo códigos sin usar: uno usado es el registro de quién invitó a quién. */
+router.delete("/admin/invites/:code", async (req, res) => {
+  const { code } = AdminDeleteInviteParams.parse(req.params);
+  await db.delete(invitesTable).where(and(eq(invitesTable.code, code), isNull(invitesTable.usedById)));
+  res.status(204).end();
+});
+
+// ---------------------------------------------------------------- visitas
+/** Historial de credenciales escaneadas: quién, dónde, cuándo y si se dio regalo. */
+router.get("/admin/visits", async (_req, res) => {
+  const rows = await db
+    .select({
+      id: visitsTable.id,
+      at: visitsTable.createdAt,
+      residentId: visitsTable.residentId,
+      residentName: residentsTable.name,
+      placeId: visitsTable.placeId,
+      placeName: placesTable.name,
+      welcomeApplied: visitsTable.welcomeApplied,
+      welcomeOffer: visitsTable.welcomeOffer,
+    })
+    .from(visitsTable)
+    .innerJoin(residentsTable, eq(visitsTable.residentId, residentsTable.id))
+    .innerJoin(placesTable, eq(visitsTable.placeId, placesTable.id))
+    .orderBy(desc(visitsTable.createdAt))
+    .limit(500);
+  res.json(rows.map((r) => ({ ...r, at: r.at.toISOString() })));
+});
+
+router.delete("/admin/visits/:id", async (req, res) => {
+  const { id } = AdminDeleteVisitParams.parse(req.params);
+  await db.delete(visitsTable).where(eq(visitsTable.id, id));
+  res.status(204).end();
+});
+
+/** Borrado en bloque para limpiar pruebas: de un vecino, de un comercio o todas. */
+router.post("/admin/visits/clear", async (req, res) => {
+  const { residentId, placeId } = AdminClearVisitsBody.parse(req.body);
+  const conds = [
+    residentId ? eq(visitsTable.residentId, residentId) : undefined,
+    placeId ? eq(visitsTable.placeId, placeId) : undefined,
+  ].filter((c) => c !== undefined);
+  const removed = await db
+    .delete(visitsTable)
+    .where(conds.length ? and(...conds) : sql`true`)
+    .returning({ id: visitsTable.id });
+  res.json({ removed: removed.length });
 });
 
 // ----------------------------------------------------------------- lugares
