@@ -13,6 +13,8 @@ import {
 import { Link } from "wouter";
 import { BadgeCheck, Bath, BedDouble, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
 import { openState, weekSummary } from "@/lib/hours";
+import { setPickup } from "@/lib/pickup";
+import { ShoppingBag } from "lucide-react";
 import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
 
 interface Match {
@@ -133,6 +135,8 @@ function Card({
 
       <Facts place={place} color={info.color} />
 
+      {place.news && <TodayNews news={place.news} />}
+
       {/* Regalo de bienvenida: la invitación a encender una estrella nueva. */}
       {place.welcomeOffer && place.myVisits === 0 && (
         <div className="flex items-start gap-3 rounded-2xl border border-[#E6C882]/50 bg-[#E6C882]/10 p-3">
@@ -198,6 +202,9 @@ function Card({
       >
         <MessageCircle size={20} /> Escribir por WhatsApp
       </a>
+      {place.pickup && (
+        <PickupOrder place={place} meName={meName} onSent={() => contact.mutate({ id: place.id, data: { searchId } })} />
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -346,6 +353,91 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+const ago = (iso: string) => {
+  const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  return m < 60 ? `hace ${m} min` : `hace ${Math.round(m / 60)} h`;
+};
+
+/** "Hoy en Villas": la novedad del día de esta estrella. */
+function TodayNews({ news }: { news: NonNullable<PlaceDetail["news"]> }) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return (
+    <div className="flex gap-3 rounded-2xl border border-ai/40 bg-ai/10 p-3">
+      {news.photoUrl && <img src={`${base}${news.photoUrl}`} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />}
+      <div className="min-w-0 text-sm">
+        <p className="text-[11px] font-black uppercase tracking-wide text-ai">Hoy · {ago(news.createdAt)}</p>
+        <p className="font-bold leading-snug">{news.text}</p>
+      </div>
+    </div>
+  );
+}
+
+const WHEN = ["En 15 min", "En 30 min", "En 1 hora"] as const;
+
+/** Pedir para recoger: arma el mensaje de WhatsApp y deja listo el botón "Ya llegué". */
+function PickupOrder({ place, meName, onSent }: { place: PlaceDetail; meName: string; onSent: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState("");
+  const [when, setWhen] = useState<string>(WHEN[1]);
+  const first = meName.trim().split(/\s+/)[0] ?? "";
+  const status = openState(place.hours);
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#25D366]/60 py-3 text-base font-black text-[#25D366] active:scale-[0.98]"
+      >
+        <ShoppingBag size={19} /> Pedir para recoger
+      </button>
+    );
+  }
+  const msg =
+    `Hola${place.contactName ? ` ${place.contactName}` : ""}, soy ${first}, vecino de Villas. ` +
+    `Quiero pedir para recoger: ${items.trim()}. Paso ${when.toLowerCase()}. ¿Me confirmas? 🙌`;
+  return (
+    <div className="space-y-3 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/5 p-3">
+      <p className="text-sm font-black">¿Qué vas a pedir?</p>
+      {status && !status.open && <p className="text-xs text-alert">{status.text}. Puedes dejar tu pedido para cuando abra.</p>}
+      <textarea
+        value={items}
+        onChange={(e) => setItems(e.target.value)}
+        rows={2}
+        maxLength={300}
+        placeholder="2 pizzas grandes, una hawaiana y una pepperoni"
+        className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-[#25D366]"
+      />
+      <div className="flex flex-wrap gap-2">
+        {WHEN.map((w) => (
+          <button
+            key={w}
+            type="button"
+            onClick={() => setWhen(w)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-bold ${when === w ? "border-[#25D366] text-[#25D366]" : "border-white/20 text-muted"}`}
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+      <a
+        href={items.trim().length >= 2 ? whatsappLink(place.whatsapp, msg) : undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-disabled={items.trim().length < 2}
+        onClick={(e) => {
+          if (items.trim().length < 2) return e.preventDefault();
+          onSent();
+          setPickup({ placeId: place.id, placeName: place.name, whatsapp: place.whatsapp, contactName: place.contactName, at: Date.now() });
+          setOpen(false);
+        }}
+        className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 font-black text-[#0b3d1f] ${items.trim().length < 2 ? "opacity-40" : ""}`}
+      >
+        <MessageCircle size={18} /> Enviar pedido por WhatsApp
+      </a>
+      <p className="text-[11px] text-muted">Al llegar, toca "Ya llegué" en la pantalla principal y le avisamos que estás afuera.</p>
     </div>
   );
 }

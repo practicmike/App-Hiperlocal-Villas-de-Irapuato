@@ -86,5 +86,15 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"place_photos\" ADD CONSTRAINT \"place_photos_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
       "CREATE INDEX \"place_photos_place_idx\" ON \"place_photos\" USING btree (\"place_id\",\"position\");"
     ]
+  },
+  {
+    "tag": "0005_hoy",
+    "statements": [
+      "CREATE TABLE \"news\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"text\" text NOT NULL,\n\t\"photo_mime\" text,\n\t\"photo_data\" \"bytea\",\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL\n);",
+      "ALTER TABLE \"places\" ADD COLUMN \"pickup\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"news\" ADD CONSTRAINT \"news_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE INDEX \"news_place_idx\" ON \"news\" USING btree (\"place_id\");",
+      "CREATE INDEX \"news_expires_idx\" ON \"news\" USING btree (\"expires_at\");"
+    ]
   }
 ];

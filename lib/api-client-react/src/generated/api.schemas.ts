@@ -204,6 +204,18 @@ export const PlaceKind = {
   oficio: 'oficio',
 } as const;
 
+export interface NewsItem {
+  id: string;
+  placeId: string;
+  placeName: string;
+  constellation: string;
+  text: string;
+  /** @nullable */
+  photoUrl: string | null;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface MerchantMe {
   placeId: string;
   placeName: string;
@@ -214,6 +226,7 @@ export interface MerchantMe {
   neighbors: number;
   recent: MerchantRecentVisit[];
   kind: PlaceKind;
+  news: NewsItem | null;
 }
 
 export interface MemberLookup {
@@ -267,6 +280,14 @@ export interface DayHours {
  */
 export type WeekHours = (DayHours | null)[] | null;
 
+export interface NewsInput {
+  /**
+     * @minLength 3
+     * @maxLength 140
+     */
+  text: string;
+}
+
 export interface PlaceSummary {
   id: string;
   constellation: Constellation;
@@ -282,6 +303,7 @@ export interface PlaceSummary {
   hours: WeekHours | null;
   /** @nullable */
   coverUrl: string | null;
+  hasNews: boolean;
 }
 
 export interface Universe {
@@ -332,6 +354,8 @@ export interface PlaceDetail {
   myVisits: number;
   kind: PlaceKind;
   delivers: boolean;
+  pickup: boolean;
+  news: NewsItem | null;
   hours: WeekHours | null;
   /**
      * @minimum 0
@@ -606,6 +630,7 @@ export interface PlaceInput {
   welcomeOffer: string | null;
   kind: PlaceKind;
   delivers: boolean;
+  pickup: boolean;
   hours: WeekHours | null;
   /**
      * @minimum 0

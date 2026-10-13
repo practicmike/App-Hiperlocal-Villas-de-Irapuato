@@ -173,7 +173,17 @@ export const MerchantLoginResponse = zod.object({
   "at": zod.coerce.date(),
   "welcomeApplied": zod.boolean()
 })),
-  "kind": zod.enum(['comercio', 'oficio'])
+  "kind": zod.enum(['comercio', 'oficio']),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()])
 })
 
 
@@ -192,7 +202,17 @@ export const GetMerchantMeResponse = zod.object({
   "at": zod.coerce.date(),
   "welcomeApplied": zod.boolean()
 })),
-  "kind": zod.enum(['comercio', 'oficio'])
+  "kind": zod.enum(['comercio', 'oficio']),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()])
 })
 
 
@@ -260,8 +280,126 @@ export const GetUniverseResponse = zod.object({
   "open": zod.string().regex(getUniverseResponsePlacesItemHoursItemOneOpenRegExp),
   "close": zod.string().regex(getUniverseResponsePlacesItemHoursItemOneCloseRegExp)
 }),zod.null()])).min(getUniverseResponsePlacesItemHoursMin).max(getUniverseResponsePlacesItemHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
-  "coverUrl": zod.string().nullable()
+  "coverUrl": zod.string().nullable(),
+  "hasNews": zod.boolean()
 }))
+})
+
+
+/**
+ * @summary Hoy en Villas (novedades vigentes)
+ */
+export const ListNewsResponseItem = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+export const ListNewsResponse = zod.array(ListNewsResponseItem)
+
+
+export const merchantPublishNewsBodyTextMin = 3;
+export const merchantPublishNewsBodyTextMax = 140;
+
+
+
+export const MerchantPublishNewsBody = zod.object({
+  "text": zod.string().min(merchantPublishNewsBodyTextMin).max(merchantPublishNewsBodyTextMax)
+})
+
+export const MerchantPublishNewsResponse = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+export const MerchantRemoveNewsResponse = zod.void()
+
+
+export const MerchantNewsPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const MerchantNewsPhotoResponse = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+export const AdminListNewsResponseItem = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+export const AdminListNewsResponse = zod.array(AdminListNewsResponseItem)
+
+
+export const AdminPublishNewsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const adminPublishNewsBodyTextMin = 3;
+export const adminPublishNewsBodyTextMax = 140;
+
+
+
+export const AdminPublishNewsBody = zod.object({
+  "text": zod.string().min(adminPublishNewsBodyTextMin).max(adminPublishNewsBodyTextMax)
+})
+
+export const AdminPublishNewsResponse = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+export const AdminRemoveNewsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminRemoveNewsResponse = zod.void()
+
+
+export const AdminNewsPhotoParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminNewsPhotoResponse = zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
 })
 
 
@@ -314,6 +452,17 @@ export const GetPlaceResponse = zod.object({
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(getPlaceResponseHoursItemOneOpenRegExp),
   "close": zod.string().regex(getPlaceResponseHoursItemOneCloseRegExp)
@@ -388,6 +537,17 @@ export const EndorsePlaceResponse = zod.object({
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(endorsePlaceResponseHoursItemOneOpenRegExp),
   "close": zod.string().regex(endorsePlaceResponseHoursItemOneCloseRegExp)
@@ -455,6 +615,17 @@ export const RemoveEndorsementResponse = zod.object({
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
+  "news": zod.union([zod.object({
+  "id": zod.string(),
+  "placeId": zod.string(),
+  "placeName": zod.string(),
+  "constellation": zod.string(),
+  "text": zod.string(),
+  "photoUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(removeEndorsementResponseHoursItemOneOpenRegExp),
   "close": zod.string().regex(removeEndorsementResponseHoursItemOneCloseRegExp)
@@ -755,6 +926,7 @@ export const AdminListPlacesResponseItem = zod.object({
   "welcomeOffer": zod.string().max(adminListPlacesResponseOneWelcomeOfferMax).nullable(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminListPlacesResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminListPlacesResponseOneHoursItemOneCloseRegExp)
@@ -841,6 +1013,7 @@ export const AdminCreatePlaceBody = zod.object({
   "welcomeOffer": zod.string().max(adminCreatePlaceBodyWelcomeOfferMax).nullable(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminCreatePlaceBodyHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminCreatePlaceBodyHoursItemOneCloseRegExp)
@@ -911,6 +1084,7 @@ export const AdminCreatePlaceResponse = zod.object({
   "welcomeOffer": zod.string().max(adminCreatePlaceResponseOneWelcomeOfferMax).nullable(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminCreatePlaceResponseOneHoursItemOneCloseRegExp)
@@ -1000,6 +1174,7 @@ export const AdminUpdatePlaceBody = zod.object({
   "welcomeOffer": zod.string().max(adminUpdatePlaceBodyWelcomeOfferMax).nullable(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminUpdatePlaceBodyHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminUpdatePlaceBodyHoursItemOneCloseRegExp)
@@ -1070,6 +1245,7 @@ export const AdminUpdatePlaceResponse = zod.object({
   "welcomeOffer": zod.string().max(adminUpdatePlaceResponseOneWelcomeOfferMax).nullable(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
+  "pickup": zod.boolean(),
   "hours": zod.array(zod.union([zod.object({
   "open": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneOpenRegExp),
   "close": zod.string().regex(adminUpdatePlaceResponseOneHoursItemOneCloseRegExp)

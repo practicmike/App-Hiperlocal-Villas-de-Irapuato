@@ -36,6 +36,13 @@
       "when": 1791920935807,
       "tag": "0004_fichas",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791922491232,
+      "tag": "0005_hoy",
+      "breakpoints": true
     }
   ]
 }

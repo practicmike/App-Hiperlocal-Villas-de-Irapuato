@@ -36,6 +36,11 @@ import {
   useAdminDeletePhoto,
   useAdminReorderPhotos,
   getGetPlaceQueryKey,
+  useAdminListNews,
+  getAdminListNewsQueryKey,
+  getListNewsQueryKey,
+  adminPublishNews,
+  adminRemoveNews,
   useAdminClearSearches,
   getAdminListVisitsQueryKey,
   getGetMySkyQueryKey,
@@ -57,6 +62,8 @@ import {
 } from "@workspace/api-client-react";
 import { ArrowLeft, Copy, MessageCircle } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
+import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
+import { NewsComposer } from "@/components/NewsComposer";
 
 type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "constelaciones" | "busquedas" | "quejas";
 const TABS: Array<[Tab, string]> = [
@@ -397,6 +404,7 @@ const EMPTY: PlaceInput = {
   welcomeOffer: null,
   kind: "comercio",
   delivers: false,
+  pickup: false,
   hours: null,
   landM2: null,
   builtM2: null,
@@ -560,10 +568,16 @@ function Places({ editId }: { editId: string | null }) {
               </div>
             </div>
             {f.kind === "comercio" && (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="accent-[#7d80d9]" checked={f.delivers} onChange={(e) => set("delivers", e.target.checked)} />
-                También entrega a domicilio
-              </label>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="accent-[#7d80d9]" checked={f.delivers} onChange={(e) => set("delivers", e.target.checked)} />
+                  También entrega a domicilio
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="accent-[#7d80d9]" checked={f.pickup} onChange={(e) => set("pickup", e.target.checked)} />
+                  Acepta pedidos para recoger
+                </label>
+              </div>
             )}
             <HoursEditor value={f.hours} onChange={(h) => set("hours", h)} />
           </>
@@ -583,6 +597,7 @@ function Places({ editId }: { editId: string | null }) {
         ) : (
           <p className="rounded-xl bg-space-2/60 p-3 text-xs text-muted">Las fotos se agregan después de guardar la estrella.</p>
         )}
+        {editing.id && !current?.isProperty && <AdminNewsBox placeId={editing.id} />}
         {editing.id && <MerchantKeyBox placeId={editing.id} placeName={f.name} whatsapp={f.whatsapp} hasKey={!!places?.find((x) => x.id === editing.id)?.hasMerchantKey} />}
         {error && <p className="text-sm text-alert">Revisa los datos: {(error as Error).message}</p>}
         <div className="flex gap-2 pt-2">
@@ -654,6 +669,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   welcomeOffer: p.welcomeOffer,
   kind: p.kind,
   delivers: p.delivers,
+  pickup: p.pickup,
   hours: p.hours,
   landM2: p.landM2,
   builtM2: p.builtM2,
@@ -1377,30 +1393,6 @@ function HoursEditor({ value, onChange }: { value: PlaceInput["hours"]; onChange
   );
 }
 
-/** Reduce la foto en el propio celular: máx. 1600 px, WebP (o JPG si el navegador no sabe WebP). */
-async function shrinkPhoto(file: File): Promise<{ blob: Blob; width: number; height: number }> {
-  const bitmap = await createImageBitmap(file).catch(async () => {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    await img.decode();
-    return img;
-  });
-  const w0 = "width" in bitmap ? bitmap.width : 0;
-  const h0 = "height" in bitmap ? bitmap.height : 0;
-  const scale = Math.min(1, 1600 / Math.max(w0, h0));
-  const width = Math.round(w0 * scale);
-  const height = Math.round(h0 * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext("2d")!.drawImage(bitmap as CanvasImageSource, 0, 0, width, height);
-  const toBlob = (type: string, q: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, q));
-  let blob = await toBlob("image/webp", 0.82);
-  if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg", 0.85);
-  if (!blob) throw new Error("No pude procesar la foto.");
-  return { blob, width, height };
-}
-
 function PhotoManager({ placeId, highlight }: { placeId: string; highlight: boolean }) {
   const qc = useQueryClient();
   const { data: places } = useAdminListPlaces();
@@ -1425,14 +1417,7 @@ function PhotoManager({ placeId, highlight }: { placeId: string; highlight: bool
     try {
       for (const [i, file] of list.entries()) {
         setBusy(`Subiendo ${i + 1} de ${list.length}…`);
-        const { blob, width, height } = await shrinkPhoto(file);
-        const res = await fetch(`${base}/api/admin/places/${placeId}/photos`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": blob.type, "x-width": String(width), "x-height": String(height) },
-          body: blob,
-        });
-        if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { message?: string } | null)?.message ?? "No se pudo subir.");
+        await uploadPhoto(`/api/admin/places/${placeId}/photos`, await shrinkPhoto(file));
       }
       if (files.length > room) setErr(`Solo caben 5 fotos; subí ${list.length}.`);
     } catch (e) {
@@ -1487,6 +1472,27 @@ function PhotoManager({ placeId, highlight }: { placeId: string; highlight: bool
       <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => void upload(e.target.files)} />
       {err && <p className="mt-2 text-xs text-alert">{err}</p>}
     </div>
+  );
+}
+
+/** El creador también puede publicar la novedad del día por el comercio. */
+function AdminNewsBox({ placeId }: { placeId: string }) {
+  const qc = useQueryClient();
+  const { data } = useAdminListNews();
+  const current = data?.find((n) => n.placeId === placeId) ?? null;
+  return (
+    <NewsComposer
+      current={current}
+      publish={(text) => adminPublishNews(placeId, { text })}
+      photoPath={(id) => `/api/admin/news/${id}/photo`}
+      remove={() => (current ? adminRemoveNews(current.id) : Promise.resolve())}
+      onChange={() => {
+        void qc.invalidateQueries({ queryKey: getAdminListNewsQueryKey() });
+        void qc.invalidateQueries({ queryKey: getListNewsQueryKey() });
+        void qc.invalidateQueries({ queryKey: getGetUniverseQueryKey() });
+        void qc.invalidateQueries({ queryKey: getGetPlaceQueryKey(placeId) });
+      }}
+    />
   );
 }
 

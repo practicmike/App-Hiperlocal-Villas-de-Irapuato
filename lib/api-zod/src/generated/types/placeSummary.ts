@@ -24,4 +24,5 @@ export interface PlaceSummary {
   hours: WeekHours | null;
   /** @nullable */
   coverUrl: string | null;
+  hasNews: boolean;
 }

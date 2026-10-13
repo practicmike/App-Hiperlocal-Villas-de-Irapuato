@@ -10,6 +10,7 @@
  */
 import { config, aiEnabled } from "./config";
 import { placeFacts, type SearchablePlace } from "./search-core";
+import { isOpenNow, nowInVillas } from "./hours";
 import { logger } from "./logger";
 
 export type MatchCandidate = Pick<
@@ -28,7 +29,7 @@ export interface AiMatch {
 export const AI_MATCH_MIN = 50;
 export const AI_MAX_CANDIDATES = 12;
 
-export function buildMatchPrompt(query: string, candidates: MatchCandidate[]) {
+export function buildMatchPrompt(query: string, candidates: MatchCandidate[], now = new Date()) {
   const list = candidates
     .map((c, i) =>
       [
@@ -37,6 +38,10 @@ export function buildMatchPrompt(query: string, candidates: MatchCandidate[]) {
         c.priceLabel ? `precio: ${c.priceLabel}` : "",
         c.zone ? `zona: ${c.zone}` : "",
         placeFacts(c as SearchablePlace) ? `datos: ${placeFacts(c as SearchablePlace)}` : "",
+        (() => {
+          const open = isOpenNow(c.hours, now);
+          return open === null ? "" : open ? "ahora: ABIERTO" : "ahora: CERRADO";
+        })(),
         c.description ? `descripción: ${c.description.slice(0, 700)}` : "",
       ]
         .filter(Boolean)
@@ -53,6 +58,7 @@ export function buildMatchPrompt(query: string, candidates: MatchCandidate[]) {
         "Rúbrica: 90-100 resuelve todo lo pedido; 70-89 resuelve lo principal con algún detalle sin confirmar; 50-69 sirve parcialmente; " +
         "menos de 50 no sirve. Si contradice algo explícito (pide renta y es venta, pide a domicilio y no hay), baja a menos de 50. " +
         "No inventes datos que no estén en la descripción. " +
+        `Ahora es ${nowInVillas(now).label} en Irapuato. Si el vecino pide algo para ya, hoy, ahorita o abierto, un candidato CERRADO baja a menos de 50; si no indica urgencia, el horario no castiga. ` +
         'La razón: máximo 12 palabras, en español, dirigida al vecino, diciendo qué sí cumple y, si aplica, qué no se sabe ("Hace pizza a domicilio; no indica horario"). ' +
         'Responde solo JSON: {"matches":[{"i":0,"score":85,"reason":"..."}]} incluyendo todos los candidatos.',
     },

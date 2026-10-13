@@ -1,7 +1,14 @@
-import { Router, type IRouter } from "express";
+import express, { Router, type IRouter } from "express";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { db, placesTable, residentsTable, visitsTable, merchantSessionsTable } from "@workspace/db";
-import { MerchantLoginBody, MerchantLookupMemberParams, MerchantRecordVisitBody } from "@workspace/api-zod";
+import {
+  MerchantLoginBody,
+  MerchantLookupMemberParams,
+  MerchantRecordVisitBody,
+  MerchantPublishNewsBody,
+  MerchantNewsPhotoParams,
+} from "@workspace/api-zod";
+import { activeNews, newsById, publishNews, removeNews, setNewsPhoto } from "../lib/news";
 import { hashToken, requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
 import {
@@ -85,11 +92,13 @@ async function merchantSummary(placeId: string, placeName: string, welcomeOffer:
       .orderBy(desc(visitsTable.createdAt))
       .limit(10),
   ]);
+  const [news] = await activeNews([placeId]);
   return {
     placeId,
     placeName,
     welcomeOffer,
     kind,
+    news: news ?? null,
     todayVisits: stats?.today ?? 0,
     totalVisits: stats?.total ?? 0,
     neighbors: stats?.neighbors ?? 0,
@@ -172,5 +181,36 @@ router.post("/merchant/visits", requireMerchant, rateLimit("merchant-visit", 120
     duplicate: false,
   });
 });
+
+// ---------------------------------------------------------- hoy en villas
+router.post("/merchant/news", requireMerchant, rateLimit("merchant-news", 12, 60 * 60_000), async (req, res) => {
+  const { text } = MerchantPublishNewsBody.parse(req.body);
+  res.status(201).json(await publishNews(req.merchantPlace!.id, text));
+});
+
+router.delete("/merchant/news", requireMerchant, async (req, res) => {
+  await removeNews({ placeId: req.merchantPlace!.id });
+  res.status(204).end();
+});
+
+router.post(
+  "/merchant/news/:id/photo",
+  requireMerchant,
+  express.raw({ type: () => true, limit: "3mb" }),
+  async (req, res) => {
+    const { id } = MerchantNewsPhotoParams.parse(req.params);
+    const n = await newsById(id);
+    if (!n || n.placeId !== req.merchantPlace!.id) {
+      res.status(404).json({ message: "Novedad no encontrada." });
+      return;
+    }
+    const item = await setNewsPhoto(id, req.body);
+    if (!item) {
+      res.status(400).json({ message: "Eso no parece una foto (JPG, PNG o WebP)." });
+      return;
+    }
+    res.json(item);
+  },
+);
 
 export default router;

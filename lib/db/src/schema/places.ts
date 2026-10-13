@@ -77,6 +77,8 @@ export const placesTable = pgTable(
     kind: text("kind", { enum: ["comercio", "oficio"] }).notNull().default("comercio"),
     /** Entrega o atiende a domicilio. */
     delivers: boolean("delivers").notNull().default(false),
+    /** Acepta pedidos por WhatsApp para pasar a recoger. */
+    pickup: boolean("pickup").notNull().default(false),
     /** null = sin horario capturado. */
     hours: jsonb("hours").$type<WeekHours | null>(),
     // Solo inmuebles.
@@ -168,6 +170,27 @@ export const placePhotosTable = pgTable(
   (t) => [index("place_photos_place_idx").on(t.placeId, t.position)],
 );
 export const MAX_PHOTOS = 5;
+
+/**
+ * "Hoy en Villas": una novedad del día por estrella (pan recién salido, menú, oferta).
+ * Caduca sola a las 24 h; publicar otra reemplaza la anterior.
+ */
+export const newsTable = pgTable(
+  "news",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    photoMime: text("photo_mime"),
+    photoData: bytea("photo_data"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("news_place_idx").on(t.placeId), index("news_expires_idx").on(t.expiresAt)],
+);
+export const NEWS_HOURS = 24;
 
 /** Teléfonos del comercio con el modo comercio abierto (solo el hash). */
 export const merchantSessionsTable = pgTable(

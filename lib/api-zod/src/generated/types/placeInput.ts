@@ -58,6 +58,7 @@ export interface PlaceInput {
   welcomeOffer: string | null;
   kind: PlaceKind;
   delivers: boolean;
+  pickup: boolean;
   hours: WeekHours | null;
   /**
      * @minimum 0
