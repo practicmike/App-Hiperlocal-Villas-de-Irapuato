@@ -39,11 +39,12 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
   const sky = useGetMySky({
     query: { queryKey: getGetMySkyQueryKey(), enabled: !guest, refetchOnWindowFocus: true, staleTime: 20_000 },
   });
+  // El visitante ve el mismo cielo limpio que un vecino nuevo: todo por descubrir.
   const lit = useMemo(
-    () => (guest ? null : new Set((sky.data?.visits ?? []).map((v) => v.placeId))),
+    () => (guest ? new Set<string>() : new Set((sky.data?.visits ?? []).map((v) => v.placeId))),
     [guest, sky.data],
   );
-  const litCount = useMemo(() => (lit ? places.filter((p) => lit.has(p.id)).length : 0), [lit, places]);
+  const litCount = useMemo(() => places.filter((p) => lit.has(p.id)).length, [lit, places]);
 
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
