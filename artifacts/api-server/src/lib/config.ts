@@ -15,6 +15,7 @@ export const config = {
     apiKey: env["OPENAI_API_KEY"] ?? "",
     embeddingModel: env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small",
     chatModel: env["OPENAI_CHAT_MODEL"] ?? "gpt-4o-mini",
+    transcribeModel: env["OPENAI_TRANSCRIBE_MODEL"] ?? "gpt-4o-mini-transcribe",
   },
   sessionDays: 180,
 };
