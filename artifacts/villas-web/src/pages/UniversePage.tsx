@@ -21,6 +21,7 @@ import { ListView } from "@/components/ListView";
 import { MeSheet } from "@/components/MeSheet";
 import { Intro, introSeen } from "@/components/Intro";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
 import { homeLayout, searchLayout } from "@/lib/layout";
 import { byId, placeConstellations, whatsappLink } from "@/lib/constellations";
 
@@ -111,8 +112,17 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
     return () => clearTimeout(t);
   }, [result, view]);
 
-  const run = () => {
-    const q = query.trim();
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    if (!voiceError) return;
+    const t = setTimeout(() => setVoiceError(null), 6000);
+    return () => clearTimeout(t);
+  }, [voiceError]);
+  const hasVoice = useMemo(() => voiceAvailable(creator.aiEnabled), [creator.aiEnabled]);
+
+  const run = (text?: string) => {
+    const q = (text ?? query).trim();
     if (!q || search.isPending) return;
     search.mutate({ data: { query: q, refine: false } });
   };
@@ -175,7 +185,7 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="¿Qué necesitas? Entre más detalle, mejor"
+              placeholder={listening ? "Te escucho…" : "¿Qué necesitas? Entre más detalle, mejor"}
               aria-label="Buscar en Villas"
               enterKeyHint="search"
               maxLength={400}
@@ -185,6 +195,18 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
               <button type="button" onClick={clear} className="rounded-full p-1.5 text-muted hover:bg-white/10" aria-label="Limpiar búsqueda">
                 <X size={18} />
               </button>
+            )}
+            {hasVoice && (
+              <VoiceButton
+                serverAi={creator.aiEnabled}
+                onPartial={setQuery}
+                onError={setVoiceError}
+                onListening={setListening}
+                onText={(t) => {
+                  setQuery(t);
+                  run(t);
+                }}
+              />
             )}
           </form>
           <CreatorAvatar creator={creator} onClick={() => setCreatorOpen(true)} />
@@ -203,13 +225,14 @@ export function UniversePage({ me, creator }: { me: Me | null; creator: Creator 
             </>
           )}
           {/* Solo al visitante nuevo le hace falta la pista; el vecino ya conoce su universo. */}
-          {guest && !search.isPending && !result && !isLoading && level === "far" && view === "universe" && (
+          {guest && !search.isPending && !result && !isLoading && !voiceError && level === "far" && view === "universe" && (
             <>Pellizca para acercarte o toca una constelación</>
           )}
           {tooManyGuestSearches && (
             <span className="text-casas">Llegaste al límite de búsquedas de la vista previa. Únete para buscar sin límite.</span>
           )}
           {search.isError && !tooManyGuestSearches && <span className="text-alert">No pude buscar. Revisa tu conexión.</span>}
+          {voiceError && !search.isPending && <span className="text-alert">{voiceError}</span>}
         </div>
 
         {/* Hoy en Villas: lo nuevo del día, a un toque. */}

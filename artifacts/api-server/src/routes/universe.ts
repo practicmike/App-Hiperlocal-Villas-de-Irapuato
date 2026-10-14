@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import express, { Router, type IRouter } from "express";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
@@ -31,6 +31,7 @@ import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
 import { photosByPlace } from "../lib/photos";
 import { activeNews } from "../lib/news";
 import { embed } from "../lib/ai";
+import { audioExt, transcribe } from "../lib/transcribe";
 import { aiMatch, AI_MAX_CANDIDATES } from "../lib/ai-match";
 import {
   MATCH_MIN,
@@ -262,6 +263,43 @@ router.post("/places/:id/complaints", requireResident, rateLimit("complaint", 10
   await db.insert(complaintsTable).values({ placeId: id, residentId: req.resident!.id, message });
   res.status(201).end();
 });
+
+// ---------------------------------------------------------- búsqueda por voz
+const residentVoiceLimit = rateLimit("voice", 40, 60 * 60_000);
+const guestVoiceLimit = rateLimit("voice-guest", 10, 60 * 60_000);
+
+/** Pista de vocabulario: nombres y giros reales de Villas, para que el dictado no los invente. */
+let hintCache: { at: number; text: string } | null = null;
+async function voiceHint(): Promise<string> {
+  if (hintCache && Date.now() - hintCache.at < 10 * 60_000) return hintCache.text;
+  const rows = await db
+    .select({ name: placesTable.name, category: placesTable.category })
+    .from(placesTable)
+    .where(eq(placesTable.active, true));
+  const words = [...new Set(rows.flatMap((r) => [r.name, r.category]))].join(", ");
+  const text = `Búsqueda de un vecino de Villas de Irapuato. Lugares y oficios: ${words}.`;
+  hintCache = { at: Date.now(), text };
+  return text;
+}
+
+router.post(
+  "/transcribe",
+  (req, res, next) => (req.resident?.status === "approved" ? residentVoiceLimit : guestVoiceLimit)(req, res, next),
+  express.raw({ type: () => true, limit: "2mb" }),
+  async (req, res) => {
+    const mime = req.get("content-type") ?? "";
+    if (!audioExt(mime) || !Buffer.isBuffer(req.body) || req.body.length < 1000) {
+      res.status(400).json({ message: "No escuché nada. Intenta otra vez, un poco más cerca del celular." });
+      return;
+    }
+    const text = await transcribe(req.body, mime, await voiceHint().catch(() => ""));
+    if (text === null) {
+      res.status(503).json({ message: "El dictado no está disponible ahorita. Escríbelo, porfa." });
+      return;
+    }
+    res.json({ text });
+  },
+);
 
 const residentSearchLimit = rateLimit("search", 60, 60_000);
 const guestSearchLimit = rateLimit("search-guest", 15, 60 * 60_000);
