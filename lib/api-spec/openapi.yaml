@@ -308,6 +308,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/NewsItem"
+  /searches/frequent:
+    get:
+      operationId: getFrequentSearches
+      tags: [universe]
+      summary: Atajos de búsqueda para la pantalla de inicio
+      responses:
+        "200":
+          description: Búsquedas frecuentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrequentSearches"
   /merchant/news:
     post:
       operationId: merchantPublishNews
@@ -1523,7 +1535,30 @@ components:
         neighbors:
           type: integer
           description: Vecinos distintos con visita registrada (para el tamaño de la estrella)
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors]
+        lat:
+          type: [number, "null"]
+          description: Ubicación del local para el radar; null = sin ubicación (p. ej. oficios a domicilio)
+        lng:
+          type: [number, "null"]
+        createdAt:
+          type: string
+          format: date-time
+          description: Alta en Villas (para "Nuevos en Villas" en Novedades)
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors, lat, lng, createdAt]
+    FrequentSearches:
+      type: object
+      properties:
+        mine:
+          type: array
+          description: Lo que este vecino busca más (vacío para visitantes)
+          items:
+            type: string
+        barrio:
+          type: array
+          description: Lo más buscado en Villas por al menos dos vecinos distintos
+          items:
+            type: string
+      required: [mine, barrio]
     Universe:
       type: object
       properties:
@@ -1898,6 +1933,15 @@ components:
         zone:
           type: [string, "null"]
           maxLength: 80
+        lat:
+          type: [number, "null"]
+          minimum: -90
+          maximum: 90
+          description: Opcional; si no viene, se conserva la ubicación guardada
+        lng:
+          type: [number, "null"]
+          minimum: -180
+          maximum: 180
         operation:
           type: [string, "null"]
           enum: [venta, renta, null]

@@ -57,6 +57,13 @@
       "when": 1791926383650,
       "tag": "0007_via",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793055689962,
+      "tag": "0008_ubicacion",
+      "breakpoints": true
     }
   ]
 }

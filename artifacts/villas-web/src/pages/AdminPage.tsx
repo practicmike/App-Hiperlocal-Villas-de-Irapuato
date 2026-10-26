@@ -405,6 +405,8 @@ const EMPTY: PlaceInput = {
   contactName: null,
   whatsapp: "",
   zone: null,
+  lat: null,
+  lng: null,
   operation: null,
   priceLabel: null,
   imageUrl: null,
@@ -514,6 +516,13 @@ function Places({ editId }: { editId: string | null }) {
           <AdminField label="Quién atiende" maxLength={80} {...opt("contactName")} />
         </div>
         <AdminField label="Zona o privada" maxLength={80} {...opt("zone")} />
+        {!(f.kind === "oficio" && !current?.isProperty) && (
+          <LocationField
+            lat={f.lat ?? null}
+            lng={f.lng ?? null}
+            onChange={(lat, lng) => setEditing({ ...editing, form: { ...f, lat, lng } })}
+          />
+        )}
         <label className="block">
           <span className="mb-1 block text-xs font-bold text-muted">Regalo de bienvenida (primera visita con credencial)</span>
           <input
@@ -677,6 +686,72 @@ function Places({ editId }: { editId: string | null }) {
   );
 }
 
+/**
+ * Ubicación para el radar. Lo más fácil: parado en el local, "Usar mi ubicación".
+ * También acepta pegar las coordenadas de Google Maps ("20.6767, -101.3563").
+ */
+function LocationField({
+  lat,
+  lng,
+  onChange,
+}: {
+  lat: number | null;
+  lng: number | null;
+  onChange: (lat: number | null, lng: number | null) => void;
+}) {
+  const [text, setText] = useState(lat !== null && lng !== null ? `${lat}, ${lng}` : "");
+  const [status, setStatus] = useState<string | null>(null);
+  const parse = (v: string) => {
+    setText(v);
+    const m = v.match(/(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/);
+    if (!v.trim()) {
+      onChange(null, null);
+      setStatus(null);
+    } else if (m && Math.abs(Number(m[1])) <= 90 && Math.abs(Number(m[2])) <= 180) {
+      onChange(Number(m[1]), Number(m[2]));
+      setStatus(null);
+    } else {
+      setStatus("Formato: 20.6767, -101.3563");
+    }
+  };
+  const locate = () => {
+    if (!navigator.geolocation) return setStatus("Este teléfono no comparte ubicación.");
+    setStatus("Buscando tu ubicación…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const la = Math.round(pos.coords.latitude * 1e6) / 1e6;
+        const ln = Math.round(pos.coords.longitude * 1e6) / 1e6;
+        setText(`${la}, ${ln}`);
+        onChange(la, ln);
+        setStatus(`Listo · precisión ±${Math.round(pos.coords.accuracy)} m`);
+      },
+      () => setStatus("No pude obtenerla. Revisa el permiso de ubicación o pega las coordenadas."),
+      { enableHighAccuracy: true, timeout: 15_000 },
+    );
+  };
+  return (
+    <div className="block">
+      <span className="mb-1 block text-xs font-bold text-muted">Ubicación en el radar</span>
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => parse(e.target.value)}
+          placeholder="Sin ubicación"
+          inputMode="decimal"
+          aria-label="Coordenadas"
+          className="min-w-0 flex-1 rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+        <button type="button" onClick={locate} className="shrink-0 rounded-xl border border-primary/50 px-3 text-sm font-bold text-primary">
+          Usar mi ubicación
+        </button>
+      </div>
+      <span className="mt-1 block text-[11px] text-muted">
+        {status ?? "Párate en el local y toca «Usar mi ubicación», o pega las coordenadas de Google Maps. Vacío = no aparece en el radar."}
+      </span>
+    </div>
+  );
+}
+
 const toInput = (p: AdminPlace): PlaceInput => ({
   constellation: p.constellation,
   name: p.name,
@@ -685,6 +760,8 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   contactName: p.contactName,
   whatsapp: p.whatsapp,
   zone: p.zone,
+  lat: p.lat ?? null,
+  lng: p.lng ?? null,
   operation: p.operation,
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,

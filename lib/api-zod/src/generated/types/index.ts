@@ -33,6 +33,7 @@ export * from './dayHours';
 export * from './demoResult';
 export * from './endorseRequest';
 export * from './errorResponse';
+export * from './frequentSearches';
 export * from './healthStatus';
 export * from './invite';
 export * from './joinRequest';

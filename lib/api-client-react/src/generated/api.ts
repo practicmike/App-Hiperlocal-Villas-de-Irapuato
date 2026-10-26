@@ -39,6 +39,7 @@ import type {
   DemoResult,
   EndorseRequest,
   ErrorResponse,
+  FrequentSearches,
   HealthStatus,
   Invite,
   JoinRequest,
@@ -1406,6 +1407,83 @@ export function useListNews<TData = Awaited<ReturnType<typeof listNews>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListNewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFrequentSearchesUrl = () => {
+
+
+
+
+  return `/api/searches/frequent`
+}
+
+/**
+ * @summary Atajos de búsqueda para la pantalla de inicio
+ */
+export const getFrequentSearches = async ( options?: Parameters<typeof customFetch>[1]): Promise<FrequentSearches> => {
+
+  return customFetch<FrequentSearches>(getGetFrequentSearchesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFrequentSearchesQueryKey = () => {
+    return [
+    `/api/searches/frequent`
+    ] as const;
+    }
+
+
+export const getGetFrequentSearchesQueryOptions = <TData = Awaited<ReturnType<typeof getFrequentSearches>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFrequentSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFrequentSearchesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFrequentSearches>>> = ({ signal }) => getFrequentSearches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFrequentSearches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFrequentSearchesQueryResult = NonNullable<Awaited<ReturnType<typeof getFrequentSearches>>>
+export type GetFrequentSearchesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Atajos de búsqueda para la pantalla de inicio
+ */
+
+export function useGetFrequentSearches<TData = Awaited<ReturnType<typeof getFrequentSearches>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFrequentSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFrequentSearchesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

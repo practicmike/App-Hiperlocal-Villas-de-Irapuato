@@ -49,8 +49,11 @@ export function VoiceButton({
   onPartial,
   onError,
   onListening,
+  size = "sm",
 }: {
   serverAi: boolean;
+  /** "lg": el botón grande del inicio, para quien prefiere hablar a escribir. */
+  size?: "sm" | "lg";
   onListening?: (listening: boolean) => void;
   onText: (text: string) => void;
   onPartial?: (text: string) => void;
@@ -218,17 +221,23 @@ export function VoiceButton({
       aria-label={label}
       title={label}
       aria-pressed={state === "listening"}
-      className={`relative grid h-9 w-9 shrink-0 place-items-center rounded-full transition ${
-        state === "listening" ? "bg-[#e38fc1] text-[#11143a]" : "text-muted hover:bg-white/10"
-      }`}
+      className={
+        size === "lg"
+          ? `relative grid h-20 w-20 shrink-0 place-items-center rounded-full shadow-[0_0_40px_#7d80d966] transition ${
+              state === "listening" ? "bg-[#e38fc1] text-[#11143a]" : "bg-primary text-space"
+            }`
+          : `relative grid h-9 w-9 shrink-0 place-items-center rounded-full transition ${
+              state === "listening" ? "bg-[#e38fc1] text-[#11143a]" : "text-muted hover:bg-white/10"
+            }`
+      }
     >
       {state === "listening" && <span className="absolute inset-1 animate-ping rounded-full bg-[#e38fc1]/40" aria-hidden />}
       {state === "working" ? (
-        <Loader2 size={18} className="animate-spin" />
+        <Loader2 size={size === "lg" ? 30 : 18} className="animate-spin" />
       ) : state === "listening" ? (
-        <Square size={14} fill="currentColor" className="relative" />
+        <Square size={size === "lg" ? 24 : 14} fill="currentColor" className="relative" />
       ) : (
-        <Mic size={18} />
+        <Mic size={size === "lg" ? 32 : 18} />
       )}
     </button>
   );

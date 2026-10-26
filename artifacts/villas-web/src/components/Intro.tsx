@@ -22,8 +22,8 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
   const slides = [
     {
       art: <img src={`${import.meta.env.BASE_URL}icon-512.png`} alt="" className="h-32 w-32 rounded-[28px] shadow-[0_0_60px_#6eb5ff55]" />,
-      title: "Bienvenido al universo de Villas",
-      text: "Cada estrella es un comercio, un oficio o una casa de Villas que un vecino conoce en persona. Sin anuncios de fuera, sin scroll infinito.",
+      title: "Bienvenido a la guía de Villas",
+      text: "Comercios, oficios y casas de Villas que un vecino conoce en persona. Sin anuncios de fuera, sin scroll infinito.",
     },
     {
       art: (
@@ -32,7 +32,7 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
         </div>
       ),
       title: "Dime qué necesitas",
-      text: "Escribe con tus palabras (\"plomero que venga hoy\") o pellizca para acercarte. Entre más cerca y más brillante, mejor te queda. Contactas directo por WhatsApp.",
+      text: "Escríbelo o dilo con tu voz (\"plomero que venga hoy\"). El radar te muestra qué te queda más cerca, en metros. Contactas directo por WhatsApp.",
     },
     {
       art: (
@@ -40,10 +40,10 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
           <Star size={56} className="text-[#E6C882]" fill="currentColor" />
         </div>
       ),
-      title: "Tu cielo se enciende",
+      title: "Tu credencial tiene premio",
       text: guest
-        ? `Los vecinos tienen credencial: al pagar, la estrella se enciende en su cielo y en la primera visita hay regalo. Para entrar necesitas la invitación de un vecino o de ${first}.`
-        : "Enseña tu credencial al pagar: la estrella se enciende en tu cielo y en tu primera visita a cada lugar hay regalo.",
+        ? `Los vecinos tienen credencial: en su primera visita a cada lugar hay regalo. Para entrar necesitas la invitación de un vecino o de ${first}.`
+        : "Enseña tu credencial al pagar: en tu primera visita a cada lugar hay regalo.",
     },
   ];
   const last = i === slides.length - 1;
@@ -91,7 +91,7 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
           onClick={() => (last ? finish() : setI(i + 1))}
           className="w-full rounded-2xl bg-primary py-4 text-lg font-black text-space active:scale-[0.98]"
         >
-          {last ? "Entrar al universo" : "Siguiente"}
+          {last ? "Entrar" : "Siguiente"}
         </button>
       </div>
     </div>

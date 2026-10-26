@@ -1,6 +1,6 @@
 # App Hiperlocal · Villas de Irapuato
 
-Guía de confianza de Villas de Irapuato, hecha por los vecinos y navegable como un universo: una sola pantalla donde se hace zoom en lugar de scroll. El residente escribe lo que necesita con sus palabras y encuentra casas, gente de confianza y comercios; cada tarjeta lleva a WhatsApp. No es anónima: el creador conoce en persona a cada vecino que entra.
+Guía de confianza de Villas de Irapuato, hecha por los vecinos. El inicio pregunta «¿Qué necesitas hoy?» (escrito o por voz, con tus búsquedas frecuentes como atajo) y el radar muestra sobre las calles reales lo que te queda más cerca, en metros. Cada tarjeta lleva a WhatsApp. No es anónima: el creador conoce en persona a cada vecino que entra.
 
 ## Run & Operate
 
@@ -56,7 +56,9 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Contrato de la API: `lib/api-spec/openapi.yaml` (fuente de verdad; regenera tras cambiarlo)
 - Rutas: `artifacts/api-server/src/routes/` (`auth`, `universe`, `admin`)
 - Buscador: `artifacts/api-server/src/lib/search-core.ts` (puro, con pruebas) y `lib/ai.ts` (OpenAI)
-- Universo: `artifacts/villas-web/src/components/UniverseCanvas.tsx` y `src/lib/layout.ts`
+- Inicio y radar: `artifacts/villas-web/src/pages/HomePage.tsx`, `src/components/RadarMap.tsx` (Leaflet + OpenStreetMap), `src/lib/geo.ts`
+- Novedades (sin push, dentro de la app): `src/components/NovedadesSheet.tsx`
+- Universo (ya no está en la navegación; se conserva para reutilizarlo): `src/pages/UniversePage.tsx`, `src/components/UniverseCanvas.tsx`, `src/lib/layout.ts`
 - Paleta y constelaciones: `artifacts/villas-web/src/index.css`, `src/lib/constellations.ts`
 
 ## Architecture decisions
@@ -69,13 +71,19 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 
 ## Product
 
-- Universo con tres constelaciones (Casas, Gente de confianza, Comercios) y tres niveles de zoom: lejos (constelaciones), medio (nombres), cerca (la estrella al centro abre su tarjeta).
-- Búsqueda en lenguaje libre: las estrellas que coinciden se acercan al vecino y brillan; las demás se alejan. "Refinar con IA" si hay llave de OpenAI.
+- Inicio: la pregunta, el micrófono grande y atajos. Atajos = tus búsquedas frecuentes (3 o más); si no, lo más buscado en Villas por al menos 2 vecinos; si no hay, los giros con más lugares.
+- Radar: calles reales, tú al centro con anillos de 200 y 500 m. Al buscar muestra solo lo que coincide; "o explora lo que hay cerca" muestra todo. Lista por distancia; los oficios y lo que no tiene ubicación van en "A domicilio", sin punto en el mapa.
+- Ubicación del vecino: se pide al abrir el radar, vive en memoria y nunca se manda al servidor. A más de 5 km de Villas el radar abre en Villas, sin distancias.
+- Ubicación de cada lugar: en el panel, «Usar mi ubicación» parado en el local (o pegando coordenadas de Google Maps).
+- Novedades: campana con punto cuando hay algo que no has visto (Hoy en Villas + lugares nuevos de las últimas 2 semanas). Sin notificaciones push.
 - Tarjeta: quién es, qué ofrece, quién lo recomienda, botón a WhatsApp, "Lo recomiendo" y queja privada.
 - Vista en lista equivalente.
 - Panel del creador: señales de que funciona, invitaciones, aprobar vecinos y enviar llaves, alta de lugares, búsquedas sin resultado y quejas.
 
 ## Gotchas
+
+- Mapa: teselas de OpenStreetMap (uso ligero con atribución). Si el tráfico crece, cambia `TILE_URL` en `RadarMap.tsx` por un proveedor con plan.
+- La llave de `/llave/<token>` es de un solo uso: para probar dos veces, genera otra.
 
 - Tras editar `openapi.yaml`, corre codegen; si no, los tipos del frontend y la validación del backend quedan desfasados.
 - El límite de intentos vive en la tabla `rate_limits` (sirve igual en Replit y en Vercel). Si pruebas muchas llaves falsas desde tu IP, te bloqueas 15 minutos.

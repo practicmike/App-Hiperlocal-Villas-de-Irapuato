@@ -114,5 +114,12 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"leads\" ADD COLUMN \"via\" text DEFAULT 'vendedor' NOT NULL;",
       "ALTER TABLE \"places\" ADD COLUMN \"direct_contact\" boolean DEFAULT false NOT NULL;"
     ]
+  },
+  {
+    "tag": "0008_ubicacion",
+    "statements": [
+      "ALTER TABLE \"places\" ADD COLUMN \"lat\" real;",
+      "ALTER TABLE \"places\" ADD COLUMN \"lng\" real;"
+    ]
   }
 ];
