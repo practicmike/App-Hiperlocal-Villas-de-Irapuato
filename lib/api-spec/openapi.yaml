@@ -623,6 +623,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdminResident"
+    post:
+      operationId: adminCreateResident
+      tags: [admin]
+      summary: Alta directa de un vecino que el creador ya conoce (aprobado y con llave)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResidentUpdate"
+      responses:
+        "201":
+          description: Vecino aprobado con su llave
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessKey"
   /admin/residents/{id}:
     put:
       operationId: adminUpdateResident

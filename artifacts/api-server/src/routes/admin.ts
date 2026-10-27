@@ -40,6 +40,7 @@ import {
   AdminIssueMerchantKeyParams,
   AdminUpdateResidentParams,
   AdminUpdateResidentBody,
+  AdminCreateResidentBody,
   AdminDeleteResidentParams,
   AdminDeleteVisitParams,
   AdminClearVisitsBody,
@@ -164,6 +165,40 @@ async function keyResponse(residentId: string) {
   const token = await issueAccessKey(r.id);
   return { token, phone: r.phone, name: r.name };
 }
+
+/**
+ * Alta directa: el creador ya conoce al vecino en persona, así que entra
+ * aprobado y con su llave. Sin código de invitación ni espera de aprobación.
+ */
+router.post("/admin/residents", async (req, res) => {
+  const body = AdminCreateResidentBody.parse(req.body);
+  const phone = normalizePhone(body.phone);
+  if (phone.length < 12) {
+    res.status(400).json({ message: "Revisa el WhatsApp (10 dígitos)." });
+    return;
+  }
+  const [dup] = await db
+    .select({ id: residentsTable.id, name: residentsTable.name })
+    .from(residentsTable)
+    .where(eq(residentsTable.phone, phone))
+    .limit(1);
+  if (dup) {
+    res.status(409).json({ message: `Ese WhatsApp ya es de ${dup.name}. Búscalo en la lista y dale «Nueva llave».` });
+    return;
+  }
+  const [r] = await db
+    .insert(residentsTable)
+    .values({
+      name: body.name.trim(),
+      phone,
+      zone: body.zone?.trim() || null,
+      status: "approved",
+      approvedAt: new Date(),
+      invitedById: req.resident!.id,
+    })
+    .returning({ id: residentsTable.id });
+  res.status(201).json(await keyResponse(r!.id));
+});
 
 router.post("/admin/residents/:id/approve", async (req, res) => {
   const { id } = AdminApproveResidentParams.parse(req.params);

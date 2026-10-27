@@ -885,6 +885,32 @@ export const AdminListResidentsResponseItem = zod.object({
 export const AdminListResidentsResponse = zod.array(AdminListResidentsResponseItem)
 
 
+/**
+ * @summary Alta directa de un vecino que el creador ya conoce (aprobado y con llave)
+ */
+export const adminCreateResidentBodyNameMin = 2;
+export const adminCreateResidentBodyNameMax = 80;
+
+export const adminCreateResidentBodyPhoneMin = 10;
+export const adminCreateResidentBodyPhoneMax = 20;
+
+export const adminCreateResidentBodyZoneMax = 80;
+
+
+
+export const AdminCreateResidentBody = zod.object({
+  "name": zod.string().min(adminCreateResidentBodyNameMin).max(adminCreateResidentBodyNameMax),
+  "phone": zod.string().min(adminCreateResidentBodyPhoneMin).max(adminCreateResidentBodyPhoneMax),
+  "zone": zod.string().max(adminCreateResidentBodyZoneMax).nullable()
+})
+
+export const AdminCreateResidentResponse = zod.object({
+  "token": zod.string().describe('Se muestra una sola vez; el servidor solo guarda el hash'),
+  "phone": zod.string(),
+  "name": zod.string()
+})
+
+
 export const AdminUpdateResidentParams = zod.object({
   "id": zod.coerce.string().uuid()
 })

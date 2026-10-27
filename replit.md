@@ -63,7 +63,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 
 ## Architecture decisions
 
-- **Acceso por llave personal, sin contraseñas ni SMS.** Código de invitación → vecino pendiente → el creador lo aprueba y le envía un link `/llave/<token>` por WhatsApp. Solo se guarda el hash SHA-256 de llaves y sesiones. Regenerar o bloquear corta el acceso al instante.
+- **Acceso por llave personal, sin contraseñas ni SMS.** Camino principal: en Panel → Vecinos, «Dar de alta» con nombre y WhatsApp; el vecino queda aprobado y escanea el QR de su llave en tu teléfono (o se la mandas por WhatsApp). Alternativa a distancia: código de invitación → vecino pendiente → apruebas y le envías el link `/llave/<token>`. Solo se guarda el hash SHA-256 de llaves y sesiones. Regenerar o bloquear corta el acceso al instante.
 - **Universo en 2D con profundidad, no 3D real.** La regla "fluido en gama media" pesa más; el zoom solo cambia dos variables CSS por cuadro (`--kl`, `--ks`), sin renders de React.
 - **Búsqueda: palabras + embeddings, gana el mayor.** El embedding de cada lugar se calcula al guardarlo (no en cada búsqueda); el de la consulta se cachea. Toda búsqueda se registra para medir y para que las vacías lleguen al creador.
 - **Impulso pagado separado de la relevancia.** `places.boost` suma como máximo 0.1 al orden; el brillo en pantalla es relevancia pura y lo patrocinado se marca. Aún no hay UI para cobrarlo.
