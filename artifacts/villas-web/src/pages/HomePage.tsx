@@ -7,6 +7,7 @@ import {
   useListNews,
   getListNewsQueryKey,
   useSearch,
+  useSendSearchSuggestion,
   useGetFrequentSearches,
   getGetFrequentSearchesQueryKey,
   type Creator,
@@ -14,7 +15,7 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, History, KeyRound, LocateFixed, MessageCircle, QrCode, Search, Settings2, ShoppingBag, X, Home } from "lucide-react";
+import { ArrowLeft, Bell, Check, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, ShoppingBag, X, Home } from "lucide-react";
 import { getPickup, setPickup, type PendingPickup } from "@/lib/pickup";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
@@ -275,21 +276,18 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
             {status}
 
-            {noResults && (
-              <div className="sheet-enter mt-2 rounded-2xl border border-primary/40 bg-panel/95 p-4 text-sm shadow-xl">
-                <p className="mb-3">
-                  No encontré nada para <b>«{query}»</b>.{" "}
-                  {guest ? `Escríbele a ${firstName}: quizá lo conoce.` : `Ya le llegó a ${firstName} y te ayuda en persona.`}
-                </p>
-                <a
-                  href={whatsappLink(creator.whatsapp, `Hola ${firstName}, busqué «${query}» en la guía de Villas y no encontré nada.`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 font-bold text-space"
-                >
-                  <MessageCircle size={16} /> Escribirle a {firstName}
-                </a>
-              </div>
+            {noResults && result && (
+              <NoResults
+                key={result.searchId}
+                query={query}
+                searchId={result.searchId}
+                creatorFirst={firstName}
+                onRetry={() => {
+                  setQuery("");
+                  setResult(null);
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                }}
+              />
             )}
 
             {!noResults && shortcuts.items.length > 0 && (
@@ -496,6 +494,86 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           total={places.length}
           onClose={() => setMeOpen(false)}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Sin resultados: no se manda al vecino a escribirle al creador. Se le ofrece
+ * dejarle una recomendación o propuesta (queda en Panel → Búsquedas) o buscar otra cosa.
+ */
+function NoResults({
+  query,
+  searchId,
+  creatorFirst,
+  onRetry,
+}: {
+  query: string;
+  searchId: string;
+  creatorFirst: string;
+  onRetry: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const send = useSendSearchSuggestion();
+  if (send.isSuccess) {
+    return (
+      <div className="sheet-enter mt-2 rounded-2xl border border-confianza/40 bg-panel/95 p-4 text-sm shadow-xl">
+        <p className="flex items-center gap-2 font-bold">
+          <Check size={18} className="text-confianza" /> Gracias, {creatorFirst} lo revisa.
+        </p>
+        <button onClick={onRetry} className="mt-3 inline-flex min-h-11 items-center gap-2 font-bold text-primary">
+          <RotateCcw size={16} /> Buscar otra cosa
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="sheet-enter mt-2 rounded-2xl border border-primary/40 bg-panel/95 p-4 text-sm shadow-xl">
+      <p>
+        No encontré nada para <b>«{query}»</b> en Villas.
+      </p>
+      {open ? (
+        <form
+          className="mt-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (text.trim().length >= 3) send.mutate({ id: searchId, data: { text: text.trim() } });
+          }}
+        >
+          <label htmlFor="sugerencia" className="mb-1.5 block text-xs font-bold text-muted">
+            Tu recomendación o propuesta para {creatorFirst}
+          </label>
+          <textarea
+            id="sugerencia"
+            autoFocus
+            rows={3}
+            maxLength={500}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Ej. La señora Lupe de Privada Encino hace pasteles por encargo"
+            className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-[15px] outline-none focus:border-primary"
+          />
+          {send.isError && <p className="mt-1 text-alert">No se pudo enviar. Intenta otra vez.</p>}
+          <div className="mt-2 flex gap-2">
+            <button disabled={send.isPending || text.trim().length < 3} className="min-h-11 rounded-full bg-primary px-5 font-bold text-space disabled:opacity-50">
+              {send.isPending ? "Enviando…" : "Enviar"}
+            </button>
+            <button type="button" onClick={() => setOpen(false)} className="min-h-11 px-3 text-muted">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2">
+          <button onClick={() => setOpen(true)} className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-4 font-bold text-space">
+            <Lightbulb size={16} /> Recomendar o proponer a {creatorFirst}
+          </button>
+          <button onClick={onRetry} className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 px-4 font-bold">
+            <RotateCcw size={16} /> Intentar otra búsqueda
+          </button>
+        </div>
       )}
     </div>
   );

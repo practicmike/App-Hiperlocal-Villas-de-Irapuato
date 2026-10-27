@@ -884,6 +884,7 @@ router.get("/admin/searches", async (_req, res) => {
       resultCount: s.resultCount,
       contacted: s.contactedPlaceId !== null,
       handled: s.handled,
+      suggestion: s.suggestion,
       createdAt: s.createdAt.toISOString(),
     })),
   );

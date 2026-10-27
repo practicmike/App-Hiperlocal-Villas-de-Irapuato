@@ -4,11 +4,11 @@ const env = process.env;
 export const config = {
   isProduction: env["NODE_ENV"] === "production",
   creator: {
-    name: env["CREATOR_NAME"] ?? "Miguel",
+    name: env["CREATOR_NAME"] ?? "Mike",
     whatsapp: (env["CREATOR_WHATSAPP"] ?? "").replace(/\D/g, ""),
     message:
       env["CREATOR_MESSAGE"] ??
-      "Hola, soy Miguel, vecino de Villas. Hice esta guía para que encontremos gente y negocios de confianza entre nosotros. Si necesitas algo, escríbeme.",
+      "Hola, soy Mike, vecino de Villas. Hice esta guía para que encontremos gente y negocios de confianza entre nosotros. Si necesitas algo, escríbeme.",
     photoUrl: env["CREATOR_PHOTO_URL"] ?? null,
   },
   openai: {

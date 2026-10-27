@@ -1052,6 +1052,22 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdminSearch"
+  /searches/{id}/suggestion:
+    post:
+      operationId: sendSearchSuggestion
+      tags: [universe]
+      summary: Sin resultados, el vecino le manda al creador una recomendación o propuesta
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestionRequest"
+      responses:
+        "204":
+          description: Recibida
   /admin/searches/{id}:
     delete:
       operationId: adminDeleteSearch
@@ -2067,6 +2083,14 @@ components:
         updated:
           type: integer
       required: [inserted, removed]
+    SuggestionRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 3
+          maxLength: 500
+      required: [text]
     AdminSearch:
       type: object
       properties:
@@ -2086,6 +2110,9 @@ components:
           type: boolean
         handled:
           type: boolean
+        suggestion:
+          type: [string, "null"]
+          description: Recomendación o propuesta que dejó el vecino al no encontrar nada
         createdAt:
           type: string
           format: date-time
@@ -2098,6 +2125,7 @@ components:
         - resultCount
         - contacted
         - handled
+        - suggestion
         - createdAt
     AdminComplaint:
       type: object

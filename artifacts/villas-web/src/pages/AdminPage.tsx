@@ -979,6 +979,12 @@ function Searches() {
             </button>
             <p className="font-bold">«{s.query}»</p>
             {s.refinedQuery && <p className="text-xs text-ai">IA: {s.refinedQuery}</p>}
+            {s.suggestion && (
+              <p className="mt-2 rounded-xl bg-space-2/70 px-3 py-2 text-sm">
+                <span className="block text-[11px] font-bold uppercase tracking-wide text-casas">Recomendación del vecino</span>
+                {s.suggestion}
+              </p>
+            )}
             <p className="mt-1 text-xs text-muted">
               {s.residentName ?? "Visitante sin llave"} · {fmtDate(s.createdAt)} · {s.resultCount} {s.resultCount === 1 ? "resultado" : "resultados"}
               {s.contacted && " · terminó en WhatsApp"}

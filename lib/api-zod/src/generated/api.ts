@@ -1709,9 +1709,29 @@ export const AdminListSearchesResponseItem = zod.object({
   "resultCount": zod.number().int(),
   "contacted": zod.boolean(),
   "handled": zod.boolean(),
+  "suggestion": zod.string().nullable().describe('Recomendación o propuesta que dejó el vecino al no encontrar nada'),
   "createdAt": zod.coerce.date()
 })
 export const AdminListSearchesResponse = zod.array(AdminListSearchesResponseItem)
+
+
+/**
+ * @summary Sin resultados, el vecino le manda al creador una recomendación o propuesta
+ */
+export const SendSearchSuggestionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const sendSearchSuggestionBodyTextMin = 3;
+export const sendSearchSuggestionBodyTextMax = 500;
+
+
+
+export const SendSearchSuggestionBody = zod.object({
+  "text": zod.string().min(sendSearchSuggestionBodyTextMin).max(sendSearchSuggestionBodyTextMax)
+})
+
+export const SendSearchSuggestionResponse = zod.void()
 
 
 export const AdminDeleteSearchParams = zod.object({

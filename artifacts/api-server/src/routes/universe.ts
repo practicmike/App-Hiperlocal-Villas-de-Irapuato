@@ -24,6 +24,8 @@ import {
   SearchBody,
   RecordLeadParams,
   RecordLeadBody,
+  SendSearchSuggestionParams,
+  SendSearchSuggestionBody,
 } from "@workspace/api-zod";
 import { normalizePhone, requireResident } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
@@ -293,6 +295,28 @@ router.post("/places/:id/contact", requireResident, async (req, res) => {
           isNull(searchesTable.contactedPlaceId),
         ),
       );
+  }
+  res.status(204).end();
+});
+
+/**
+ * Sin resultados: el vecino recomienda a alguien o propone algo. Queda pegado a
+ * su búsqueda y el creador lo ve en Panel → Búsquedas. Solo la búsqueda propia
+ * (o una de visitante) y solo si no tuvo resultados.
+ */
+router.post("/searches/:id/suggestion", rateLimit("suggestion", 10, 60 * 60_000), async (req, res) => {
+  const { id } = SendSearchSuggestionParams.parse(req.params);
+  const { text } = SendSearchSuggestionBody.parse(req.body);
+  const owner =
+    req.resident?.status === "approved" ? eq(searchesTable.residentId, req.resident.id) : isNull(searchesTable.residentId);
+  const [row] = await db
+    .update(searchesTable)
+    .set({ suggestion: text.trim(), handled: false })
+    .where(and(eq(searchesTable.id, id), eq(searchesTable.resultCount, 0), owner))
+    .returning({ id: searchesTable.id });
+  if (!row) {
+    res.status(404).json({ message: "No encontramos esa búsqueda." });
+    return;
   }
   res.status(204).end();
 });

@@ -121,5 +121,11 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"places\" ADD COLUMN \"lat\" real;",
       "ALTER TABLE \"places\" ADD COLUMN \"lng\" real;"
     ]
+  },
+  {
+    "tag": "0009_recomendacion",
+    "statements": [
+      "ALTER TABLE \"searches\" ADD COLUMN \"suggestion\" text;"
+    ]
   }
 ];
