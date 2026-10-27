@@ -383,6 +383,8 @@ const toAdminPlace = (
   contactName: p.contactName,
   whatsapp: p.whatsapp,
   zone: p.zone,
+  lat: p.lat,
+  lng: p.lng,
   operation: p.operation,
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,
@@ -415,6 +417,11 @@ async function constellationById(id: string) {
   return c;
 }
 
+/** Ambas o ninguna: una coordenada sola no sirve para el radar. */
+function cleanCoords(lat: number | null | undefined, lng: number | null | undefined) {
+  return typeof lat === "number" && typeof lng === "number" ? { lat, lng } : { lat: null, lng: null };
+}
+
 function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, isProperty: boolean) {
   const blank = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
   return {
@@ -425,6 +432,8 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
     contactName: blank(body.contactName),
     whatsapp: normalizePhone(body.whatsapp),
     zone: blank(body.zone),
+    // Sin coordenadas en el cuerpo = conservar las guardadas (clientes viejos no las mandan).
+    ...(body.lat !== undefined || body.lng !== undefined ? cleanCoords(body.lat, body.lng) : {}),
     // Operación y datos de la casa solo aplican a inmuebles; el precio, a todos.
     operation: isProperty ? (body.operation ?? null) : null,
     priceLabel: blank(body.priceLabel),
@@ -788,7 +797,7 @@ router.post("/admin/demo-places", async (_req, res) => {
     demos.filter((p) => existing.has(p.whatsapp)).map((p) =>
       db
         .update(placesTable)
-        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, kind: p.kind, delivers: p.delivers, pickup: p.pickup ?? false, hours: p.hours ?? null, landM2: p.landM2 ?? null, builtM2: p.builtM2 ?? null, bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, parking: p.parking ?? null, embedding: null, updatedAt: new Date() })
+        .set({ constellation: p.constellation, name: p.name, category: p.category, description: p.description, contactName: p.contactName, zone: p.zone, lat: p.lat ?? null, lng: p.lng ?? null, operation: p.operation, priceLabel: p.priceLabel, welcomeOffer: p.welcomeOffer ?? null, kind: p.kind, delivers: p.delivers, pickup: p.pickup ?? false, hours: p.hours ?? null, landM2: p.landM2 ?? null, builtM2: p.builtM2 ?? null, bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, parking: p.parking ?? null, embedding: null, updatedAt: new Date() })
         .where(eq(placesTable.whatsapp, p.whatsapp))
         .returning(),
     ),

@@ -39,6 +39,19 @@ export interface PlaceInput {
      * @nullable
      */
   zone: string | null;
+  /**
+     * Opcional; si no viene, se conserva la ubicación guardada
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  lat?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  lng?: number | null;
   /** @nullable */
   operation: PlaceInputOperation;
   /**

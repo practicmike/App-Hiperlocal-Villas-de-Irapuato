@@ -359,6 +359,22 @@ export interface PlaceSummary {
   hasNews: boolean;
   /** Vecinos distintos con visita registrada (para el tamaño de la estrella) */
   neighbors: number;
+  /**
+     * Ubicación del local para el radar; null = sin ubicación (p. ej. oficios a domicilio)
+     * @nullable
+     */
+  lat: number | null;
+  /** @nullable */
+  lng: number | null;
+  /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
+  createdAt: string;
+}
+
+export interface FrequentSearches {
+  /** Lo que este vecino busca más (vacío para visitantes) */
+  mine: string[];
+  /** Lo más buscado en Villas por al menos dos vecinos distintos */
+  barrio: string[];
 }
 
 export interface Universe {
@@ -672,6 +688,19 @@ export interface PlaceInput {
      * @nullable
      */
   zone: string | null;
+  /**
+     * Opcional; si no viene, se conserva la ubicación guardada
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  lat?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  lng?: number | null;
   /** @nullable */
   operation: PlaceInputOperation;
   /**

@@ -69,6 +69,12 @@ export const placesTable = pgTable(
     /** WhatsApp con lada, solo dígitos. Público: es un negocio o un anuncio. */
     whatsapp: text("whatsapp").notNull(),
     zone: text("zone"),
+    /**
+     * Ubicación del local (WGS84) para el radar. null = sin ubicación:
+     * los oficios a domicilio no la necesitan y aparecen solo en la lista.
+     */
+    lat: real("lat"),
+    lng: real("lng"),
     /** Solo casas. */
     operation: text("operation", { enum: ["venta", "renta"] }),
     priceLabel: text("price_label"),

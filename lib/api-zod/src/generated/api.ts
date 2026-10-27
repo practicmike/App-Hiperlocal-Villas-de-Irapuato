@@ -284,7 +284,10 @@ export const GetUniverseResponse = zod.object({
 }),zod.null()])).min(getUniverseResponsePlacesItemHoursMin).max(getUniverseResponsePlacesItemHoursMax).nullable().describe('7 días de domingo a sábado; null = cerrado ese día'),
   "coverUrl": zod.string().nullable(),
   "hasNews": zod.boolean(),
-  "neighbors": zod.number().int().describe('Vecinos distintos con visita registrada (para el tamaño de la estrella)')
+  "neighbors": zod.number().int().describe('Vecinos distintos con visita registrada (para el tamaño de la estrella)'),
+  "lat": zod.number().nullable().describe('Ubicación del local para el radar; null = sin ubicación (p. ej. oficios a domicilio)'),
+  "lng": zod.number().nullable(),
+  "createdAt": zod.coerce.date().describe('Alta en Villas (para "Nuevos en Villas" en Novedades)')
 }))
 })
 
@@ -303,6 +306,15 @@ export const ListNewsResponseItem = zod.object({
   "expiresAt": zod.coerce.date()
 })
 export const ListNewsResponse = zod.array(ListNewsResponseItem)
+
+
+/**
+ * @summary Atajos de búsqueda para la pantalla de inicio
+ */
+export const GetFrequentSearchesResponse = zod.object({
+  "mine": zod.array(zod.string()).describe('Lo que este vecino busca más (vacío para visitantes)'),
+  "barrio": zod.array(zod.string()).describe('Lo más buscado en Villas por al menos dos vecinos distintos')
+})
 
 
 export const merchantPublishNewsBodyTextMin = 3;
@@ -1027,6 +1039,12 @@ export const adminListPlacesResponseOneWhatsappMax = 20;
 
 export const adminListPlacesResponseOneZoneMax = 80;
 
+export const adminListPlacesResponseOneLatMin = -90;
+export const adminListPlacesResponseOneLatMax = 90;
+
+export const adminListPlacesResponseOneLngMin = -180;
+export const adminListPlacesResponseOneLngMax = 180;
+
 export const adminListPlacesResponseOnePriceLabelMax = 60;
 
 export const adminListPlacesResponseOneImageUrlMax = 500;
@@ -1063,6 +1081,8 @@ export const AdminListPlacesResponseItem = zod.object({
   "contactName": zod.string().max(adminListPlacesResponseOneContactNameMax).nullable(),
   "whatsapp": zod.string().min(adminListPlacesResponseOneWhatsappMin).max(adminListPlacesResponseOneWhatsappMax),
   "zone": zod.string().max(adminListPlacesResponseOneZoneMax).nullable(),
+  "lat": zod.number().min(adminListPlacesResponseOneLatMin).max(adminListPlacesResponseOneLatMax).nullish().describe('Opcional; si no viene, se conserva la ubicación guardada'),
+  "lng": zod.number().min(adminListPlacesResponseOneLngMin).max(adminListPlacesResponseOneLngMax).nullish(),
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminListPlacesResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminListPlacesResponseOneImageUrlMax).nullable(),
@@ -1117,6 +1137,12 @@ export const adminCreatePlaceBodyWhatsappMax = 20;
 
 export const adminCreatePlaceBodyZoneMax = 80;
 
+export const adminCreatePlaceBodyLatMin = -90;
+export const adminCreatePlaceBodyLatMax = 90;
+
+export const adminCreatePlaceBodyLngMin = -180;
+export const adminCreatePlaceBodyLngMax = 180;
+
 export const adminCreatePlaceBodyPriceLabelMax = 60;
 
 export const adminCreatePlaceBodyImageUrlMax = 500;
@@ -1153,6 +1179,8 @@ export const AdminCreatePlaceBody = zod.object({
   "contactName": zod.string().max(adminCreatePlaceBodyContactNameMax).nullable(),
   "whatsapp": zod.string().min(adminCreatePlaceBodyWhatsappMin).max(adminCreatePlaceBodyWhatsappMax),
   "zone": zod.string().max(adminCreatePlaceBodyZoneMax).nullable(),
+  "lat": zod.number().min(adminCreatePlaceBodyLatMin).max(adminCreatePlaceBodyLatMax).nullish().describe('Opcional; si no viene, se conserva la ubicación guardada'),
+  "lng": zod.number().min(adminCreatePlaceBodyLngMin).max(adminCreatePlaceBodyLngMax).nullish(),
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminCreatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceBodyImageUrlMax).nullable(),
@@ -1188,6 +1216,12 @@ export const adminCreatePlaceResponseOneWhatsappMin = 10;
 export const adminCreatePlaceResponseOneWhatsappMax = 20;
 
 export const adminCreatePlaceResponseOneZoneMax = 80;
+
+export const adminCreatePlaceResponseOneLatMin = -90;
+export const adminCreatePlaceResponseOneLatMax = 90;
+
+export const adminCreatePlaceResponseOneLngMin = -180;
+export const adminCreatePlaceResponseOneLngMax = 180;
 
 export const adminCreatePlaceResponseOnePriceLabelMax = 60;
 
@@ -1225,6 +1259,8 @@ export const AdminCreatePlaceResponse = zod.object({
   "contactName": zod.string().max(adminCreatePlaceResponseOneContactNameMax).nullable(),
   "whatsapp": zod.string().min(adminCreatePlaceResponseOneWhatsappMin).max(adminCreatePlaceResponseOneWhatsappMax),
   "zone": zod.string().max(adminCreatePlaceResponseOneZoneMax).nullable(),
+  "lat": zod.number().min(adminCreatePlaceResponseOneLatMin).max(adminCreatePlaceResponseOneLatMax).nullish().describe('Opcional; si no viene, se conserva la ubicación guardada'),
+  "lng": zod.number().min(adminCreatePlaceResponseOneLngMin).max(adminCreatePlaceResponseOneLngMax).nullish(),
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminCreatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceResponseOneImageUrlMax).nullable(),
@@ -1282,6 +1318,12 @@ export const adminUpdatePlaceBodyWhatsappMax = 20;
 
 export const adminUpdatePlaceBodyZoneMax = 80;
 
+export const adminUpdatePlaceBodyLatMin = -90;
+export const adminUpdatePlaceBodyLatMax = 90;
+
+export const adminUpdatePlaceBodyLngMin = -180;
+export const adminUpdatePlaceBodyLngMax = 180;
+
 export const adminUpdatePlaceBodyPriceLabelMax = 60;
 
 export const adminUpdatePlaceBodyImageUrlMax = 500;
@@ -1318,6 +1360,8 @@ export const AdminUpdatePlaceBody = zod.object({
   "contactName": zod.string().max(adminUpdatePlaceBodyContactNameMax).nullable(),
   "whatsapp": zod.string().min(adminUpdatePlaceBodyWhatsappMin).max(adminUpdatePlaceBodyWhatsappMax),
   "zone": zod.string().max(adminUpdatePlaceBodyZoneMax).nullable(),
+  "lat": zod.number().min(adminUpdatePlaceBodyLatMin).max(adminUpdatePlaceBodyLatMax).nullish().describe('Opcional; si no viene, se conserva la ubicación guardada'),
+  "lng": zod.number().min(adminUpdatePlaceBodyLngMin).max(adminUpdatePlaceBodyLngMax).nullish(),
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminUpdatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceBodyImageUrlMax).nullable(),
@@ -1353,6 +1397,12 @@ export const adminUpdatePlaceResponseOneWhatsappMin = 10;
 export const adminUpdatePlaceResponseOneWhatsappMax = 20;
 
 export const adminUpdatePlaceResponseOneZoneMax = 80;
+
+export const adminUpdatePlaceResponseOneLatMin = -90;
+export const adminUpdatePlaceResponseOneLatMax = 90;
+
+export const adminUpdatePlaceResponseOneLngMin = -180;
+export const adminUpdatePlaceResponseOneLngMax = 180;
 
 export const adminUpdatePlaceResponseOnePriceLabelMax = 60;
 
@@ -1390,6 +1440,8 @@ export const AdminUpdatePlaceResponse = zod.object({
   "contactName": zod.string().max(adminUpdatePlaceResponseOneContactNameMax).nullable(),
   "whatsapp": zod.string().min(adminUpdatePlaceResponseOneWhatsappMin).max(adminUpdatePlaceResponseOneWhatsappMax),
   "zone": zod.string().max(adminUpdatePlaceResponseOneZoneMax).nullable(),
+  "lat": zod.number().min(adminUpdatePlaceResponseOneLatMin).max(adminUpdatePlaceResponseOneLatMax).nullish().describe('Opcional; si no viene, se conserva la ubicación guardada'),
+  "lng": zod.number().min(adminUpdatePlaceResponseOneLngMin).max(adminUpdatePlaceResponseOneLngMax).nullish(),
   "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable(),
   "priceLabel": zod.string().max(adminUpdatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceResponseOneImageUrlMax).nullable(),

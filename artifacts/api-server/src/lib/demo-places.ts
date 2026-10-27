@@ -110,14 +110,32 @@ const EXTRA: Record<string, Partial<NewPlace>> = {
   "Departamento en planta alta": { bedrooms: 2, bathrooms: 1, parking: 1, builtM2: 75 },
 };
 
-export const DEMO_PLACES: NewPlace[] = SEEDS.map((s, i) => ({
-  kind: "comercio" as const,
-  delivers: false,
-  pickup: false,
-  hours: null,
-  ...s,
-  ...EXTRA[s.name],
-  whatsapp: wa(i + 1),
-  verified: true,
-  active: true,
-}));
+/**
+ * Centro aproximado de Irapuato: solo sirve para que el radar de prueba tenga
+ * algo que mostrar. Las ubicaciones reales se capturan en el panel, en el local.
+ */
+const DEMO_CENTER = { lat: 20.6767, lng: -101.3563 };
+
+/** Ubicación ficticia y estable (misma cada vez que se recargan los ejemplos), a 80–750 m del centro. */
+function demoCoords(i: number) {
+  const angle = i * 2.399963; // ángulo áureo: reparte los puntos sin encimarlos
+  const meters = 80 + ((i * 97) % 670);
+  return {
+    lat: Math.round((DEMO_CENTER.lat + (meters * Math.cos(angle)) / 111_320) * 1e6) / 1e6,
+    lng: Math.round((DEMO_CENTER.lng + (meters * Math.sin(angle)) / 104_100) * 1e6) / 1e6,
+  };
+}
+
+export const DEMO_PLACES: NewPlace[] = SEEDS.map((s, i) => {
+  const place = {
+    kind: "comercio" as const,
+    delivers: false,
+    pickup: false,
+    hours: null,
+    ...s,
+    ...EXTRA[s.name],
+  };
+  // Los oficios van a tu casa: sin local, sin punto en el radar.
+  const coords = place.kind === "oficio" ? { lat: null, lng: null } : demoCoords(i);
+  return { ...place, ...coords, whatsapp: wa(i + 1), verified: true, active: true };
+});

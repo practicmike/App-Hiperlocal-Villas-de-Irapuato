@@ -1,5 +1,5 @@
 import express, { Router, type IRouter } from "express";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNull, sql } from "drizzle-orm";
 import {
   db,
   constellationsTable,
@@ -73,6 +73,9 @@ router.get("/universe", async (_req, res) => {
         kind: placesTable.kind,
         delivers: placesTable.delivers,
         hours: placesTable.hours,
+        lat: placesTable.lat,
+        lng: placesTable.lng,
+        createdAt: placesTable.createdAt,
       })
       .from(placesTable)
       .where(eq(placesTable.active, true))
@@ -91,8 +94,9 @@ router.get("/universe", async (_req, res) => {
   const withNews = new Set(news.map((n) => n.placeId));
   res.json({
     constellations,
-    places: places.map(({ welcomeOffer, ...p }) => ({
+    places: places.map(({ welcomeOffer, createdAt, ...p }) => ({
       ...p,
+      createdAt: createdAt.toISOString(),
       endorsementCount: counts.get(p.id) ?? 0,
       welcome: !!welcomeOffer,
       coverUrl: photos.get(p.id)?.[0]?.url ?? null,
@@ -145,6 +149,47 @@ router.post("/places/:id/lead", rateLimit("lead", 20, 60 * 60_000), async (req, 
     .set({ whatsappClicks: sql`${placesTable.whatsappClicks} + 1` })
     .where(eq(placesTable.id, id));
   res.status(204).end();
+});
+
+/**
+ * Atajos del inicio. "mine": lo que el vecino repite (búsquedas con resultado,
+ * últimos 90 días). "barrio": lo más buscado por al menos 2 vecinos distintos
+ * (últimos 30 días), para que una búsqueda de una sola persona nunca se exponga.
+ */
+router.get("/searches/frequent", async (req, res) => {
+  const norm = sql<string>`lower(trim(${searchesTable.query}))`;
+  const since = (days: number) => new Date(Date.now() - days * 86_400_000);
+  const isResident = req.resident?.status === "approved";
+  const [mine, barrio] = await Promise.all([
+    isResident
+      ? db
+          .select({ q: norm, n: sql<number>`count(*)::int` })
+          .from(searchesTable)
+          .where(
+            and(
+              eq(searchesTable.residentId, req.resident!.id),
+              gt(searchesTable.resultCount, 0),
+              gte(searchesTable.createdAt, since(90)),
+            ),
+          )
+          .groupBy(norm)
+          .orderBy(desc(sql`count(*)`), desc(sql`max(${searchesTable.createdAt})`))
+          .limit(4)
+      : Promise.resolve([]),
+    db
+      .select({ q: norm })
+      .from(searchesTable)
+      .where(and(gt(searchesTable.resultCount, 0), gte(searchesTable.createdAt, since(30))))
+      .groupBy(norm)
+      .having(sql`count(distinct ${searchesTable.residentId}) >= 2`)
+      .orderBy(desc(sql`count(distinct ${searchesTable.residentId})`), desc(sql`count(*)`))
+      .limit(6),
+  ]);
+  const short = (q: string) => q.length <= 40;
+  res.json({
+    mine: mine.map((r) => r.q).filter(short),
+    barrio: barrio.map((r) => r.q).filter(short),
+  });
 });
 
 router.get("/news", async (_req, res) => {

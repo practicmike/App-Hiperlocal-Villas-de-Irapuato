@@ -27,4 +27,13 @@ export interface PlaceSummary {
   hasNews: boolean;
   /** Vecinos distintos con visita registrada (para el tamaño de la estrella) */
   neighbors: number;
+  /**
+     * Ubicación del local para el radar; null = sin ubicación (p. ej. oficios a domicilio)
+     * @nullable
+     */
+  lat: number | null;
+  /** @nullable */
+  lng: number | null;
+  /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
+  createdAt: Date;
 }

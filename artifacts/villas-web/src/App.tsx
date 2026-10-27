@@ -9,7 +9,7 @@ import {
   getGetMeQueryKey,
   getGetSetupStatusQueryKey,
 } from "@workspace/api-client-react";
-import { UniversePage } from "@/pages/UniversePage";
+import { HomePage } from "@/pages/HomePage";
 import { LandingPage, KeyLoginPage } from "@/pages/AccessPages";
 import { AdminPage } from "@/pages/AdminPage";
 import { NeedsSetup, SetupPage } from "@/pages/SetupPage";
@@ -68,9 +68,9 @@ function Main() {
       <Route path="/unirme">
         {me.data ? <Redirect to="/" /> : <LandingPage creator={creator.data} />}
       </Route>
-      {/* Con llave: su universo. Sin llave: vista previa limitada del mismo universo. */}
+      {/* Con llave: su inicio. Sin llave: vista previa limitada (busca con límite, sin contactos). */}
       <Route>
-        <UniversePage me={me.data ?? null} creator={creator.data} />
+        <HomePage me={me.data ?? null} creator={creator.data} />
       </Route>
     </Switch>
   );
