@@ -123,3 +123,29 @@ test("match IA: ignora índices inventados, repetidos y JSON roto", () => {
   assert.equal(out![0]!.score, 0.8);
   assert.ok(AI_MATCH_MIN === 50);
 });
+
+// ------------------------------------------------- IA: no esconder lo obvio
+import { keepKeywordHits, wantsNow } from "./ai-match";
+
+test("la IA no puede descartar una coincidencia obvia por palabra", () => {
+  const ai = [{ placeId: "guarderia", score: 0.8, reason: "Cuida niños" }];
+  const out = keepKeywordHits(ai, [
+    { placeId: "guarderia", keyword: 0.3 },
+    { placeId: "colegio", keyword: 0.62 },
+    { placeId: "tacos", keyword: 0.1 },
+  ]);
+  assert.deepEqual(out.map((m) => m.placeId), ["guarderia", "colegio"]);
+  assert.equal(out[1]!.reason, null);
+  assert.ok(out[1]!.score <= 0.8, "lo rescatado va después de lo que la IA aprobó");
+});
+
+test("si la IA no aprueba nada, igual sale lo obvio", () => {
+  const out = keepKeywordHits([], [{ placeId: "colegio", keyword: 0.62 }]);
+  assert.deepEqual(out.map((m) => m.placeId), ["colegio"]);
+});
+
+test("el horario solo cuenta si el vecino tiene prisa", () => {
+  assert.equal(wantsNow("busco un colegio para mi niña"), false);
+  assert.equal(wantsNow("tacos abiertos ahorita"), true);
+  assert.equal(wantsNow("plomero que venga hoy"), true);
+});

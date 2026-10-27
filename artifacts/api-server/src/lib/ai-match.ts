@@ -29,7 +29,12 @@ export interface AiMatch {
 export const AI_MATCH_MIN = 50;
 export const AI_MAX_CANDIDATES = 12;
 
+/** El vecino pide algo para ya: solo entonces importa si está abierto. */
+export const wantsNow = (query: string) =>
+  /\b(ya|hoy|ahorita|ahora|abiert[oa]s?|urgente|urge|en este momento|esta noche|al rato)\b/i.test(query);
+
 export function buildMatchPrompt(query: string, candidates: MatchCandidate[], now = new Date()) {
+  const urgent = wantsNow(query);
   const list = candidates
     .map((c, i) =>
       [
@@ -39,6 +44,8 @@ export function buildMatchPrompt(query: string, candidates: MatchCandidate[], no
         c.zone ? `zona: ${c.zone}` : "",
         placeFacts(c as SearchablePlace) ? `datos: ${placeFacts(c as SearchablePlace)}` : "",
         (() => {
+          // Sin urgencia el horario no se manda: el modelo tendía a castigar lo cerrado igual.
+          if (!urgent) return "";
           const open = isOpenNow(c.hours, now);
           return open === null ? "" : open ? "ahora: ABIERTO" : "ahora: CERRADO";
         })(),
@@ -92,6 +99,29 @@ export function parseMatchResponse(content: string, candidates: MatchCandidate[]
     });
   }
   return out.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Coincidencia obvia: la palabra buscada está en el nombre o el giro
+ * ("colegio" → Colegio Montessori). Con este puntaje de palabras, nunca se descarta.
+ */
+export const KEYWORD_SURE = 0.5;
+
+/**
+ * Une el veredicto de la IA con la búsqueda por palabras. La IA ordena y explica,
+ * pero no puede esconder una coincidencia obvia: si la calificó bajo o la omitió,
+ * se conserva con su puntaje de palabras (sin razón), después de las que la IA aprobó.
+ */
+export function keepKeywordHits(
+  ai: AiMatch[],
+  candidates: Array<{ placeId: string; keyword: number }>,
+): Array<{ placeId: string; score: number; reason: string | null }> {
+  const inAi = new Set(ai.map((m) => m.placeId));
+  const rescued = candidates
+    .filter((c) => c.keyword >= KEYWORD_SURE && !inAi.has(c.placeId))
+    .sort((a, b) => b.keyword - a.keyword)
+    .map((c) => ({ placeId: c.placeId, score: Math.min(c.keyword, ai.at(-1)?.score ?? 1), reason: null }));
+  return [...ai, ...rescued];
 }
 
 /** Califica candidatos con el modelo. null = no disponible (se usa la búsqueda normal). */

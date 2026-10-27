@@ -32,7 +32,8 @@ import { photosByPlace } from "../lib/photos";
 import { activeNews } from "../lib/news";
 import { embed } from "../lib/ai";
 import { audioExt, transcribe } from "../lib/transcribe";
-import { aiMatch, AI_MAX_CANDIDATES } from "../lib/ai-match";
+import { aiMatch, keepKeywordHits, AI_MAX_CANDIDATES } from "../lib/ai-match";
+import { logger } from "../lib/logger";
 import {
   MATCH_MIN,
   calibrateSimilarity,
@@ -370,7 +371,7 @@ router.post(
         const kw = keywordScore(effectiveQuery, p, weightOf);
         const sem =
           queryVector && p.embedding ? calibrateSimilarity(cosineSimilarity(queryVector, p.embedding)) : 0;
-        return { place: p, placeId: p.id, score: Math.min(1, Math.max(kw, sem)), boost: p.boost };
+        return { place: p, placeId: p.id, score: Math.min(1, Math.max(kw, sem)), keyword: kw, boost: p.boost };
       })
       .sort((a, b) => b.score - a.score);
 
@@ -383,8 +384,21 @@ router.post(
       if (ai) {
         mode = "ai";
         const boostOf = new Map(candidates.map((m) => [m.placeId, m.boost]));
-        matches = rankMatches(ai.map((m) => ({ ...m, boost: boostOf.get(m.placeId) ?? 0 }))).map(
+        const approved = rankMatches(ai.map((m) => ({ ...m, boost: boostOf.get(m.placeId) ?? 0 }))).map(
           ({ placeId, score, reason }) => ({ placeId, score, reason }),
+        );
+        // Se revisa toda la lista, no solo los 12 candidatos: lo obvio nunca se pierde.
+        matches = keepKeywordHits(approved, all);
+        // Para diagnosticar "¿por qué no salió X?" en los logs de Vercel (sin datos del vecino).
+        const nameOf = new Map(candidates.map((m) => [m.placeId, m.place.name]));
+        logger.info(
+          {
+            query: raw,
+            candidates: candidates.map((m) => `${m.place.name} kw=${m.keyword.toFixed(2)} s=${m.score.toFixed(2)}`),
+            ai: ai.map((m) => `${nameOf.get(m.placeId)} ${Math.round(m.score * 100)}`),
+            rescued: matches.length - approved.length,
+          },
+          "search ai",
         );
       }
     }
