@@ -71,6 +71,7 @@ export * from './sky';
 export * from './skyVisit';
 export * from './suggestConstellationRequest';
 export * from './suggestConstellationResult';
+export * from './suggestionRequest';
 export * from './universe';
 export * from './updateMeRequest';
 export * from './visitResult';

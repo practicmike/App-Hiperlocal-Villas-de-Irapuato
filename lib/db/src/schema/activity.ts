@@ -31,6 +31,8 @@ export const searchesTable = pgTable(
     }),
     /** El creador ya la atendió a mano. */
     handled: boolean("handled").notNull().default(false),
+    /** Sin resultados: el vecino recomendó a alguien o propuso algo para el creador. */
+    suggestion: text("suggestion"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("searches_created_idx").on(t.createdAt)],

@@ -22,7 +22,7 @@ Guía de confianza de Villas de Irapuato, hecha por los vecinos. El inicio pregu
 | Variable | Obligatoria | Uso |
 |---|---|---|
 | `DATABASE_URL` | Sí | Postgres |
-| `CREATOR_NAME` | No (`Miguel`) | Nombre visible del creador |
+| `CREATOR_NAME` | No (`Mike`) | Nombre visible del creador |
 | `CREATOR_WHATSAPP` | Recomendada | WhatsApp del creador, 10 dígitos o con lada |
 | `CREATOR_MESSAGE` | No | Presentación personal |
 | `CREATOR_PHOTO_URL` | No | Foto del creador |
@@ -65,6 +65,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 
 - **Acceso por llave personal, sin contraseñas ni SMS.** Camino principal: en Panel → Vecinos, «Dar de alta» con nombre y WhatsApp; el vecino queda aprobado y escanea el QR de su llave en tu teléfono (o se la mandas por WhatsApp). Alternativa a distancia: código de invitación → vecino pendiente → apruebas y le envías el link `/llave/<token>`. Solo se guarda el hash SHA-256 de llaves y sesiones. Regenerar o bloquear corta el acceso al instante.
 - **Universo en 2D con profundidad, no 3D real.** La regla "fluido en gama media" pesa más; el zoom solo cambia dos variables CSS por cuadro (`--kl`, `--ks`), sin renders de React.
+- **Sin resultados no se manda a WhatsApp.** El vecino elige «Recomendar o proponer» (queda en `searches.suggestion`, visible en Panel → Búsquedas) o «Intentar otra búsqueda».
 - **Búsqueda: palabras + embeddings, gana el mayor.** El embedding de cada lugar se calcula al guardarlo (no en cada búsqueda); el de la consulta se cachea. Toda búsqueda se registra para medir y para que las vacías lleguen al creador.
 - **Impulso pagado separado de la relevancia.** `places.boost` suma como máximo 0.1 al orden; el brillo en pantalla es relevancia pura y lo patrocinado se marca. Aún no hay UI para cobrarlo.
 - **Privacidad por diseño.** Los vecinos nunca aparecen en el universo; su WhatsApp solo lo ve el creador; el nombre en una recomendación requiere permiso explícito; las quejas no se publican.

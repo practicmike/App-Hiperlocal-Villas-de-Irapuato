@@ -18,5 +18,10 @@ export interface AdminSearch {
   resultCount: number;
   contacted: boolean;
   handled: boolean;
+  /**
+     * Recomendación o propuesta que dejó el vecino al no encontrar nada
+     * @nullable
+     */
+  suggestion: string | null;
   createdAt: Date;
 }
