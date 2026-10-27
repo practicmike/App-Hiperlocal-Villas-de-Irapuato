@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import QRCode from "qrcode";
 import {
   useAdminOverview,
   useAdminListResidents,
   useAdminApproveResident,
+  useAdminCreateResident,
   useAdminRegenerateKey,
   useAdminBlockResident,
   useAdminListInvites,
@@ -64,7 +66,7 @@ import {
   type PlaceInput,
   type Creator,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Copy, MessageCircle } from "lucide-react";
+import { ArrowLeft, ChevronDown, Copy, MessageCircle, UserPlus } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
 import { NewsComposer } from "@/components/NewsComposer";
@@ -167,22 +169,47 @@ function Stat({ label, value, hint, accent }: { label: string; value: number | s
 }
 
 // ------------------------------------------------------------------ vecinos
+/**
+ * La llave recién creada. En persona: el vecino escanea el QR con su cámara y
+ * entra al instante. A distancia: se manda por WhatsApp. Es de un solo uso.
+ */
 function KeyBox({ k, me, onDone }: { k: AccessKey; me: string; onDone: () => void }) {
   const link = keyLink(k.token);
   const first = k.name.split(" ")[0];
+  const [svg, setSvg] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void QRCode.toString(link, {
+      type: "svg",
+      margin: 1,
+      errorCorrectionLevel: "M",
+      color: { dark: "#0b0d1f", light: "#ffffff" },
+    }).then((s) => alive && setSvg(s));
+    return () => {
+      alive = false;
+    };
+  }, [link]);
   return (
     <div className="mb-4 rounded-2xl border border-primary/50 bg-primary/10 p-4 text-sm">
-      <p className="mb-2 font-bold">Llave de {k.name}</p>
-      <p className="mb-3 break-all rounded-lg bg-space-2 p-2 font-mono text-xs">{link}</p>
-      <p className="mb-3 text-xs text-muted">Funciona una sola vez: en el primer teléfono que la abra. Si alguien la reenvía, a esa otra persona no le abre y te avisa aquí.</p>
-      <div className="flex flex-wrap gap-2">
+      <p className="text-lg font-black">Listo: {k.name}</p>
+      <p className="mb-3 text-xs text-muted">Que lo escanee con la cámara de su teléfono. Entra directo, sin códigos.</p>
+      {svg && (
+        <div
+          className="mx-auto mb-3 w-full max-w-[260px] rounded-2xl bg-white p-3 [&>svg]:h-auto [&>svg]:w-full"
+          role="img"
+          aria-label={`QR con la llave de ${k.name}`}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      )}
+      <p className="mb-3 text-center text-xs text-muted">Funciona una sola vez, en el primer teléfono que la abra.</p>
+      <div className="flex flex-wrap justify-center gap-2">
         <a
           href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de la guía de vecinos de Villas. Esta es tu llave personal. Ábrela en tu teléfono; funciona una sola vez, así que no la reenvíes: ${link}`)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 font-bold text-[#0b3d1f]"
         >
-          <MessageCircle size={16} /> Enviar por WhatsApp
+          <MessageCircle size={16} /> Mejor por WhatsApp
         </a>
         <button onClick={() => void navigator.clipboard?.writeText(link)} className="flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 font-bold">
           <Copy size={14} /> Copiar
@@ -192,6 +219,42 @@ function KeyBox({ k, me, onDone }: { k: AccessKey; me: string; onDone: () => voi
         </button>
       </div>
     </div>
+  );
+}
+
+/** Alta directa: nombre y WhatsApp de alguien que ya conociste. Sale aprobado y con su QR. */
+function QuickAdd({ onCreated }: { onCreated: (k: AccessKey) => void }) {
+  const [f, setF] = useState({ name: "", phone: "", zone: "" });
+  const create = useAdminCreateResident({
+    mutation: {
+      onSuccess: (k) => {
+        setF({ name: "", phone: "", zone: "" });
+        onCreated(k);
+      },
+    },
+  });
+  const err = create.error as { data?: { message?: string }; message?: string } | null;
+  return (
+    <form
+      className="space-y-2 rounded-2xl border border-primary/40 bg-panel p-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        create.mutate({ data: { name: f.name, phone: f.phone, zone: f.zone || null } });
+      }}
+    >
+      <h2 className="flex items-center gap-2 text-base font-black">
+        <UserPlus size={18} className="text-primary" /> Dar de alta a un vecino
+      </h2>
+      <AdminField label="Nombre" required minLength={2} maxLength={80} autoComplete="off" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      <div className="grid grid-cols-2 gap-2">
+        <AdminField label="WhatsApp (10 dígitos)" required inputMode="tel" autoComplete="off" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <AdminField label="Privada (opcional)" maxLength={80} value={f.zone} onChange={(e) => setF({ ...f, zone: e.target.value })} />
+      </div>
+      {err && <p className="text-sm text-alert">{err.data?.message ?? err.message}</p>}
+      <button disabled={create.isPending} className="w-full rounded-xl bg-primary py-3 font-bold text-space">
+        {create.isPending ? "Creando…" : "Dar de alta y mostrar QR"}
+      </button>
+    </form>
   );
 }
 
@@ -226,6 +289,7 @@ function Residents({ me }: { me: string }) {
     },
   });
   const unusedInvites = invites?.filter((i) => !i.usedBy) ?? [];
+  const pending = residents?.filter((r) => r.status === "pending") ?? [];
   const dropInvite = useAdminDeleteInvite({
     mutation: { onSuccess: () => void qc.invalidateQueries({ queryKey: getAdminListInvitesQueryKey() }) },
   });
@@ -234,8 +298,21 @@ function Residents({ me }: { me: string }) {
     <div className="space-y-8">
       {key && <KeyBox k={key} me={me} onDone={() => setKey(null)} />}
 
-      <section>
-        <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Invitar a alguien</h2>
+      {!key && <QuickAdd onCreated={(k) => (setKey(k), refresh())} />}
+
+      {pending.length > 0 && (
+        <p className="rounded-xl bg-[#E6C882]/10 px-3 py-2 text-sm text-casas">
+          {pending.length} {pending.length === 1 ? "vecino espera" : "vecinos esperan"} tu aprobación (abajo).
+        </p>
+      )}
+
+      <details className="group rounded-2xl border border-white/10 px-4 py-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-muted">
+          Invitar con código (si no puedes verlo en persona)
+          <ChevronDown size={16} className="transition group-open:rotate-180" />
+        </summary>
+      <section className="pt-3">
+        <p className="mb-3 text-xs text-muted">La persona entra a la app, pone el código y sus datos; luego tú la apruebas aquí y le mandas su llave.</p>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -284,6 +361,7 @@ function Residents({ me }: { me: string }) {
           </ul>
         )}
       </section>
+      </details>
 
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Vecinos</h2>
@@ -291,7 +369,7 @@ function Residents({ me }: { me: string }) {
           <Loading />
         ) : (
           <ul className="space-y-2">
-            {residents.map((r) => (
+            {[...residents].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending")).map((r) => (
               <li key={r.id} className="rounded-2xl bg-panel p-4 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
