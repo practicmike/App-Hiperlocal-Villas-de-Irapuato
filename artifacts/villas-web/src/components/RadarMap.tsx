@@ -89,8 +89,8 @@ export function RadarMap({
       L.circle([origin.lat, origin.lng], {
         radius: r,
         interactive: false,
-        color: "#6eb5ff",
-        opacity: 0.45,
+        color: "#2f5fd0",
+        opacity: 0.7,
         weight: 1,
         dashArray: "4 6",
         fill: false,

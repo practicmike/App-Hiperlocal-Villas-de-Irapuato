@@ -15,7 +15,7 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, Check, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, ShoppingBag, X, Home } from "lucide-react";
+import { ArrowLeft, Bell, Bookmark, Check, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, ShoppingBag, X, Home } from "lucide-react";
 import { getPickup, setPickup, type PendingPickup } from "@/lib/pickup";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
@@ -25,6 +25,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
 import { RadarMap, type RadarPoint } from "@/components/RadarMap";
 import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet";
+import { useSaved } from "@/lib/saved";
 import { FALLBACK, byId, placeConstellations, whatsappLink } from "@/lib/constellations";
 import { centroid, distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
 
@@ -34,6 +35,8 @@ const IRAPUATO: LatLng = { lat: 20.6767, lng: -101.3563 };
 const NEAR_M = 5_000;
 /** Alto de la hoja de resultados sobre el mapa. */
 const SHEET_PX = 340;
+/** Hoja plegada: solo la barra con el conteo, para ver el mapa completo. */
+const SHEET_FOLDED_PX = 72;
 
 /**
  * Inicio de Villas: primero la pregunta (escrita o hablada) con tus búsquedas
@@ -61,6 +64,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const news = useListNews({ query: { queryKey: getListNewsQueryKey(), refetchOnWindowFocus: true, staleTime: 60_000 } }).data ?? [];
 
   const [screen, setScreen] = useState<"ask" | "radar">("ask");
+  /** Radar mostrando solo lo que el vecino guardó. */
+  const [savedOnly, setSavedOnly] = useState(false);
+  const saved = useSaved(!guest);
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -99,7 +105,10 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
         setSelectedId(null);
         inputRef.current?.blur();
         // Con algo que mostrar, directo al radar; sin nada, se queda en la pregunta con la salida a WhatsApp.
-        if (r.matches.length > 0) setScreen("radar");
+        if (r.matches.length > 0) {
+          setSavedOnly(false);
+          setScreen("radar");
+        }
       },
     },
   });
@@ -111,11 +120,19 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   };
   const explore = () => {
     setResult(null);
+    setSavedOnly(false);
+    setSelectedId(null);
+    setScreen("radar");
+  };
+  const openSaved = () => {
+    setResult(null);
+    setSavedOnly(true);
     setSelectedId(null);
     setScreen("radar");
   };
   const backToAsk = () => {
     setScreen("ask");
+    setSavedOnly(false);
     setSelectedId(null);
   };
 
@@ -127,10 +144,14 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const farAway = geo.state.status === "ok" && !me_at;
 
   const shown = useMemo(() => {
+    if (savedOnly) {
+      const order = new Map(saved.ids.map((id, i) => [id, i]));
+      return places.filter((p) => order.has(p.id)).sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+    }
     if (!result) return places;
     const ids = new Set(result.matches.map((m) => m.placeId));
     return places.filter((p) => ids.has(p.id));
-  }, [places, result]);
+  }, [places, result, savedOnly, saved.ids]);
   const reasons = useMemo(() => new Map((result?.matches ?? []).map((m) => [m.placeId, m.reason])), [result]);
 
   // Lugares con ubicación: por distancia si sabemos dónde estás; si no, por relevancia o por nombre.
@@ -156,7 +177,11 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
   // La hoja crece con los resultados hasta SHEET_PX; con uno solo, el mapa se ve más.
   const rows = withDistance.length + atHome.length;
-  const sheetH = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (atHome.length ? 36 : 0));
+  const [sheetOpen, setSheetOpen] = useState(true);
+  // Cada búsqueda nueva vuelve a mostrar la lista.
+  useEffect(() => setSheetOpen(true), [result?.searchId]);
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (atHome.length ? 36 : 0));
+  const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
   const shortcuts = useMemo(() => {
@@ -208,7 +233,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
         <div className="relative flex h-full flex-col">
           <div className="sky" aria-hidden />
           <header className="pt-safe relative z-10 mx-auto flex w-full max-w-lg items-center gap-2 px-4 pt-3">
-            <p className="min-w-0 flex-1 truncate text-sm font-bold text-muted">Villas de Irapuato</p>
+            <p className="min-w-0 flex-1 truncate text-base font-black">
+              OrbiTú <span className="font-normal text-muted">Villas</span>
+            </p>
             {bell}
             <CreatorAvatar creator={creator} onClick={() => setCreatorOpen(true)} />
           </header>
@@ -335,6 +362,11 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             </button>
             <div className="mt-1 flex justify-center gap-2">
               {!guest && (
+                <button onClick={openSaved} className="flex items-center gap-2 rounded-full border border-white/10 bg-panel/90 px-4 py-2.5 text-sm font-bold">
+                  <Bookmark size={16} /> Guardados{saved.ids.length > 0 && <span className="text-casas">{saved.ids.length}</span>}
+                </button>
+              )}
+              {!guest && (
                 <button onClick={() => setMeOpen(true)} className="flex items-center gap-2 rounded-full border border-white/10 bg-panel/90 px-4 py-2.5 text-sm font-bold">
                   <QrCode size={16} /> Credencial
                 </button>
@@ -356,7 +388,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             selectedId={selectedId}
             onSelect={setSelectedId}
             bottomInset={sheetH}
-            fitKey={result?.searchId ?? "todo"}
+            fitKey={savedOnly ? `guardados-${saved.ids.length}` : (result?.searchId ?? "todo")}
           />
 
           <header className="pt-safe pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pt-3">
@@ -373,7 +405,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                 aria-label="Cambiar búsqueda"
               >
                 <Search size={16} className="shrink-0 text-muted" aria-hidden />
-                <span className={`truncate ${result ? "font-bold" : "text-muted"}`}>{result ? query : "Todo lo cercano"}</span>
+                <span className={`truncate ${result || savedOnly ? "font-bold" : "text-muted"}`}>
+                  {savedOnly ? "Tus guardados" : result ? query : "Todo lo cercano"}
+                </span>
               </button>
               {bell}
             </div>
@@ -397,17 +431,29 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           <section
             aria-label="Resultados"
             className="pb-safe absolute inset-x-0 bottom-0 z-10 mx-auto flex max-w-lg flex-col rounded-t-3xl border-t border-white/10 bg-panel/[0.97] shadow-2xl"
-            style={{ height: sheetH }}
+            style={{ height: sheetH, transition: "height 220ms ease" }}
           >
-            <div className="px-5 pb-1 pt-3">
-              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20" aria-hidden />
-              <p className="text-sm text-muted">
-                {isLoading
-                  ? "Cargando…"
-                  : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? ` y ${atHome.length} a domicilio` : ""}${me_at ? ", por distancia" : ""}`}
-              </p>
-            </div>
-            <ul className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+            <button
+              type="button"
+              onClick={() => setSheetOpen((o) => !o)}
+              aria-expanded={sheetOpen}
+              aria-controls="lista-resultados"
+              className="flex w-full flex-col px-5 pb-2 pt-3 text-left"
+            >
+              <span className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20" aria-hidden />
+              <span className="flex w-full items-center justify-between gap-2">
+                <span className="text-sm text-muted">
+                  {isLoading
+                    ? "Cargando…"
+                    : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? ` y ${atHome.length} a domicilio` : ""}${me_at ? ", por distancia" : ""}`}
+                </span>
+                <span className="flex items-center gap-1 text-xs font-bold text-primary">
+                  {sheetOpen ? "Ver mapa" : "Ver lista"}
+                  {sheetOpen ? <ChevronDown size={16} aria-hidden /> : <ChevronUp size={16} aria-hidden />}
+                </span>
+              </span>
+            </button>
+            <ul id="lista-resultados" hidden={!sheetOpen} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
               {withDistance.map(({ place: p, m }) => (
                 <ResultRow
                   key={p.id}
@@ -440,7 +486,12 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                   </ul>
                 </li>
               )}
-              {!isLoading && shown.length === 0 && (
+              {!isLoading && shown.length === 0 && savedOnly && (
+                <li className="py-6 text-center text-sm text-muted">
+                  Aún no guardas nada. Abre un lugar y toca «Guardar para después».
+                </li>
+              )}
+              {!isLoading && shown.length === 0 && !savedOnly && (
                 <li className="py-6 text-center text-sm text-muted">
                   Aún no hay lugares. {me?.role === "admin" ? "Dalos de alta desde el panel." : `${firstName} está sumando los primeros.`}
                 </li>

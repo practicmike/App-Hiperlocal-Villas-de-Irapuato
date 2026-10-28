@@ -82,7 +82,9 @@ function BootSplash() {
     <div className="grid h-full place-items-center" style={{ background: "radial-gradient(circle at 50% 45%, #1d2160 0%, #0b0d1f 62%)" }}>
       <div className="text-center">
         <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" className="boot-pulse mx-auto h-24 w-24 rounded-[22px]" />
-        <p className="mt-4 text-[22px] font-black tracking-wide">villas</p>
+        <p className="mt-4 text-[24px] font-black">
+          OrbiTú <span className="font-normal text-muted">Villas</span>
+        </p>
       </div>
     </div>
   );

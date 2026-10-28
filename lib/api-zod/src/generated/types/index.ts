@@ -61,6 +61,7 @@ export * from './recordVisitRequest';
 export * from './removeConstellationRequest';
 export * from './reorderRequest';
 export * from './residentUpdate';
+export * from './savedPlaces';
 export * from './searchMatch';
 export * from './searchRequest';
 export * from './searchResult';

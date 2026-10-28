@@ -76,10 +76,10 @@ type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "interesados" | "cons
 const TABS: Array<[Tab, string]> = [
   ["resumen", "Resumen"],
   ["vecinos", "Vecinos"],
-  ["lugares", "Estrellas"],
+  ["lugares", "Lugares"],
   ["visitas", "Visitas"],
   ["interesados", "Interesados"],
-  ["constelaciones", "Constelaciones"],
+  ["constelaciones", "Categorías"],
   ["busquedas", "Búsquedas"],
   ["quejas", "Quejas"],
 ];
@@ -97,7 +97,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
     <div className="h-full overflow-y-auto bg-space">
       <header className="pt-safe sticky top-0 z-10 border-b border-white/10 bg-space/95 px-4 pb-2 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
-          <Link href="/" className="rounded-full p-2 hover:bg-white/10" aria-label="Volver al universo">
+          <Link href="/" className="rounded-full p-2 hover:bg-white/10" aria-label="Volver al inicio">
             <ArrowLeft size={20} />
           </Link>
           <h1 className="text-lg font-black">Panel del creador</h1>
@@ -149,7 +149,7 @@ function Overview() {
       </section>
       <section className="grid grid-cols-3 gap-3">
         <Stat label="Pendientes" value={o.residentsPending} accent={o.residentsPending ? "#7d80d9" : undefined} />
-        <Stat label="Estrellas" value={o.places} />
+        <Stat label="Lugares" value={o.places} />
         <Stat label="Quejas abiertas" value={o.openComplaints} accent={o.openComplaints ? "#ffabab" : undefined} />
       </section>
     </div>
@@ -204,7 +204,7 @@ function KeyBox({ k, me, onDone }: { k: AccessKey; me: string; onDone: () => voi
       <p className="mb-3 text-center text-xs text-muted">Funciona una sola vez, en el primer teléfono que la abra.</p>
       <div className="flex flex-wrap justify-center gap-2">
         <a
-          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de la guía de vecinos de Villas. Esta es tu llave personal. Ábrela en tu teléfono; funciona una sola vez, así que no la reenvíes: ${link}`)}
+          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de OrbiTú Villas. Esta es tu llave personal. Ábrela en tu teléfono; funciona una sola vez, así que no la reenvíes: ${link}`)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 font-bold text-[#0b3d1f]"
@@ -416,7 +416,7 @@ function Residents({ me }: { me: string }) {
                         Bloquear
                       </button>
                     )}
-                    <a href={whatsappLink(r.phone, `Hola ${r.name.split(" ")[0]}, soy ${me}, de la guía de vecinos de Villas.`)} target="_blank" rel="noopener noreferrer" className="rounded-full px-3 py-1.5 text-xs text-confianza">
+                    <a href={whatsappLink(r.phone, `Hola ${r.name.split(" ")[0]}, soy ${me}, de OrbiTú Villas.`)} target="_blank" rel="noopener noreferrer" className="rounded-full px-3 py-1.5 text-xs text-confianza">
                       WhatsApp
                     </a>
                     <button onClick={() => setEditingId(editingId === r.id ? null : r.id)} className="rounded-full px-3 py-1.5 text-xs text-muted">
@@ -559,12 +559,12 @@ function Places({ editId }: { editId: string | null }) {
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!f.constellation) return alert("Elige una constelación.");
+          if (!f.constellation) return alert("Elige una categoría.");
           if (editing.id) update.mutate({ id: editing.id, data: f });
           else create.mutate({ data: f });
         }}
       >
-        <h2 className="text-lg font-black">{editing.id ? "Editar estrella" : "Nueva estrella"}</h2>
+        <h2 className="text-lg font-black">{editing.id ? "Editar lugar" : "Nuevo lugar"}</h2>
         <AdminField label="Nombre" required minLength={2} maxLength={80} {...txt("name")} />
         <AdminField label="Giro u oficio (Plomería, Tacos, Casa en renta…)" required minLength={2} maxLength={60} {...txt("category")} />
         <label className="block">
@@ -691,13 +691,13 @@ function Places({ editId }: { editId: string | null }) {
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" className="accent-[#7d80d9]" checked={f.active} onChange={(e) => set("active", e.target.checked)} />
-            Visible en el universo
+            Visible en la app
           </label>
         </div>
         {editing.id ? (
           <PhotoManager placeId={editing.id} highlight={justCreated} />
         ) : (
-          <p className="rounded-xl bg-space-2/60 p-3 text-xs text-muted">Las fotos se agregan después de guardar la estrella.</p>
+          <p className="rounded-xl bg-space-2/60 p-3 text-xs text-muted">Las fotos se agregan después de guardar el lugar.</p>
         )}
         {editing.id && places?.find((x) => x.id === editing.id)?.slug && (
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 p-3 text-xs">
@@ -721,7 +721,7 @@ function Places({ editId }: { editId: string | null }) {
               type="button"
               disabled={remove.isPending}
               onClick={() =>
-                confirm(`¿Eliminar «${f.name}» para siempre? Se borran también sus recomendaciones. Si solo quieres ocultarla, desmarca "Visible en el universo".`) &&
+                confirm(`¿Eliminar «${f.name}» para siempre? Se borran también sus recomendaciones. Si solo quieres ocultarla, desmarca "Visible en la app".`) &&
                 remove.mutate({ id: editing.id! })
               }
               className="ml-auto rounded-xl px-4 text-sm font-bold text-alert"
@@ -858,7 +858,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   active: p.active,
 });
 
-/** Cargar o borrar las estrellas de ejemplo; las reales nunca se tocan. */
+/** Cargar o borrar las lugares de ejemplo; las reales nunca se tocan. */
 function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const load = useAdminLoadDemoPlaces({
@@ -866,7 +866,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
       onSuccess: (r) => {
         setMsg(
           r.inserted
-            ? `Listo: ${r.inserted} estrellas de ejemplo. La marca "IA" aparece en unos segundos si OpenAI responde.`
+            ? `Listo: ${r.inserted} lugares de ejemplo. La marca "IA" aparece en unos segundos si OpenAI responde.`
             : `Actualicé ${r.updated ?? 0} ejemplos con descripciones detalladas. La marca "IA" vuelve en unos segundos.`,
         );
         onChange();
@@ -876,7 +876,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   const remove = useAdminRemoveDemoPlaces({
     mutation: {
       onSuccess: (r) => {
-        setMsg(`Borradas ${r.removed} estrellas de ejemplo.`);
+        setMsg(`Borradas ${r.removed} lugares de ejemplo.`);
         onChange();
       },
     },
@@ -885,7 +885,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   return (
     <div className="rounded-2xl border border-casas/30 bg-casas/5 p-3 text-sm">
       <p className="mb-2 text-xs text-muted">
-        Datos de ejemplo para probar (casas, oficios, comida, clases y salud) con WhatsApp ficticio: no le escriben a nadie real. Solo se cargan en constelaciones que existan.
+        Datos de ejemplo para probar (casas, oficios, comida, clases y salud) con WhatsApp ficticio: no le escriben a nadie real. Solo se cargan en categorías que existan.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -898,7 +898,7 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
         {demoCount > 0 && (
           <button
             disabled={remove.isPending}
-            onClick={() => confirm(`¿Borrar las ${demoCount} estrellas de ejemplo? Las reales no se tocan.`) && remove.mutate()}
+            onClick={() => confirm(`¿Borrar las ${demoCount} lugares de ejemplo? Las reales no se tocan.`) && remove.mutate()}
             className="rounded-full border border-alert/50 px-4 py-1.5 text-xs font-bold text-alert"
           >
             Borrar ejemplos ({demoCount})
@@ -1065,7 +1065,7 @@ function ConstellationPicker({
 }) {
   return (
     <div>
-      <span className="mb-1 block text-xs font-bold text-muted">Constelación</span>
+      <span className="mb-1 block text-xs font-bold text-muted">Categoría</span>
       <div className="flex flex-wrap gap-2">
         {list.map((c) => (
           <button
@@ -1109,11 +1109,11 @@ function SuggestBox({
         onClick={() => suggest.mutate({ data: place })}
         className="rounded-full bg-ai px-4 py-1.5 text-xs font-bold text-space disabled:opacity-40"
       >
-        {suggest.isPending ? "Pensando…" : "✨ Sugerir constelación"}
+        {suggest.isPending ? "Pensando…" : "✨ Sugerir categoría"}
       </button>
       {!ready && <span className="ml-2 text-xs text-muted">Escribe nombre y giro o descripción primero.</span>}
-      {r && !r.available && <p className="mt-2 text-xs text-muted">La IA no está disponible ahora. Elige tú la constelación.</p>}
-      {r?.available && !target && <p className="mt-2 text-xs text-muted">La IA no supo dónde va. Elige tú la constelación.</p>}
+      {r && !r.available && <p className="mt-2 text-xs text-muted">La IA no está disponible ahora. Elige tú la categoría.</p>}
+      {r?.available && !target && <p className="mt-2 text-xs text-muted">La IA no supo dónde va. Elige tú la categoría.</p>}
       {r?.available && target && (
         <div className="mt-2 space-y-2">
           <p className="text-xs">
@@ -1173,7 +1173,7 @@ function Constellations() {
           else create.mutate({ data: f });
         }}
       >
-        <h2 className="text-lg font-black">{editing.id ? "Editar constelación" : "Nueva constelación"}</h2>
+        <h2 className="text-lg font-black">{editing.id ? "Editar categoría" : "Nueva categoría"}</h2>
         <AdminField label="Nombre (corto: se lee en el mapa)" required minLength={2} maxLength={24} value={f.name} onChange={(e) => set("name", e.target.value)} />
         <AdminField label="Pista (qué hay adentro)" maxLength={60} placeholder="Plomería, luz, jardín…" value={f.hint} onChange={(e) => set("hint", e.target.value)} />
         <div>
@@ -1222,7 +1222,7 @@ function Constellations() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">
-        Las constelaciones son los grupos grandes del universo. Tú las decides; la IA solo te sugiere en cuál va cada estrella.
+        Las categorías agrupan los lugares (Comida, Servicios, Salud…). Tú las decides; la IA solo te sugiere en cuál va cada lugar.
         Máximo {MAX_CONS}: más se enciman en un celular. La primera queda arriba y las demás siguen el reloj.
       </p>
       <button
@@ -1230,7 +1230,7 @@ function Constellations() {
         onClick={() => setEditing({ id: null, form: { ...EMPTY_CONS, color: PALETTE[list.length % PALETTE.length]!.hex } })}
         className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-space disabled:opacity-40"
       >
-        {full ? `Tienes ${MAX_CONS} (máximo)` : "+ Nueva constelación"}
+        {full ? `Tienes ${MAX_CONS} (máximo)` : "+ Nueva categoría"}
       </button>
       {error && !editing && <p className="text-sm text-alert">No se pudo: {(error as Error).message}</p>}
       <ul className="space-y-2">
@@ -1243,7 +1243,7 @@ function Constellations() {
             >
               <span className="block truncate font-bold">{c.name}</span>
               <span className="block truncate text-xs text-muted">
-                {c.starCount} estrellas{c.hint && ` · ${c.hint}`}{c.isProperty && " · inmuebles"}
+                {c.starCount} lugares{c.hint && ` · ${c.hint}`}{c.isProperty && " · inmuebles"}
               </span>
             </button>
             <div className="flex shrink-0 items-center gap-1 text-muted">
@@ -1273,7 +1273,7 @@ function Constellations() {
           <p className="font-bold">¿Eliminar «{removing.name}»?</p>
           {removing.starCount > 0 ? (
             <label className="mt-2 block text-xs">
-              Sus {removing.starCount} estrellas se mueven a:
+              Sus {removing.starCount} lugares se mueven a:
               <select
                 value={moveTo}
                 onChange={(e) => setMoveTo(e.target.value)}
@@ -1289,7 +1289,7 @@ function Constellations() {
               </select>
             </label>
           ) : (
-            <p className="mt-1 text-xs text-muted">No tiene estrellas; se borra sin mover nada.</p>
+            <p className="mt-1 text-xs text-muted">No tiene lugares; se borra sin mover nada.</p>
           )}
           <div className="mt-3 flex gap-2">
             <button
@@ -1322,7 +1322,7 @@ function MerchantKeyBox({ placeId, placeName, whatsapp, hasKey }: { placeId: str
     },
   });
   const msg = (l: string) =>
-    `Hola, ya estás en el universo de Villas como «${placeName}». Abre este link en el celular de tu negocio: ${l}\n\nCuando un vecino te enseñe su credencial, apunta la cámara de tu celular a su código QR y confirma la visita. Así se enciende tu estrella en su cielo y le aplicas tu regalo de bienvenida.`;
+    `Hola, ya estás en OrbiTú Villas como «${placeName}». Abre este link en el celular de tu negocio: ${l}\n\nCuando un vecino te enseñe su credencial, apunta la cámara de tu celular a su código QR y confirma la visita. Así queda registrada su visita y le aplicas tu regalo de bienvenida.`;
   return (
     <div className="rounded-2xl border border-confianza/30 bg-confianza/5 p-3 text-sm">
       <p className="font-bold text-confianza">Modo comercio</p>
@@ -1467,7 +1467,7 @@ function Visits() {
               <button
                 aria-label="Borrar visita"
                 disabled={del.isPending}
-                onClick={() => confirm("¿Borrar esta visita? La estrella se apaga en el cielo del vecino si era la única.") && del.mutate({ id: v.id })}
+                onClick={() => confirm("¿Borrar esta visita? Si era la única, ese lugar deja de contar como visitado para el vecino.") && del.mutate({ id: v.id })}
                 className="rounded-full px-2 py-1 text-alert/70 hover:bg-white/10"
               >
                 ✕
@@ -1699,8 +1699,8 @@ function Leads() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted">
-        Personas que no son vecinas y escribieron por WhatsApp a una casa (con su nombre) o desde el link público de una estrella.
-        Es la prueba que le enseñas a un vendedor o comercio de que el universo le trae clientes.
+        Personas que no son vecinas y escribieron por WhatsApp a una casa (con su nombre) o desde el link público de un lugar.
+        Es la prueba que le enseñas a un vendedor o comercio de que OrbiTú Villas le trae clientes.
       </p>
       {byPlace.length > 0 && (
         <div className="flex flex-wrap gap-2">

@@ -777,6 +777,10 @@ export interface DemoResult {
   updated?: number;
 }
 
+export interface SavedPlaces {
+  placeIds: string[];
+}
+
 export interface SuggestionRequest {
   /**
      * @minLength 3

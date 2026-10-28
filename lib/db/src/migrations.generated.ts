@@ -127,5 +127,13 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
     "statements": [
       "ALTER TABLE \"searches\" ADD COLUMN \"suggestion\" text;"
     ]
+  },
+  {
+    "tag": "0010_guardados",
+    "statements": [
+      "CREATE TABLE \"saved_places\" (\n\t\"resident_id\" uuid NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\tCONSTRAINT \"saved_places_resident_place\" UNIQUE(\"resident_id\",\"place_id\")\n);",
+      "ALTER TABLE \"saved_places\" ADD CONSTRAINT \"saved_places_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"saved_places\" ADD CONSTRAINT \"saved_places_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+    ]
   }
 ];

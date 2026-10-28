@@ -1,4 +1,4 @@
-# App Hiperlocal · Villas de Irapuato
+# OrbiTú Villas (App Hiperlocal · Villas de Irapuato)
 
 Guía de confianza de Villas de Irapuato, hecha por los vecinos. El inicio pregunta «¿Qué necesitas hoy?» (escrito o por voz, con tus búsquedas frecuentes como atajo) y el radar muestra sobre las calles reales lo que te queda más cerca, en metros. Cada tarjeta lleva a WhatsApp. No es anónima: el creador conoce en persona a cada vecino que entra.
 
@@ -58,6 +58,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Buscador: `artifacts/api-server/src/lib/search-core.ts` (puro, con pruebas) y `lib/ai.ts` (OpenAI)
 - Inicio y radar: `artifacts/villas-web/src/pages/HomePage.tsx`, `src/components/RadarMap.tsx` (Leaflet + OpenStreetMap), `src/lib/geo.ts`
 - Novedades (sin push, dentro de la app): `src/components/NovedadesSheet.tsx`
+- Guardados (favoritos del vecino, en la base: tabla `saved_places`): `src/lib/saved.ts`, botón en `PlaceSheet.tsx`
 - Universo (ya no está en la navegación; se conserva para reutilizarlo): `src/pages/UniversePage.tsx`, `src/components/UniverseCanvas.tsx`, `src/lib/layout.ts`
 - Paleta y constelaciones: `artifacts/villas-web/src/index.css`, `src/lib/constellations.ts`
 
@@ -83,7 +84,9 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 
 ## Gotchas
 
-- Mapa: teselas de OpenStreetMap (uso ligero con atribución). Si el tráfico crece, cambia `TILE_URL` en `RadarMap.tsx` por un proveedor con plan.
+- En pantalla se dice «lugares» y «categorías»; en el código siguen llamándose `places` y `constellations` (no renombrar tablas ni rutas).
+
+- Mapa: teselas de OpenStreetMap en su versión clara (uso ligero con atribución). No se invierten a oscuro: calle y fondo quedaban del mismo negro. Si el tráfico crece, cambia `TILE_URL` en `RadarMap.tsx` por un proveedor con plan.
 - La llave de `/llave/<token>` es de un solo uso: para probar dos veces, genera otra.
 
 - Tras editar `openapi.yaml`, corre codegen; si no, los tipos del frontend y la validación del backend quedan desfasados.

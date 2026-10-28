@@ -193,7 +193,7 @@ function NoMerchant() {
         <Store className="mx-auto mb-4 text-muted" size={40} />
         <h1 className="mb-2 text-2xl font-black">Este teléfono no tiene el modo comercio</h1>
         <p className="mb-6 text-ink/80">Abre el link de comercio que te mandó el creador por WhatsApp.</p>
-        <Link href="/" className="text-sm text-muted underline">Ir al universo de Villas</Link>
+        <Link href="/" className="text-sm text-muted underline">Ir a OrbiTú Villas</Link>
       </div>
     </Shell>
   );
@@ -213,10 +213,10 @@ export function MemberPassPage({ code }: { code: string }) {
           <Star className="mx-auto mb-4 text-me" size={40} fill="currentColor" />
           <h1 className="mb-2 text-2xl font-black">Credencial de vecino de Villas</h1>
           <p className="mb-6 text-ink/80">
-            Los comercios de Villas la escanean para encender su estrella en el cielo del vecino y darle su regalo de bienvenida.
+            Los comercios de Villas la escanean para registrar la visita del vecino y darle su regalo de bienvenida.
           </p>
           <Link href="/" className="inline-flex rounded-2xl bg-primary px-5 py-3 font-black text-space">
-            Ver el universo de Villas
+            Ir a OrbiTú Villas
           </Link>
         </div>
       </Shell>
@@ -255,7 +255,7 @@ function ConfirmVisit({ code, placeName, chamba }: { code: string; placeName: st
             </>
           ) : (
             <>
-              <h1 className="mb-2 text-2xl font-black">Estrella encendida para {done.firstName}</h1>
+              <h1 className="mb-2 text-2xl font-black">Visita registrada de {done.firstName}</h1>
               <p className="mb-4 text-ink/80">
                 {chamba
                   ? done.visitsHere === 1

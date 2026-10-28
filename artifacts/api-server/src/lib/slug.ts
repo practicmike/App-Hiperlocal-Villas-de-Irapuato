@@ -32,5 +32,5 @@ export async function ensureSlug(place: { id: string; name: string; slug: string
       // Ya lo usa otra estrella: se prueba con -2, -3…
     }
   }
-  throw new Error("No pude crear el link de la estrella");
+  throw new Error("No pude crear el link del lugar");
 }

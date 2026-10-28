@@ -11,12 +11,13 @@ import {
   type PlaceDetail,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BadgeCheck, Bath, BedDouble, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
+import { BadgeCheck, Bath, BedDouble, Bookmark, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
 import { openState, weekSummary } from "@/lib/hours";
 import { setPickup } from "@/lib/pickup";
 import { ShoppingBag, Share2 } from "lucide-react";
 import { useRecordLead } from "@workspace/api-client-react";
 import { FALLBACK, whatsappLink, type Constellation } from "@/lib/constellations";
+import { useSaved } from "@/lib/saved";
 
 interface Match {
   score: number;
@@ -93,6 +94,8 @@ export function Card({
   const endorse = useEndorsePlace({ mutation: { onSuccess: onSaved } });
   const unendorse = useRemoveEndorsement({ mutation: { onSuccess: onSaved } });
   const busy = endorse.isPending || unendorse.isPending;
+  const saved = useSaved(!guest);
+  const isSaved = saved.has(place.id);
 
   // La API solo publica nombres con permiso; si el mío aparece, ya lo había dado.
   const [showName, setShowName] = useState(
@@ -112,7 +115,7 @@ export function Card({
       : `Lo ${names.length === 1 ? "recomienda" : "recomiendan"} ${list}`;
   })();
 
-  const message = `Hola${place.contactName ? ` ${place.contactName}` : ""}, te encontré en la guía de vecinos de Villas.`;
+  const message = `Hola${place.contactName ? ` ${place.contactName}` : ""}, te encontré en OrbiTú Villas.`;
 
   return (
     <div className="space-y-4">
@@ -156,7 +159,7 @@ export function Card({
       )}
       {place.myVisits > 0 && (
         <p className="flex items-center gap-1.5 text-sm font-bold text-me">
-          <Star size={16} fill="currentColor" /> Ya la encendiste · {place.myVisits} {place.myVisits === 1 ? "visita" : "visitas"}
+          <Star size={16} fill="currentColor" /> Ya lo visitaste · {place.myVisits} {place.myVisits === 1 ? "visita" : "visitas"}
         </p>
       )}
 
@@ -212,6 +215,17 @@ export function Card({
       >
         <MessageCircle size={20} /> Escribir por WhatsApp
       </a>
+      <button
+        type="button"
+        onClick={() => saved.toggle(place.id)}
+        aria-pressed={isSaved}
+        className={`flex w-full items-center justify-center gap-2 rounded-2xl border py-3 text-[15px] font-bold transition active:scale-[0.98] ${
+          isSaved ? "border-casas bg-casas/15 text-casas" : "border-white/20 text-ink"
+        }`}
+      >
+        <Bookmark size={18} fill={isSaved ? "currentColor" : "none"} />
+        {isSaved ? "Guardado · está en tus Guardados" : "Guardar para después"}
+      </button>
       {place.pickup && (
         <PickupOrder place={place} meName={meName} onSent={() => contact.mutate({ id: place.id, data: { searchId } })} />
       )}
@@ -255,7 +269,7 @@ export function Card({
 
       {isAdmin && (
         <Link href={`/panel?editar=${place.id}`} className="flex items-center gap-1.5 pb-2 text-xs text-primary">
-          <Pencil size={13} /> Editar esta estrella (solo tú lo ves)
+          <Pencil size={13} /> Editar este lugar (solo tú lo ves)
         </Link>
       )}
     </div>
@@ -573,7 +587,7 @@ export function ShareButton({ slug, name }: { slug: string; name: string }) {
       }}
       className="flex items-center gap-1.5 pb-2 text-xs font-bold text-muted"
     >
-      <Share2 size={14} /> {copied ? "Link copiado" : "Compartir esta estrella"}
+      <Share2 size={14} /> {copied ? "Link copiado" : "Compartir este lugar"}
     </button>
   );
 }

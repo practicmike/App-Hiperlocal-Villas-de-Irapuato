@@ -59,6 +59,7 @@ import type {
   RemoveConstellationRequest,
   ReorderRequest,
   ResidentUpdate,
+  SavedPlaces,
   SearchRequest,
   SearchResult,
   SetupRequest,
@@ -2635,6 +2636,225 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getRemoveEndorsementMutationOptions(options));
     }
+
+export const getSavePlaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/places/${id}/save`
+}
+
+/**
+ * @summary Guardar para después (solo vecinos)
+ */
+export const savePlace = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getSavePlaceUrl(id),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getSavePlaceMutationKey = () => ['savePlace'] as const;
+
+export const getSavePlaceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePlace>>, TError,SavePlaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePlace>>, TError,SavePlaceMutationVariables, TContext> => {
+
+const mutationKey = getSavePlaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePlace>>, SavePlaceMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  savePlace(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePlaceMutationResult = NonNullable<Awaited<ReturnType<typeof savePlace>>>
+
+    export type SavePlaceMutationError = ErrorType<unknown>
+    export type SavePlaceMutationVariables = {id: string}
+
+    /**
+ * @summary Guardar para después (solo vecinos)
+ */
+export const useSavePlace = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePlace>>, TError,SavePlaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePlace>>,
+        TError,
+        SavePlaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSavePlaceMutationOptions(options));
+    }
+
+export const getUnsavePlaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/places/${id}/save`
+}
+
+export const unsavePlace = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getUnsavePlaceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnsavePlaceMutationKey = () => ['unsavePlace'] as const;
+
+export const getUnsavePlaceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsavePlace>>, TError,UnsavePlaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unsavePlace>>, TError,UnsavePlaceMutationVariables, TContext> => {
+
+const mutationKey = getUnsavePlaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unsavePlace>>, UnsavePlaceMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  unsavePlace(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnsavePlaceMutationResult = NonNullable<Awaited<ReturnType<typeof unsavePlace>>>
+
+    export type UnsavePlaceMutationError = ErrorType<unknown>
+    export type UnsavePlaceMutationVariables = {id: string}
+
+    export const useUnsavePlace = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsavePlace>>, TError,UnsavePlaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unsavePlace>>,
+        TError,
+        UnsavePlaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnsavePlaceMutationOptions(options));
+    }
+
+export const getGetMySavedUrl = () => {
+
+
+
+
+  return `/api/me/saved`
+}
+
+/**
+ * @summary Lugares que el vecino guardó, del más reciente al más antiguo
+ */
+export const getMySaved = async ( options?: Parameters<typeof customFetch>[1]): Promise<SavedPlaces> => {
+
+  return customFetch<SavedPlaces>(getGetMySavedUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMySavedQueryKey = () => {
+    return [
+    `/api/me/saved`
+    ] as const;
+    }
+
+
+export const getGetMySavedQueryOptions = <TData = Awaited<ReturnType<typeof getMySaved>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySaved>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMySavedQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMySaved>>> = ({ signal }) => getMySaved({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMySaved>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMySavedQueryResult = NonNullable<Awaited<ReturnType<typeof getMySaved>>>
+export type GetMySavedQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lugares que el vecino guardó, del más reciente al más antiguo
+ */
+
+export function useGetMySaved<TData = Awaited<ReturnType<typeof getMySaved>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySaved>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMySavedQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRecordContactUrl = (id: string,) => {
 

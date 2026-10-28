@@ -548,6 +548,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlaceDetail"
+  /places/{id}/save:
+    put:
+      operationId: savePlace
+      tags: [universe]
+      summary: Guardar para después (solo vecinos)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Guardado
+    delete:
+      operationId: unsavePlace
+      tags: [universe]
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Quitado de guardados
+  /me/saved:
+    get:
+      operationId: getMySaved
+      tags: [universe]
+      summary: Lugares que el vecino guardó, del más reciente al más antiguo
+      responses:
+        "200":
+          description: Guardados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedPlaces"
   /places/{id}/contact:
     post:
       operationId: recordContact
@@ -2083,6 +2113,14 @@ components:
         updated:
           type: integer
       required: [inserted, removed]
+    SavedPlaces:
+      type: object
+      properties:
+        placeIds:
+          type: array
+          items:
+            type: string
+      required: [placeIds]
     SuggestionRequest:
       type: object
       properties:
