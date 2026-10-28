@@ -22,7 +22,7 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
   const slides = [
     {
       art: <img src={`${import.meta.env.BASE_URL}icon-512.png`} alt="" className="h-32 w-32 rounded-[28px] shadow-[0_0_60px_#6eb5ff55]" />,
-      title: "Bienvenido a la guía de Villas",
+      title: "Bienvenido a OrbiTú Villas",
       text: "Comercios, oficios y casas de Villas que un vecino conoce en persona. Sin anuncios de fuera, sin scroll infinito.",
     },
     {

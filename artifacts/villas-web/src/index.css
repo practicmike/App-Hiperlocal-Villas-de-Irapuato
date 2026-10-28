@@ -194,20 +194,21 @@ body {
 
 /* ---------------------------------------------------------------- Radar */
 .radar-map {
-  background: var(--color-space);
+  background: #e8e6e1;
   font-family: var(--font-sans);
 }
-/* Calles reales (OpenStreetMap) llevadas a la paleta nocturna de la app. */
+/* Calles reales (OpenStreetMap) en su versión clara: calles y manzanas se distinguen.
+   Antes se invertían a oscuro y calle y fondo quedaban casi del mismo negro. */
 .radar-tiles {
-  filter: invert(1) hue-rotate(200deg) brightness(0.62) contrast(1.15) saturate(0.45);
+  filter: saturate(0.75) brightness(0.97);
 }
 .radar-map .leaflet-control-attribution {
-  background: rgba(11, 13, 31, 0.7);
-  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
   font-size: 10px;
 }
 .radar-map .leaflet-control-attribution a {
-  color: var(--color-muted);
+  color: #333;
 }
 .radar-me {
   position: absolute;
@@ -217,9 +218,9 @@ body {
   height: 26px;
   border-radius: 50%;
   background: var(--color-me);
-  border: 3px solid var(--color-space);
+  border: 3px solid #fff;
   box-sizing: border-box;
-  box-shadow: 0 0 26px rgba(110, 181, 255, 0.8);
+  box-shadow: 0 0 0 6px rgba(60, 120, 230, 0.25), 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .radar-sweep {
   position: absolute;
@@ -228,7 +229,7 @@ body {
   left: calc(var(--sweep, 300px) / -2);
   top: calc(var(--sweep, 300px) / -2);
   border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(110, 181, 255, 0.22), rgba(110, 181, 255, 0) 70deg, rgba(110, 181, 255, 0));
+  background: conic-gradient(from 0deg, rgba(60, 120, 230, 0.22), rgba(60, 120, 230, 0) 70deg, rgba(60, 120, 230, 0));
   animation: radar-spin 6s linear infinite;
   pointer-events: none;
 }
@@ -237,9 +238,9 @@ body {
   transform: translate(4px, -50%);
   font-size: 11px;
   font-weight: 700;
-  color: #8fb8ea;
+  color: #1f3f8f;
   white-space: nowrap;
-  text-shadow: 0 0 4px var(--color-space);
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
 }
 /* Cada lugar: un punto del color de su constelación, con un toque de 44 px. */
 .radar-dot {
@@ -253,8 +254,8 @@ body {
   height: 14px;
   border-radius: 50%;
   background: var(--c);
-  border: 2px solid var(--color-space);
-  box-shadow: 0 0 12px var(--c);
+  border: 2px solid #1a1d45;
+  box-shadow: 0 0 0 2px #fff, 0 1px 6px rgba(0, 0, 0, 0.35);
   transition: transform 200ms ease;
 }
 .radar-dot::before {

@@ -800,6 +800,31 @@ export const RemoveEndorsementResponse = zod.object({
 
 
 /**
+ * @summary Guardar para después (solo vecinos)
+ */
+export const SavePlaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SavePlaceResponse = zod.void()
+
+
+export const UnsavePlaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const UnsavePlaceResponse = zod.void()
+
+
+/**
+ * @summary Lugares que el vecino guardó, del más reciente al más antiguo
+ */
+export const GetMySavedResponse = zod.object({
+  "placeIds": zod.array(zod.string())
+})
+
+
+/**
  * @summary Registrar que el vecino abrió WhatsApp
  */
 export const RecordContactParams = zod.object({

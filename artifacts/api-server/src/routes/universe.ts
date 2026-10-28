@@ -11,6 +11,7 @@ import {
   newsTable,
   leadsTable,
   visitsTable,
+  savedPlacesTable,
 } from "@workspace/db";
 import {
   GetPlaceParams,
@@ -25,6 +26,8 @@ import {
   RecordLeadParams,
   RecordLeadBody,
   SendSearchSuggestionParams,
+  SavePlaceParams,
+  UnsavePlaceParams,
   SendSearchSuggestionBody,
 } from "@workspace/api-zod";
 import { normalizePhone, requireResident } from "../lib/auth";
@@ -118,7 +121,7 @@ router.get("/share/:slug", async (req, res) => {
     .where(and(eq(placesTable.slug, slug), eq(placesTable.active, true)))
     .limit(1);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   res.json(await placeDetail(place, req.resident?.status === "approved" ? req.resident.id : null, { shared: true }));
@@ -130,7 +133,7 @@ router.post("/places/:id/lead", rateLimit("lead", 20, 60 * 60_000), async (req, 
   const body = RecordLeadBody.parse(req.body);
   const place = await getActivePlace(id);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   const name = body.name?.trim() || null;
@@ -236,7 +239,7 @@ router.get("/places/:id", async (req, res) => {
   const { id } = GetPlaceParams.parse(req.params);
   const place = await getActivePlace(id);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   res.json(await placeDetail(place, req.resident?.status === "approved" ? req.resident.id : null));
@@ -247,7 +250,7 @@ router.put("/places/:id/endorsement", requireResident, async (req, res) => {
   const { showName } = EndorsePlaceBody.parse(req.body);
   const place = await getActivePlace(id);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   await db
@@ -264,7 +267,7 @@ router.delete("/places/:id/endorsement", requireResident, async (req, res) => {
   const { id } = RemoveEndorsementParams.parse(req.params);
   const place = await getActivePlace(id);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   await db
@@ -273,6 +276,35 @@ router.delete("/places/:id/endorsement", requireResident, async (req, res) => {
       and(eq(endorsementsTable.placeId, id), eq(endorsementsTable.residentId, req.resident!.id)),
     );
   res.json(await placeDetail(place, req.resident!.id));
+});
+
+/** Guardados: privados del vecino; un toque guarda, otro quita. */
+router.get("/me/saved", requireResident, async (req, res) => {
+  const rows = await db
+    .select({ placeId: savedPlacesTable.placeId })
+    .from(savedPlacesTable)
+    .innerJoin(placesTable, eq(savedPlacesTable.placeId, placesTable.id))
+    .where(and(eq(savedPlacesTable.residentId, req.resident!.id), eq(placesTable.active, true)))
+    .orderBy(desc(savedPlacesTable.createdAt));
+  res.json({ placeIds: rows.map((r) => r.placeId) });
+});
+
+router.put("/places/:id/save", requireResident, async (req, res) => {
+  const { id } = SavePlaceParams.parse(req.params);
+  if (!(await getActivePlace(id))) {
+    res.status(404).json({ message: "No encontramos ese lugar." });
+    return;
+  }
+  await db.insert(savedPlacesTable).values({ residentId: req.resident!.id, placeId: id }).onConflictDoNothing();
+  res.status(204).end();
+});
+
+router.delete("/places/:id/save", requireResident, async (req, res) => {
+  const { id } = UnsavePlaceParams.parse(req.params);
+  await db
+    .delete(savedPlacesTable)
+    .where(and(eq(savedPlacesTable.residentId, req.resident!.id), eq(savedPlacesTable.placeId, id)));
+  res.status(204).end();
 });
 
 /** Base del KPI "búsquedas que terminan en WhatsApp" (idea del contador de TiendApp). */
@@ -327,7 +359,7 @@ router.post("/places/:id/complaints", requireResident, rateLimit("complaint", 10
   const { message } = SendComplaintBody.parse(req.body);
   const place = await getActivePlace(id);
   if (!place) {
-    res.status(404).json({ message: "No encontramos esa estrella." });
+    res.status(404).json({ message: "No encontramos ese lugar." });
     return;
   }
   await db.insert(complaintsTable).values({ placeId: id, residentId: req.resident!.id, message });

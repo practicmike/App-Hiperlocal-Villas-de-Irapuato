@@ -37,7 +37,7 @@ function Credential({ code, name }: { code: string; name: string }) {
         />
         <p className="mt-3 font-mono text-base font-bold tracking-widest">{pretty(code)}</p>
         <p className="mt-2 text-xs text-muted">
-          Enséñala al pagar en cualquier estrella de Villas. El comercio la escanea con la cámara de su celular y la estrella se enciende en tu cielo.
+          Enséñala al pagar en cualquier lugar de OrbiTú Villas. El comercio la escanea con la cámara de su celular y queda registrada tu visita.
         </p>
       </div>
     </div>
@@ -93,13 +93,13 @@ export function MeSheet({
         {memberCode ? <Credential code={memberCode} name={me.name} /> : <p className="mb-5 text-sm text-muted">Cargando tu credencial…</p>}
         <div className="mb-6 rounded-2xl bg-space-2/60 p-4">
           <p className="text-sm font-bold">
-            Tu cielo: {litCount} de {total} estrellas encendidas
+            Lugares visitados: {litCount} de {total}
           </p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
             <div className="h-full rounded-full bg-me" style={{ width: `${total ? (litCount / total) * 100 : 0}%` }} />
           </div>
           <p className="mt-2 text-xs text-muted">
-            Las estrellas tenues son las que te faltan. Las que tienen anillo dorado te dan un regalo en tu primera visita.
+            Cada lugar donde enseñas tu credencial cuenta como visitado. Muchos te dan un regalo en tu primera visita.
           </p>
         </div>
         {!confirming ? (

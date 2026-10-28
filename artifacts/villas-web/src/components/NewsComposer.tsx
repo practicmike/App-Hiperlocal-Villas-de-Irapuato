@@ -54,7 +54,7 @@ export function NewsComposer({
       <p className="flex items-center gap-2 font-black">
         <Sparkles size={18} className="text-ai" /> Hoy en Villas
       </p>
-      <p className="mb-3 text-xs text-muted">Una novedad del día. Dura 24 horas y en el universo tu estrella late para que la vean.</p>
+      <p className="mb-3 text-xs text-muted">Una novedad del día. Dura 24 horas y aparece en Novedades para que los vecinos la vean.</p>
 
       {current && (
         <div className="mb-3 flex gap-3 rounded-2xl bg-space-2/70 p-3">

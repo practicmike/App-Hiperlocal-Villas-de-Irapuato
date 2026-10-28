@@ -508,7 +508,7 @@ router.post("/admin/places", async (req, res) => {
   const body = AdminCreatePlaceBody.parse(req.body);
   const c = await constellationById(body.constellation);
   if (!c) {
-    res.status(400).json({ message: "Esa constelación no existe." });
+    res.status(400).json({ message: "Esa categoría no existe." });
     return;
   }
   const [place0] = await db.insert(placesTable).values(cleanPlaceInput(body, c.isProperty)).returning();
@@ -522,7 +522,7 @@ router.put("/admin/places/:id", async (req, res) => {
   const body = AdminUpdatePlaceBody.parse(req.body);
   const c = await constellationById(body.constellation);
   if (!c) {
-    res.status(400).json({ message: "Esa constelación no existe." });
+    res.status(400).json({ message: "Esa categoría no existe." });
     return;
   }
   const [place] = await db
@@ -590,7 +590,7 @@ router.post("/admin/constellations", async (req, res) => {
   const current = await listConstellations();
   if (current.length >= MAX_CONSTELLATIONS) {
     res.status(400).json({
-      message: `Ya tienes ${MAX_CONSTELLATIONS} constelaciones, el máximo para que se lean bien en un celular. Junta o elimina una antes de crear otra.`,
+      message: `Ya tienes ${MAX_CONSTELLATIONS} categorías, el máximo para que se lean bien en un celular. Junta o elimina una antes de crear otra.`,
     });
     return;
   }
@@ -628,7 +628,7 @@ router.put("/admin/constellations/:cid", async (req, res) => {
     .where(eq(constellationsTable.id, cid))
     .returning({ id: constellationsTable.id });
   if (!updated) {
-    res.status(404).json({ message: "Constelación no encontrada." });
+    res.status(404).json({ message: "Categoría no encontrada." });
     return;
   }
   res.json((await listConstellations()).find((c) => c.id === cid));
@@ -641,16 +641,16 @@ router.post("/admin/constellations/:cid/remove", async (req, res) => {
   const all = await listConstellations();
   const target = all.find((c) => c.id === cid);
   if (!target) {
-    res.status(404).json({ message: "Constelación no encontrada." });
+    res.status(404).json({ message: "Categoría no encontrada." });
     return;
   }
   if (all.length <= 1) {
-    res.status(400).json({ message: "El universo necesita al menos una constelación." });
+    res.status(400).json({ message: "Necesitas al menos una categoría." });
     return;
   }
   if (target.starCount > 0) {
     if (!moveTo || moveTo === cid || !all.some((c) => c.id === moveTo)) {
-      res.status(400).json({ message: `Tiene ${target.starCount} estrellas. Elige a qué constelación moverlas.` });
+      res.status(400).json({ message: `Tiene ${target.starCount} lugares. Elige a qué categoría moverlos.` });
       return;
     }
   }
@@ -753,7 +753,7 @@ router.post(
       .from(placePhotosTable)
       .where(eq(placePhotosTable.placeId, id));
     if ((count?.n ?? 0) >= MAX_PHOTOS) {
-      res.status(400).json({ message: `Máximo ${MAX_PHOTOS} fotos por estrella. Borra una para subir otra.` });
+      res.status(400).json({ message: `Máximo ${MAX_PHOTOS} fotos por lugar. Borra una para subir otra.` });
       return;
     }
     const dim = (h: unknown) => Math.max(1, Math.min(10000, Number(h) || 1));

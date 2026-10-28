@@ -71,6 +71,13 @@
       "when": 1793067872844,
       "tag": "0009_recomendacion",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793158102313,
+      "tag": "0010_guardados",
+      "breakpoints": true
     }
   ]
 }

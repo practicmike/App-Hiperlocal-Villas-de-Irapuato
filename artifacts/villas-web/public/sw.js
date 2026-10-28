@@ -1,10 +1,10 @@
 /*
- * Service worker de Villas: lo justo para instalarse y abrir rápido.
+ * Service worker de OrbiTú Villas: lo justo para instalarse y abrir rápido.
  * - Archivos de la app (/assets) y fotos: se guardan en el celular (nunca cambian).
  * - Páginas: siempre de la red; si no hay señal, la última versión guardada.
  * - API: siempre de la red (datos al día, sesiones seguras).
  */
-const VERSION = "villas-v2";
+const VERSION = "orbitu-v3";
 const SHELL = "/index.html";
 
 self.addEventListener("install", (e) => {

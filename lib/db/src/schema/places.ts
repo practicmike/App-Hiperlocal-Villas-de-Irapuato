@@ -137,6 +137,21 @@ export const endorsementsTable = pgTable(
   (t) => [unique("endorsements_place_resident").on(t.placeId, t.residentId)],
 );
 
+/** Guardados: lugares que el vecino quiere tener a mano para después. Privados, solo él los ve. */
+export const savedPlacesTable = pgTable(
+  "saved_places",
+  {
+    residentId: uuid("resident_id")
+      .notNull()
+      .references(() => residentsTable.id, { onDelete: "cascade" }),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("saved_places_resident_place").on(t.residentId, t.placeId)],
+);
+
 /**
  * Visita registrada: el comercio escaneó la credencial del vecino.
  * Es lo que enciende la estrella en el cielo de ese vecino.

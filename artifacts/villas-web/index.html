@@ -6,12 +6,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Villas" />
+    <meta name="apple-mobile-web-app-title" content="OrbiTú" />
+    <meta name="application-name" content="OrbiTú Villas" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#0b0d1f" />
-    <meta name="description" content="La guía de confianza de Villas de Irapuato, hecha por los propios vecinos." />
-    <title>Villas · Universo de vecinos</title>
+    <meta name="description" content="OrbiTú Villas: la guía de confianza de Villas de Irapuato, hecha por los propios vecinos." />
+    <title>OrbiTú Villas</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <style>
@@ -19,7 +20,8 @@
       html, body { margin: 0; height: 100%; background: #0b0d1f; }
       #boot { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, #1d2160 0%, #0b0d1f 62%); }
       #boot img { width: 96px; height: 96px; border-radius: 22px; animation: boot 1.6s ease-in-out infinite; }
-      #boot p { margin: 18px 0 0; text-align: center; font: 900 22px Lato, system-ui, sans-serif; color: #eef0ff; letter-spacing: .02em; }
+      #boot p { margin: 18px 0 0; text-align: center; font: 900 24px Lato, system-ui, sans-serif; color: #eef0ff; letter-spacing: .01em; }
+      #boot p span { font-weight: 400; color: #a6abd6; }
       @keyframes boot { 50% { transform: scale(1.06); filter: drop-shadow(0 0 18px #6eb5ff88); } }
       @media (prefers-reduced-motion: reduce) { #boot img { animation: none; } }
     </style>
@@ -28,7 +30,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap">
   </head>
   <body>
-    <div id="root"><div id="boot"><div><img src="/icon-192.png" alt="" /><p>villas</p></div></div></div>
+    <div id="root"><div id="boot"><div><img src="/icon-192.png" alt="" /><p>OrbiTú <span>Villas</span></p></div></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
