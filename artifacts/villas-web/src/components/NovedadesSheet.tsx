@@ -2,6 +2,7 @@ import type { NewsItem, PlaceSummary } from "@workspace/api-client-react";
 import { Bell, X } from "lucide-react";
 import type { Constellation } from "@/lib/constellations";
 import { store } from "@/lib/storage";
+import { PlaceTile } from "@/components/PlaceTile";
 
 const SEEN_KEY = "villas-novedades-visto";
 /** Un lugar cuenta como "nuevo" durante una semana. */
@@ -50,6 +51,7 @@ export function NovedadesSheet({
 }) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const fresh = newPlaces(places);
+  const byPlace = new Map(places.map((p) => [p.id, p]));
   const dot = (cid: string) => constellations.get(cid)?.color ?? "#7d80d9";
   return (
     <div className="absolute inset-0 z-40 flex items-end justify-center bg-black/40" onClick={onClose}>
@@ -82,9 +84,12 @@ export function NovedadesSheet({
                     {n.photoUrl ? (
                       <img src={`${base}${n.photoUrl}`} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
                     ) : (
-                      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl" style={{ background: `${dot(n.constellation)}22` }}>
-                        <span className="h-3 w-3 rounded-full" style={{ background: dot(n.constellation) }} />
-                      </span>
+                      <PlaceTile
+                        size={56}
+                        color={dot(n.constellation)}
+                        category={byPlace.get(n.placeId)?.category ?? ""}
+                        name={n.placeName}
+                      />
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-bold" style={{ color: dot(n.constellation) }}>
@@ -106,7 +111,7 @@ export function NovedadesSheet({
               {fresh.map((p) => (
                 <li key={p.id}>
                   <button onClick={() => onOpen(p.id)} className="flex w-full items-center gap-3 border-b border-white/5 py-3 text-left">
-                    <span className="h-11 w-11 shrink-0 rounded-xl" style={{ background: dot(p.constellation) }} aria-hidden />
+                    <PlaceTile color={dot(p.constellation)} category={p.category} name={p.name} coverUrl={p.coverUrl} />
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{p.name}</span>
                       <span className="block text-sm text-muted">
