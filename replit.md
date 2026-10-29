@@ -59,7 +59,6 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Inicio y radar: `artifacts/villas-web/src/pages/HomePage.tsx`, `src/components/RadarMap.tsx` (Leaflet + OpenStreetMap), `src/lib/geo.ts`
 - Novedades (sin push, dentro de la app): `src/components/NovedadesSheet.tsx`
 - Guardados (favoritos del vecino, en la base: tabla `saved_places`): `src/lib/saved.ts`, botón en `PlaceSheet.tsx`
-- Universo (ya no está en la navegación; se conserva para reutilizarlo): `src/pages/UniversePage.tsx`, `src/components/UniverseCanvas.tsx`, `src/lib/layout.ts`
 - Paleta y constelaciones: `artifacts/villas-web/src/index.css`, `src/lib/constellations.ts`
 
 ## Architecture decisions
@@ -83,6 +82,8 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Panel del creador: señales de que funciona, invitaciones, aprobar vecinos y enviar llaves, alta de lugares, búsquedas sin resultado y quejas.
 
 ## Gotchas
+
+- Sin «pedir para recoger»: el contacto es solo WhatsApp y la etiqueta de domicilio. La columna `places.pickup` queda en la base sin usarse en pantalla.
 
 - En pantalla se dice «lugares» y «categorías»; en el código siguen llamándose `places` y `constellations` (no renombrar tablas ni rutas).
 
