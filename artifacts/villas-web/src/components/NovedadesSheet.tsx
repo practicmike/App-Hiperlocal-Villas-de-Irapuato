@@ -4,8 +4,8 @@ import type { Constellation } from "@/lib/constellations";
 import { store } from "@/lib/storage";
 
 const SEEN_KEY = "villas-novedades-visto";
-/** Una estrella cuenta como "nueva" durante dos semanas. */
-const NEW_DAYS = 14;
+/** Un lugar cuenta como "nuevo" durante una semana. */
+const NEW_DAYS = 7;
 
 const ago = (iso: string) => {
   const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -33,7 +33,7 @@ export const markSeen = () => store.set(SEEN_KEY, new Date().toISOString());
 
 /**
  * Novedades dentro de la app: lo que publicaron hoy los comercios ("Hoy en Villas")
- * y quién se sumó a Villas en las últimas dos semanas.
+ * y quién se sumó a Villas en la última semana.
  */
 export function NovedadesSheet({
   news,

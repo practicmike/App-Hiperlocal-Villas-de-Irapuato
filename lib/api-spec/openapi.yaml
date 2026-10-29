@@ -108,6 +108,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /auth/request:
+    post:
+      operationId: requestAccess
+      tags: [auth]
+      summary: Pedir entrar sin código; queda pendiente hasta que el creador lo conozca y lo apruebe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResidentUpdate"
+      responses:
+        "201":
+          description: Solicitud registrada
+        "400":
+          description: Datos inválidos o WhatsApp ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/key:
     post:
       operationId: loginWithKey

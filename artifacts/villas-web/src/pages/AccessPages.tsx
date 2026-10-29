@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useJoinWithInvite,
+  useRequestAccess,
   useLoginWithKey,
   useGetCreator,
   getGetCreatorQueryKey,
@@ -27,30 +27,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Para quien aún no tiene llave: quién hizo esto y cómo entrar. */
+/**
+ * Para quien aún no entra: qué es y cómo pedir entrar. Sin códigos ni llaves:
+ * deja nombre y WhatsApp, y el creador lo conoce en persona y le muestra su QR.
+ */
 export function LandingPage({ creator }: { creator: Creator }) {
-  const join = useJoinWithInvite();
-  const [form, setForm] = useState({ code: "", name: "", phone: "", zone: "" });
+  const request = useRequestAccess();
+  const [form, setForm] = useState({ name: "", phone: "", zone: "" });
   const firstName = creator.name.split(" ")[0] ?? creator.name;
 
-  if (join.isSuccess) {
+  if (request.isSuccess) {
     return (
       <Shell>
         <h1 className="mb-3 text-3xl font-black">¡Listo, {form.name.split(" ")[0]}!</h1>
         <p className="mb-6 text-ink/90">
-          Te invitó {join.data.invitedBy}. {firstName} te va a escribir por WhatsApp para presentarse y mandarte tu{" "}
-          <b>llave personal</b>: un link que abre la guía en tu teléfono.
+          {firstName} te va a buscar para conocerte. Cuando se vean, te enseña un código QR en su teléfono: lo escaneas con tu
+          cámara y ya estás dentro.
         </p>
-        {creator.whatsapp && (
-          <a
-            href={whatsappLink(creator.whatsapp, `Hola ${firstName}, soy ${form.name}. Acabo de registrarme en la guía de Villas.`)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 font-black text-space"
-          >
-            <MessageCircle size={20} /> Avisarle a {firstName}
-          </a>
-        )}
+        <Link href="/" className="block rounded-2xl bg-primary py-3.5 text-center font-black text-space">
+          Mientras, ver la guía
+        </Link>
       </Shell>
     );
   }
@@ -80,41 +76,26 @@ export function LandingPage({ creator }: { creator: Creator }) {
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          join.mutate({
-            data: { code: form.code, name: form.name, phone: form.phone, zone: form.zone || undefined },
-          });
+          request.mutate({ data: { name: form.name, phone: form.phone, zone: form.zone || null } });
         }}
       >
-        <h2 className="text-lg font-black">Tengo un código de invitación</h2>
-        <Field label="Código" value={form.code} onChange={set("code")} placeholder="VILLAS-XXXXXX" autoCapitalize="characters" required />
-        <Field label="Tu nombre" value={form.name} onChange={set("name")} autoComplete="name" required minLength={2} />
+        <h2 className="text-lg font-black">Quiero entrar</h2>
+        <Field label="Tu nombre" value={form.name} onChange={set("name")} autoComplete="name" required minLength={2} maxLength={80} />
         <Field label="Tu WhatsApp (10 dígitos)" value={form.phone} onChange={set("phone")} inputMode="tel" autoComplete="tel" required />
-        <Field label="Privada o sección (opcional)" value={form.zone} onChange={set("zone")} />
-        <p className="text-xs text-muted">
-          Tu WhatsApp solo lo ve {firstName} para darte acceso.
-        </p>
-        {join.isError && <p className="text-sm text-alert">{errorMessage(join.error, "No se pudo registrar.")}</p>}
+        <Field label="Privada o sección (opcional)" value={form.zone} onChange={set("zone")} maxLength={80} />
+        <p className="text-xs text-muted">Tu WhatsApp solo lo ve {firstName}, para contactarte y darte de alta.</p>
+        {request.isError && <p className="text-sm text-alert">{errorMessage(request.error, "No se pudo enviar. Intenta otra vez.")}</p>}
         <button
-          disabled={join.isPending}
+          disabled={request.isPending}
           className="w-full rounded-2xl bg-primary py-3.5 font-black text-space disabled:opacity-50"
         >
-          {join.isPending ? "Enviando…" : "Pedir mi llave"}
+          {request.isPending ? "Enviando…" : "Enviar"}
         </button>
       </form>
 
       <Link href="/" className="mt-6 block text-center text-sm font-bold text-primary underline underline-offset-4">
         Primero quiero ver la guía
       </Link>
-      {creator.whatsapp && (
-        <a
-          href={whatsappLink(creator.whatsapp, "Hola, me gustaría entrar a la guía de vecinos de Villas.")}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 text-center text-sm text-muted underline underline-offset-4"
-        >
-          ¿Sin código? Escríbele a {firstName}
-        </a>
-      )}
     </Shell>
   );
 }
@@ -159,24 +140,24 @@ export function KeyLoginPage({ token }: { token: string }) {
         <KeyRound className="mx-auto mb-4 text-primary" size={40} />
         {login.isError ? (
           <>
-            <h1 className="mb-2 text-2xl font-black">Esta llave ya no abre</h1>
+            <h1 className="mb-2 text-2xl font-black">Este acceso ya no abre</h1>
             <p className="mb-6 text-ink/80">
               {errorMessage(login.error, "Pide una nueva al creador.").replace("al creador", `a ${creatorFirst}`)}
             </p>
             {creator.data?.whatsapp && (
               <a
-                href={whatsappLink(creator.data.whatsapp, `Hola ${creatorFirst}, mi llave de la guía de Villas ya no abre. ¿Me mandas una nueva?`)}
+                href={whatsappLink(creator.data.whatsapp, `Hola ${creatorFirst}, mi acceso a OrbiTú Villas ya no abre. ¿Me das uno nuevo?`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mb-4 inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 font-black text-space"
               >
-                <MessageCircle size={18} /> Pedir llave nueva a {creatorFirst}
+                <MessageCircle size={18} /> Pedir acceso nuevo a {creatorFirst}
               </a>
             )}
             <a href="/" className="block text-sm text-muted underline">Ir al inicio</a>
           </>
         ) : (
-          <h1 className="text-2xl font-black">Abriendo Villas…</h1>
+          <h1 className="text-2xl font-black">Abriendo OrbiTú Villas…</h1>
         )}
       </div>
     </Shell>

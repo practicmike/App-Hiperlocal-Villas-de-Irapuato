@@ -64,7 +64,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 
 ## Architecture decisions
 
-- **Acceso por llave personal, sin contraseñas ni SMS.** Camino principal: en Panel → Vecinos, «Dar de alta» con nombre y WhatsApp; el vecino queda aprobado y escanea el QR de su llave en tu teléfono (o se la mandas por WhatsApp). Alternativa a distancia: código de invitación → vecino pendiente → apruebas y le envías el link `/llave/<token>`. Solo se guarda el hash SHA-256 de llaves y sesiones. Regenerar o bloquear corta el acceso al instante.
+- **Acceso por llave personal, sin contraseñas ni SMS.** Camino principal: en Panel → Vecinos, «Dar de alta» con nombre y WhatsApp; el vecino queda aprobado y escanea el QR de su llave en tu teléfono (o se la mandas por WhatsApp). Si alguien te encuentra solo: en /unirme deja nombre y WhatsApp (sin código), queda pendiente y al aprobarlo te sale el mismo QR. Los códigos de invitación ya no se usan en pantalla (la ruta /auth/join sigue por compatibilidad). Solo se guarda el hash SHA-256 de llaves y sesiones. Regenerar o bloquear corta el acceso al instante.
 - **Universo en 2D con profundidad, no 3D real.** La regla "fluido en gama media" pesa más; el zoom solo cambia dos variables CSS por cuadro (`--kl`, `--ks`), sin renders de React.
 - **Sin resultados no se manda a WhatsApp.** El vecino elige «Recomendar o proponer» (queda en `searches.suggestion`, visible en Panel → Búsquedas) o «Intentar otra búsqueda».
 - **Búsqueda: palabras + embeddings, gana el mayor.** El embedding de cada lugar se calcula al guardarlo (no en cada búsqueda); el de la consulta se cachea. Toda búsqueda se registra para medir y para que las vacías lleguen al creador.
@@ -77,7 +77,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Radar: calles reales, tú al centro con anillos de 200 y 500 m. Al buscar muestra solo lo que coincide; "o explora lo que hay cerca" muestra todo. Lista por distancia; los oficios y lo que no tiene ubicación van en "A domicilio", sin punto en el mapa.
 - Ubicación del vecino: se pide al abrir el radar, vive en memoria y nunca se manda al servidor. A más de 5 km de Villas el radar abre en Villas, sin distancias.
 - Ubicación de cada lugar: en el panel, «Usar mi ubicación» parado en el local (o pegando coordenadas de Google Maps).
-- Novedades: campana con punto cuando hay algo que no has visto (Hoy en Villas + lugares nuevos de las últimas 2 semanas). Sin notificaciones push.
+- Novedades: campana con punto cuando hay algo que no has visto (Hoy en Villas + lugares nuevos de los últimos 7 días). Sin notificaciones push.
 - Tarjeta: quién es, qué ofrece, quién lo recomienda, botón a WhatsApp, "Lo recomiendo" y queja privada.
 - Vista en lista equivalente.
 - Panel del creador: señales de que funciona, invitaciones, aprobar vecinos y enviar llaves, alta de lugares, búsquedas sin resultado y quejas.

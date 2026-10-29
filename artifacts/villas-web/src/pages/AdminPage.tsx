@@ -9,8 +9,6 @@ import {
   useAdminCreateResident,
   useAdminRegenerateKey,
   useAdminBlockResident,
-  useAdminListInvites,
-  useAdminCreateInvite,
   useAdminListPlaces,
   useAdminCreatePlace,
   useAdminUpdatePlace,
@@ -33,7 +31,6 @@ import {
   useAdminListVisits,
   useAdminDeleteVisit,
   useAdminClearVisits,
-  useAdminDeleteInvite,
   useAdminDeleteSearch,
   useAdminDeletePhoto,
   useAdminReorderPhotos,
@@ -54,7 +51,6 @@ import {
   type AdminConstellation,
   type ConstellationInput,
   getAdminListResidentsQueryKey,
-  getAdminListInvitesQueryKey,
   getAdminListPlacesQueryKey,
   getAdminListSearchesQueryKey,
   getAdminListComplaintsQueryKey,
@@ -66,7 +62,7 @@ import {
   type PlaceInput,
   type Creator,
 } from "@workspace/api-client-react";
-import { ArrowLeft, ChevronDown, Copy, MessageCircle, UserPlus } from "lucide-react";
+import { ArrowLeft, Copy, MessageCircle, UserPlus } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
 import { NewsComposer } from "@/components/NewsComposer";
@@ -140,15 +136,15 @@ function Overview() {
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Señales de que funciona · 30 días</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Stat label="Vecinos por invitación" value={o.residentsByInvite} hint={`${o.residentsApproved} aprobados`} />
+          <Stat label="Vecinos dentro" value={o.residentsApproved} hint="Con acceso aprobado" />
           <Stat label="Búsquedas → WhatsApp" value={`${pct}%`} hint={`${o.searchesWithContact30d} de ${o.searches30d}`} accent="#50e3c2" />
           <Stat label="Búsquedas sin resultado" value={o.searchesNoResult30d} hint="Lo que falta en Villas" accent="#e6c882" />
-          <Stat label="Búsquedas de visitantes" value={o.guestSearches30d} hint="Gente sin llave probando" accent="#c38cf3" />
+          <Stat label="Búsquedas de visitantes" value={o.guestSearches30d} hint="Gente sin acceso probando" accent="#c38cf3" />
           <Stat label="Visitas registradas" value={o.visits30d} hint="Credenciales escaneadas en comercios" accent="#6eb5ff" />
         </div>
       </section>
       <section className="grid grid-cols-3 gap-3">
-        <Stat label="Pendientes" value={o.residentsPending} accent={o.residentsPending ? "#7d80d9" : undefined} />
+        <Stat label="Piden entrar" value={o.residentsPending} accent={o.residentsPending ? "#7d80d9" : undefined} />
         <Stat label="Lugares" value={o.places} />
         <Stat label="Quejas abiertas" value={o.openComplaints} accent={o.openComplaints ? "#ffabab" : undefined} />
       </section>
@@ -261,9 +257,7 @@ function QuickAdd({ onCreated }: { onCreated: (k: AccessKey) => void }) {
 function Residents({ me }: { me: string }) {
   const qc = useQueryClient();
   const { data: residents } = useAdminListResidents();
-  const { data: invites } = useAdminListInvites();
   const [key, setKey] = useState<AccessKey | null>(null);
-  const [note, setNote] = useState("");
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: getAdminListResidentsQueryKey() });
     void qc.invalidateQueries({ queryKey: getAdminOverviewQueryKey() });
@@ -280,19 +274,7 @@ function Residents({ me }: { me: string }) {
       },
     },
   });
-  const invite = useAdminCreateInvite({
-    mutation: {
-      onSuccess: () => {
-        setNote("");
-        void qc.invalidateQueries({ queryKey: getAdminListInvitesQueryKey() });
-      },
-    },
-  });
-  const unusedInvites = invites?.filter((i) => !i.usedBy) ?? [];
   const pending = residents?.filter((r) => r.status === "pending") ?? [];
-  const dropInvite = useAdminDeleteInvite({
-    mutation: { onSuccess: () => void qc.invalidateQueries({ queryKey: getAdminListInvitesQueryKey() }) },
-  });
 
   return (
     <div className="space-y-8">
@@ -302,66 +284,10 @@ function Residents({ me }: { me: string }) {
 
       {pending.length > 0 && (
         <p className="rounded-xl bg-[#E6C882]/10 px-3 py-2 text-sm text-casas">
-          {pending.length} {pending.length === 1 ? "vecino espera" : "vecinos esperan"} tu aprobación (abajo).
+          {pending.length} {pending.length === 1 ? "persona pidió" : "personas pidieron"} entrar. Cuando la conozcas, toca «Ya lo conocí · aprobar» y enséñale el QR.
         </p>
       )}
 
-      <details className="group rounded-2xl border border-white/10 px-4 py-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-muted">
-          Invitar con código (si no puedes verlo en persona)
-          <ChevronDown size={16} className="transition group-open:rotate-180" />
-        </summary>
-      <section className="pt-3">
-        <p className="mb-3 text-xs text-muted">La persona entra a la app, pone el código y sus datos; luego tú la apruebas aquí y le mandas su llave.</p>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            invite.mutate({ data: { note } });
-          }}
-        >
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Para quién (ej. Laura, Privada Encino)"
-            maxLength={120}
-            className="min-w-0 flex-1 rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-          <button disabled={invite.isPending} className="rounded-xl bg-primary px-4 text-sm font-bold text-space">
-            Crear código
-          </button>
-        </form>
-        {unusedInvites.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {unusedInvites.map((i) => (
-              <li key={i.code} className="flex items-center justify-between gap-2 rounded-xl bg-panel px-3 py-2 text-sm">
-                <span>
-                  <b className="font-mono">{i.code}</b>
-                  {i.note && <span className="text-muted"> · {i.note}</span>}
-                </span>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Te invito a la guía de vecinos de Villas. Entra a ${window.location.origin}${import.meta.env.BASE_URL} y usa el código ${i.code}`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-xs font-bold text-confianza"
-                >
-                  Compartir
-                </a>
-                <button
-                  aria-label={`Borrar código ${i.code}`}
-                  onClick={() => dropInvite.mutate({ code: i.code })}
-                  className="shrink-0 rounded-full px-2 text-alert/70"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      </details>
 
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Vecinos</h2>

@@ -97,6 +97,28 @@ export const JoinWithInviteResponse = zod.object({
 
 
 /**
+ * @summary Pedir entrar sin código; queda pendiente hasta que el creador lo conozca y lo apruebe
+ */
+export const requestAccessBodyNameMin = 2;
+export const requestAccessBodyNameMax = 80;
+
+export const requestAccessBodyPhoneMin = 10;
+export const requestAccessBodyPhoneMax = 20;
+
+export const requestAccessBodyZoneMax = 80;
+
+
+
+export const RequestAccessBody = zod.object({
+  "name": zod.string().min(requestAccessBodyNameMin).max(requestAccessBodyNameMax),
+  "phone": zod.string().min(requestAccessBodyPhoneMin).max(requestAccessBodyPhoneMax),
+  "zone": zod.string().max(requestAccessBodyZoneMax).nullable()
+})
+
+export const RequestAccessResponse = zod.void()
+
+
+/**
  * @summary Entrar con la llave personal; crea la sesión
  */
 export const loginWithKeyBodyTokenMin = 20;

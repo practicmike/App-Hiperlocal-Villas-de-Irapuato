@@ -193,7 +193,7 @@ export function Card({
             href="/unirme"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-base font-black text-space active:scale-[0.98]"
           >
-            <KeyRound size={20} /> Únete para ver el contacto
+            <KeyRound size={20} /> Pide entrar para ver el contacto
           </Link>
           <p className="pb-2 text-center text-xs text-muted">
             Los vecinos de Villas ven el WhatsApp, quién atiende y quién lo recomienda.
