@@ -183,7 +183,7 @@ router.post("/admin/residents", async (req, res) => {
     .where(eq(residentsTable.phone, phone))
     .limit(1);
   if (dup) {
-    res.status(409).json({ message: `Ese WhatsApp ya es de ${dup.name}. Búscalo en la lista y dale «Nueva llave».` });
+    res.status(409).json({ message: `Ese WhatsApp ya es de ${dup.name}. Búscalo en la lista y dale «Nuevo acceso».` });
     return;
   }
   const [r] = await db

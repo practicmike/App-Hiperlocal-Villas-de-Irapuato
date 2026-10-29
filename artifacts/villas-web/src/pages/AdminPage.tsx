@@ -193,14 +193,14 @@ function KeyBox({ k, me, onDone }: { k: AccessKey; me: string; onDone: () => voi
         <div
           className="mx-auto mb-3 w-full max-w-[260px] rounded-2xl bg-white p-3 [&>svg]:h-auto [&>svg]:w-full"
           role="img"
-          aria-label={`QR con la llave de ${k.name}`}
+          aria-label={`QR de acceso de ${k.name}`}
           dangerouslySetInnerHTML={{ __html: svg }}
         />
       )}
       <p className="mb-3 text-center text-xs text-muted">Funciona una sola vez, en el primer teléfono que la abra.</p>
       <div className="flex flex-wrap justify-center gap-2">
         <a
-          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de OrbiTú Villas. Esta es tu llave personal. Ábrela en tu teléfono; funciona una sola vez, así que no la reenvíes: ${link}`)}
+          href={whatsappLink(k.phone, `Hola ${first}, soy ${me}, de OrbiTú Villas. Este es tu acceso personal. Ábrelo en tu teléfono; funciona una sola vez, así que no lo reenvíes: ${link}`)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 font-bold text-[#0b3d1f]"
@@ -315,7 +315,7 @@ function Residents({ me }: { me: string }) {
                 {r.role === "admin" && (
                   <div className="mt-3">
                     <button onClick={() => regen.mutate({ id: r.id })} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold">
-                      Nueva llave para mí (otro teléfono o computadora)
+                      Nuevo acceso para mí (otro teléfono o computadora)
                     </button>
                     <button onClick={() => setEditingId(editingId === r.id ? null : r.id)} className="ml-2 rounded-full px-3 py-1.5 text-xs text-muted">
                       Editar
@@ -331,7 +331,7 @@ function Residents({ me }: { me: string }) {
                     )}
                     {r.status === "approved" && (
                       <button onClick={() => regen.mutate({ id: r.id })} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold">
-                        Nueva llave
+                        Nuevo acceso
                       </button>
                     )}
                     {r.status !== "blocked" && (
@@ -374,16 +374,16 @@ function Residents({ me }: { me: string }) {
 function KeyStatus({ r }: { r: AdminResident }) {
   const text =
     r.keyStatus === "none"
-      ? "Sin llave vigente"
+      ? "Sin acceso vigente"
       : r.keyStatus === "unused"
-        ? "Llave enviada · aún sin abrir"
-        : `Llave abierta el ${fmtDate(r.keyUsedAt!)}`;
+        ? "Acceso creado · aún sin abrir"
+        : `Entró el ${fmtDate(r.keyUsedAt!)}`;
   return (
     <div className="mt-2 space-y-1 text-xs">
       <p className={r.keyStatus === "unused" ? "text-casas" : "text-muted"}>{text}</p>
       {r.keyRejectedAttempts > 0 && (
         <p className="rounded-lg bg-alert/15 px-2 py-1 text-alert">
-          ⚠ Alguien intentó abrir su llave ya usada {r.keyRejectedAttempts} {r.keyRejectedAttempts === 1 ? "vez" : "veces"}. Puede que la haya reenviado. Escríbele y, si hace falta, genera una nueva.
+          ⚠ Alguien intentó usar su acceso ya usado {r.keyRejectedAttempts} {r.keyRejectedAttempts === 1 ? "vez" : "veces"}. Puede que la haya reenviado. Escríbele y, si hace falta, genera una nueva.
         </p>
       )}
     </div>
@@ -669,7 +669,7 @@ function Places({ editId }: { editId: string | null }) {
           className="min-w-0 flex-1 rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none"
         />
         <button onClick={() => setEditing({ id: null, form: { ...EMPTY, constellation: cons?.[0]?.id ?? "" } })} className="rounded-xl bg-primary px-4 text-sm font-bold text-space">
-          + Nueva
+          + Nuevo
         </button>
       </div>
       <DemoTools places={places ?? []} onChange={done} />
@@ -908,7 +908,7 @@ function Searches() {
               </p>
             )}
             <p className="mt-1 text-xs text-muted">
-              {s.residentName ?? "Visitante sin llave"} · {fmtDate(s.createdAt)} · {s.resultCount} {s.resultCount === 1 ? "resultado" : "resultados"}
+              {s.residentName ?? "Visitante sin acceso"} · {fmtDate(s.createdAt)} · {s.resultCount} {s.resultCount === 1 ? "resultado" : "resultados"}
               {s.contacted && " · terminó en WhatsApp"}
             </p>
             {pending && (
@@ -1145,7 +1145,7 @@ function Constellations() {
     <div className="space-y-3">
       <p className="text-xs text-muted">
         Las categorías agrupan los lugares (Comida, Servicios, Salud…). Tú las decides; la IA solo te sugiere en cuál va cada lugar.
-        Máximo {MAX_CONS}: más se enciman en un celular. La primera queda arriba y las demás siguen el reloj.
+        Máximo {MAX_CONS}, para que el vecino las distinga de un vistazo.
       </p>
       <button
         disabled={full}
