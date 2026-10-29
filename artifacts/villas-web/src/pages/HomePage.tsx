@@ -15,7 +15,7 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, Bookmark, Check, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home } from "lucide-react";
+import { ArrowLeft, Bell, Bookmark, Check, Heart, Sparkles, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home } from "lucide-react";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { MeSheet } from "@/components/MeSheet";
@@ -25,6 +25,7 @@ import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
 import { RadarMap, type RadarPoint } from "@/components/RadarMap";
 import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet";
 import { useSaved } from "@/lib/saved";
+import { PlaceTile } from "@/components/PlaceTile";
 import { FALLBACK, byId, placeConstellations } from "@/lib/constellations";
 import { centroid, distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
 
@@ -61,6 +62,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     query: { queryKey: getGetFrequentSearchesQueryKey(), staleTime: 5 * 60_000 },
   }).data;
   const news = useListNews({ query: { queryKey: getListNewsQueryKey(), refetchOnWindowFocus: true, staleTime: 60_000 } }).data ?? [];
+  /** Lo último que publicó un comercio hoy: lo que hace que el inicio cambie cada día. */
+  const latestNews = [...news].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
 
   const [screen, setScreen] = useState<"ask" | "radar">("ask");
   /** Radar mostrando solo lo que el vecino guardó. */
@@ -292,6 +295,41 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
             {status}
 
+            {latestNews && !noResults && (
+              <div className="mt-4 flex items-stretch gap-2">
+                <button
+                  onClick={() => setSelectedId(latestNews.placeId)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-ai/40 bg-panel/80 p-3 text-left"
+                >
+                  <PlaceTile
+                    size={40}
+                    color={(cById.get(latestNews.constellation) ?? FALLBACK).color}
+                    category={places.find((p) => p.id === latestNews.placeId)?.category ?? ""}
+                    name={latestNews.placeName}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-ai">
+                      <Sparkles size={12} aria-hidden /> Hoy en Villas · {latestNews.placeName}
+                    </span>
+                    <span className="line-clamp-2 block text-[15px] font-bold leading-snug">{latestNews.text}</span>
+                  </span>
+                </button>
+                {news.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setNovedadesOpen(true);
+                      markSeen();
+                      setUnseen(false);
+                    }}
+                    className="shrink-0 rounded-2xl border border-white/10 bg-panel/80 px-3 text-sm font-bold text-ai"
+                    aria-label={`Ver ${news.length - 1} novedades más`}
+                  >
+                    +{news.length - 1}
+                  </button>
+                )}
+              </div>
+            )}
+
             {noResults && result && (
               <NoResults
                 key={result.searchId}
@@ -427,12 +465,12 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             >
               <span className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20" aria-hidden />
               <span className="flex w-full items-center justify-between gap-2">
-                <span className="text-sm text-muted">
+                <span className="min-w-0 truncate text-sm text-muted">
                   {isLoading
                     ? "Cargando…"
                     : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? ` y ${atHome.length} a domicilio` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
-                <span className="flex items-center gap-1 text-xs font-bold text-primary">
+                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
                   {sheetOpen ? "Ver mapa" : "Ver lista"}
                   {sheetOpen ? <ChevronDown size={16} aria-hidden /> : <ChevronUp size={16} aria-hidden />}
                 </span>
@@ -638,14 +676,20 @@ function ResultRow({
         onClick={onClick}
         className={`flex w-full items-center gap-3 border-b border-white/5 py-3 text-left ${selected ? "bg-white/5" : ""}`}
       >
-        {place.coverUrl ? (
-          <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}${place.coverUrl}`} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" style={{ boxShadow: `0 0 0 2px ${color}` }} />
-        ) : (
-          <span className="h-11 w-11 shrink-0 rounded-xl" style={{ background: color }} aria-hidden />
-        )}
+        <PlaceTile color={color} category={place.category} name={place.name} coverUrl={place.coverUrl} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{place.name}</span>
-          <span className="block truncate text-sm text-muted">{reason ?? sub ?? place.category}</span>
+          <span className="flex items-center gap-2 text-sm text-muted">
+            <span className="truncate">{reason ?? sub ?? place.category}</span>
+            {place.endorsementCount > 0 && (
+              <span
+                className="flex shrink-0 items-center gap-0.5 font-bold text-alert"
+                aria-label={`${place.endorsementCount} ${place.endorsementCount === 1 ? "vecino lo recomienda" : "vecinos lo recomiendan"}`}
+              >
+                <Heart size={13} fill="currentColor" aria-hidden /> {place.endorsementCount}
+              </span>
+            )}
+          </span>
         </span>
         {right && <span className="shrink-0 text-[15px] font-bold">{right}</span>}
       </button>
