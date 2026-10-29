@@ -108,7 +108,7 @@ export function MeSheet({
           </button>
         ) : (
           <div className="mb-2 rounded-2xl border border-alert/40 bg-alert/10 p-4 text-sm">
-            <p className="mb-3">Para volver a entrar necesitarás una llave nueva de {creatorFirstName}. ¿Cerrar sesión?</p>
+            <p className="mb-3">Para volver a entrar, {creatorFirstName} tendrá que darte acceso otra vez. ¿Cerrar sesión?</p>
             <div className="flex gap-2">
               <button
                 onClick={() => logout.mutate()}

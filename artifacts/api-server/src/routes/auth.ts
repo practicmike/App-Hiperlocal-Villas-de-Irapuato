@@ -136,7 +136,7 @@ router.post("/auth/key", rateLimit("key", 20, 15 * 60_000), async (req, res) => 
     .limit(1);
 
   if (!row || row.resident.status !== "approved") {
-    res.status(401).json({ message: "Esta llave ya no es válida. Pide una nueva al creador." });
+    res.status(401).json({ message: "Este acceso ya no es válido. Pide uno nuevo al creador." });
     return;
   }
 
@@ -159,7 +159,7 @@ router.post("/auth/key", rateLimit("key", 20, 15 * 60_000), async (req, res) => 
       .set({ rejectedAttempts: sql`${accessKeysTable.rejectedAttempts} + 1` })
       .where(eq(accessKeysTable.id, row.key.id));
     res.status(401).json({
-      message: "Esta llave ya se usó en otro teléfono. Por seguridad solo funciona una vez. Pide una nueva al creador.",
+      message: "Este acceso ya se usó en otro teléfono. Por seguridad solo funciona una vez. Pide uno nuevo al creador.",
       used: true,
     });
     return;

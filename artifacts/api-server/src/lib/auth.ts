@@ -92,7 +92,7 @@ export async function loadSession(req: Request, _res: Response, next: NextFuncti
 /** Solo vecinos aprobados entran al universo. */
 export function requireResident(req: Request, res: Response, next: NextFunction) {
   if (!req.resident || req.resident.status !== "approved") {
-    res.status(401).json({ message: "Necesitas tu llave personal para entrar." });
+    res.status(401).json({ message: "Necesitas tu acceso personal para entrar." });
     return;
   }
   next();

@@ -67,8 +67,8 @@ export function SetupPage() {
         <KeyRound size={36} className="mb-4 text-primary" />
         <h1 className="mb-2 text-3xl font-black">Listo, {setup.data.name.split(" ")[0]}</h1>
         <p className="mb-4 text-ink/85">
-          Esta es tu <b>llave personal de creador</b>. Guárdala (por ejemplo, mándatela a ti mismo por WhatsApp). Si la pierdes,
-          vuelve a esta página y genera otra: la anterior deja de servir.
+          Este es tu <b>acceso personal de creador</b>. Guárdalo (por ejemplo, mándatelo a ti mismo por WhatsApp). Si lo pierdes,
+          vuelve a esta página y genera otro: el anterior deja de servir.
         </p>
         <p className="mb-4 break-all rounded-xl bg-space-2 p-3 font-mono text-xs">{link}</p>
         <div className="flex flex-wrap gap-2">
@@ -87,7 +87,7 @@ export function SetupPage() {
     <Shell>
       <Wrench size={32} className="mb-3 text-primary" />
       <h1 className="mb-2 text-3xl font-black">Configuración inicial</h1>
-      <p className="mb-6 text-sm text-ink/80">Solo la primera vez, o si perdiste tu llave de creador.</p>
+      <p className="mb-6 text-sm text-ink/80">Solo la primera vez, o si perdiste tu acceso de creador.</p>
 
       {status.isLoading && <p className="text-sm text-muted">Revisando el servidor…</p>}
       {status.isError && (
@@ -107,7 +107,7 @@ export function SetupPage() {
         >
           {s.hasAdmin && (
             <p className="rounded-xl bg-primary/10 p-3 text-xs text-ink/85">
-              Ya existe una cuenta de creador. Enviar el formulario con el mismo WhatsApp genera una llave nueva y anula la anterior.
+              Ya existe una cuenta de creador. Enviar el formulario con el mismo WhatsApp genera un acceso nuevo y anula el anterior.
             </p>
           )}
           <Field label="Clave de configuración (SETUP_TOKEN)" type="password" autoComplete="off" value={form.token} onChange={(v) => setForm({ ...form, token: v })} />
