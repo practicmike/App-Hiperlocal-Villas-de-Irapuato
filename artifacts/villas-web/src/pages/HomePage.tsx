@@ -15,8 +15,7 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, Bookmark, Check, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, ShoppingBag, X, Home } from "lucide-react";
-import { getPickup, setPickup, type PendingPickup } from "@/lib/pickup";
+import { ArrowLeft, Bell, Bookmark, Check, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home } from "lucide-react";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { MeSheet } from "@/components/MeSheet";
@@ -26,7 +25,7 @@ import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
 import { RadarMap, type RadarPoint } from "@/components/RadarMap";
 import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet";
 import { useSaved } from "@/lib/saved";
-import { FALLBACK, byId, placeConstellations, whatsappLink } from "@/lib/constellations";
+import { FALLBACK, byId, placeConstellations } from "@/lib/constellations";
 import { centroid, distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
 
 /** Si no hay lugares con ubicación todavía: centro de Irapuato, solo para que el mapa abra en algún lado. */
@@ -77,16 +76,6 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const [unseen, setUnseen] = useState(false);
   useEffect(() => setUnseen(hasUnseen(news, places)), [news, places]);
 
-  const [pickup, setPickupState] = useState<PendingPickup | null>(() => getPickup());
-  useEffect(() => {
-    const on = () => setPickupState(getPickup());
-    window.addEventListener("villas-pickup", on);
-    window.addEventListener("focus", on);
-    return () => {
-      window.removeEventListener("villas-pickup", on);
-      window.removeEventListener("focus", on);
-    };
-  }, []);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
@@ -349,11 +338,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           </main>
 
           <nav className="pb-safe relative z-10 mx-auto w-full max-w-lg px-4 pb-4">
-            {pickup && !selectedId && !meOpen ? (
-              <PickupBanner pickup={pickup} meFirst={meFirst} />
-            ) : (
-              !guest && !showIntro && !meOpen && <InstallPrompt />
-            )}
+            {!guest && !showIntro && !meOpen && <InstallPrompt />}
             <button
               onClick={explore}
               className="mx-auto flex min-h-12 items-center justify-center gap-2 px-4 text-[15px] font-bold text-primary"
@@ -665,31 +650,5 @@ function ResultRow({
         {right && <span className="shrink-0 text-[15px] font-bold">{right}</span>}
       </button>
     </li>
-  );
-}
-
-function PickupBanner({ pickup, meFirst }: { pickup: PendingPickup; meFirst: string }) {
-  return (
-    <div className="sheet-enter mb-2 flex w-full items-center gap-3 rounded-2xl border border-[#25D366]/50 bg-panel/95 p-3 shadow-2xl">
-      <ShoppingBag size={20} className="shrink-0 text-[#25D366]" />
-      <p className="min-w-0 flex-1 text-sm">
-        Tu pedido en <b>{pickup.placeName}</b>
-      </p>
-      <a
-        href={whatsappLink(
-          pickup.whatsapp,
-          `Hola${pickup.contactName ? ` ${pickup.contactName}` : ""}, ya estoy afuera para recoger mi pedido. Soy ${meFirst}, de Villas.`,
-        )}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => setPickup(null)}
-        className="shrink-0 rounded-full bg-[#25D366] px-4 py-2 text-xs font-black text-[#0b3d1f]"
-      >
-        Ya llegué
-      </a>
-      <button onClick={() => setPickup(null)} className="rounded-full p-1 text-muted" aria-label="Quitar pedido">
-        <X size={16} />
-      </button>
-    </div>
   );
 }

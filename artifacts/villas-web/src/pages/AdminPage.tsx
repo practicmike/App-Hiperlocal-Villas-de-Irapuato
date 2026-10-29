@@ -601,10 +601,6 @@ function Places({ editId }: { editId: string | null }) {
                   <input type="checkbox" className="accent-[#7d80d9]" checked={f.delivers} onChange={(e) => set("delivers", e.target.checked)} />
                   También entrega a domicilio
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" className="accent-[#7d80d9]" checked={f.pickup} onChange={(e) => set("pickup", e.target.checked)} />
-                  Acepta pedidos para recoger
-                </label>
               </div>
             )}
             <HoursEditor value={f.hours} onChange={(h) => set("hours", h)} />
