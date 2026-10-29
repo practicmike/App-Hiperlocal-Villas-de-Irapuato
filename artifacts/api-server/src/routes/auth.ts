@@ -4,6 +4,7 @@ import { db, residentsTable, invitesTable, accessKeysTable } from "@workspace/db
 import {
   GetCreatorResponse,
   JoinWithInviteBody,
+  RequestAccessBody,
   LoginWithKeyBody,
   UpdateMeBody,
 } from "@workspace/api-zod";
@@ -87,6 +88,35 @@ router.post("/auth/join", rateLimit("join", 10, 60 * 60_000), async (req, res) =
     return;
   }
   res.status(201).json({ status: "pending", invitedBy: result.invitedBy });
+});
+
+/**
+ * Pedir entrar sin código: el vecino deja nombre y WhatsApp y queda pendiente.
+ * El creador lo conoce en persona, lo aprueba en el panel y le muestra su QR.
+ */
+router.post("/auth/request", rateLimit("request", 5, 60 * 60_000), async (req, res) => {
+  const body = RequestAccessBody.parse(req.body);
+  const phone = normalizePhone(body.phone);
+  if (phone.length < 12) {
+    res.status(400).json({ message: "Revisa tu número de WhatsApp (10 dígitos)." });
+    return;
+  }
+  const [existing] = await db
+    .select({ status: residentsTable.status })
+    .from(residentsTable)
+    .where(eq(residentsTable.phone, phone))
+    .limit(1);
+  if (existing) {
+    res.status(400).json({
+      message:
+        existing.status === "pending"
+          ? "Ya recibimos tu solicitud. Pronto te contactan para darte de alta."
+          : "Ese WhatsApp ya está registrado. Si perdiste tu acceso, pide uno nuevo en persona.",
+    });
+    return;
+  }
+  await db.insert(residentsTable).values({ name: body.name.trim(), phone, zone: body.zone?.trim() || null });
+  res.status(201).end();
 });
 
 /**

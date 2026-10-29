@@ -205,7 +205,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     <div className="mt-3 min-h-5 text-center text-sm text-muted" aria-live="polite">
       {search.isPending && (creator.aiEnabled && !guest ? "Buscando el mejor match…" : "Buscando…")}
       {tooManyGuestSearches && (
-        <span className="text-casas">Llegaste al límite de búsquedas de la vista previa. Únete para buscar sin límite.</span>
+        <span className="text-casas">Llegaste al límite de búsquedas de la vista previa. Pide entrar para buscar sin límite.</span>
       )}
       {search.isError && !tooManyGuestSearches && <span className="text-alert">No pude buscar. Revisa tu conexión.</span>}
       {voiceError && !search.isPending && <span className="text-alert">{voiceError}</span>}
@@ -342,7 +342,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                   href="/unirme"
                   className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-panel/80 px-3 py-1.5 text-xs font-bold text-primary"
                 >
-                  <KeyRound size={13} /> Vista previa · Únete para ver contactos
+                  <KeyRound size={13} /> Vista previa · Pide entrar para ver contactos
                 </Link>
               </div>
             )}

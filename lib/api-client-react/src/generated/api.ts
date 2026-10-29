@@ -507,6 +507,94 @@ export const useJoinWithInvite = <TError = ErrorType<ErrorResponse>,
       return useMutation(getJoinWithInviteMutationOptions(options));
     }
 
+export const getRequestAccessUrl = () => {
+
+
+
+
+  return `/api/auth/request`
+}
+
+/**
+ * @summary Pedir entrar sin código; queda pendiente hasta que el creador lo conozca y lo apruebe
+ */
+export const requestAccess = async (residentUpdate: ResidentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getRequestAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(residentUpdate)
+  }
+);}
+
+
+
+
+
+export const getRequestAccessMutationKey = () => ['requestAccess'] as const;
+
+export const getRequestAccessMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestAccess>>, TError,RequestAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestAccess>>, TError,RequestAccessMutationVariables, TContext> => {
+
+const mutationKey = getRequestAccessMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestAccess>>, RequestAccessMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestAccessMutationResult = NonNullable<Awaited<ReturnType<typeof requestAccess>>>
+    export type RequestAccessMutationBody = BodyType<ResidentUpdate>
+    export type RequestAccessMutationError = ErrorType<ErrorResponse>
+    export type RequestAccessMutationVariables = {data: BodyType<ResidentUpdate>}
+
+    /**
+ * @summary Pedir entrar sin código; queda pendiente hasta que el creador lo conozca y lo apruebe
+ */
+export const useRequestAccess = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestAccess>>, TError,RequestAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestAccess>>,
+        TError,
+        RequestAccessMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestAccessMutationOptions(options));
+    }
+
 export const getLoginWithKeyUrl = () => {
 
 
