@@ -35,9 +35,11 @@ interface Props {
   meName: string;
   isAdmin: boolean;
   onClose: () => void;
+  /** Cierra la tarjeta y lleva el radar a este lugar. */
+  onShowOnMap?: (id: string) => void;
 }
 
-export function PlaceSheet({ placeId, searchId, match, constellations, creatorName, creatorWhatsapp = "", meName, isAdmin, onClose }: Props) {
+export function PlaceSheet({ placeId, searchId, match, constellations, creatorName, creatorWhatsapp = "", meName, isAdmin, onClose, onShowOnMap }: Props) {
   const { data: place, isLoading } = useGetPlace(placeId);
 
   return (
@@ -58,7 +60,7 @@ export function PlaceSheet({ placeId, searchId, match, constellations, creatorNa
       {isLoading || !place ? (
         <div className="h-40 animate-pulse" />
       ) : (
-        <Card place={place} searchId={searchId} match={match} info={constellations.get(place.constellation) ?? FALLBACK} creatorName={creatorName} creatorWhatsapp={creatorWhatsapp} meName={meName} isAdmin={isAdmin} />
+        <Card place={place} searchId={searchId} match={match} info={constellations.get(place.constellation) ?? FALLBACK} creatorName={creatorName} creatorWhatsapp={creatorWhatsapp} meName={meName} isAdmin={isAdmin} onShowOnMap={onShowOnMap} />
       )}
     </div>
   );
@@ -73,6 +75,7 @@ export function Card({
   creatorWhatsapp = "",
   meName,
   isAdmin,
+  onShowOnMap,
 }: {
   place: PlaceDetail;
   searchId: string | null;
@@ -82,6 +85,7 @@ export function Card({
   creatorWhatsapp?: string;
   meName: string;
   isAdmin: boolean;
+  onShowOnMap?: (id: string) => void;
 }) {
   const qc = useQueryClient();
   const contact = useRecordContact();
@@ -141,6 +145,8 @@ export function Card({
       </div>
 
       <Facts place={place} color={info.color} />
+
+      <Where place={place} onShowOnMap={onShowOnMap} />
 
       {place.news && <TodayNews news={place.news} />}
 
@@ -335,6 +341,29 @@ function Photos({ photos, name }: { photos: PlaceDetail["photos"]; name: string 
 }
 
 /** Datos duros de un vistazo: abierto ahora, a domicilio, precio y, en casas, recámaras y m². */
+/**
+ * Dónde está: «Ver en el mapa» (el radar de OrbiTú) y «Cómo llegar» (Google Maps).
+ * Oficios no (van a tu casa). Casas donde el visitante pasa por el creador, tampoco:
+ * la ruta exacta se saltaría ese filtro.
+ */
+function Where({ place, onShowOnMap }: { place: PlaceDetail; onShowOnMap?: (id: string) => void }) {
+  if (place.lat == null || place.lng == null || place.kind === "oficio" || place.viaCreator) return null;
+  const directions = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+  const btn = "flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/15 py-3 text-sm font-bold text-primary active:scale-[0.98]";
+  return (
+    <div className="flex gap-2">
+      {onShowOnMap && (
+        <button type="button" onClick={() => onShowOnMap(place.id)} className={btn}>
+          <MapPinned size={18} /> Ver en el mapa
+        </button>
+      )}
+      <a href={directions} target="_blank" rel="noopener noreferrer" className={btn}>
+        <Navigation size={18} /> Cómo llegar
+      </a>
+    </div>
+  );
+}
+
 function Facts({ place, color }: { place: PlaceDetail; color: string }) {
   const [showHours, setShowHours] = useState(false);
   const open = openState(place.hours);
@@ -347,11 +376,7 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
     place.builtM2 != null && { icon: <Home size={15} />, text: `${place.builtM2} m² const.` },
   ].filter(Boolean) as Array<{ icon: React.ReactNode; text: string }>;
   const hasAny = open || place.delivers || place.kind === "oficio" || place.priceLabel || place.zone || place.operation || house.length || place.outsideVillas;
-  // Fuera de Villas no sale en el radar: el botón lleva directo a Google Maps.
-  const directions =
-    place.outsideVillas && place.lat != null && place.lng != null
-      ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`
-      : null;
+
   if (!hasAny) return null;
   return (
     <div className="space-y-2">
@@ -379,11 +404,6 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
           </span>
         ) : (
           place.zone && <span className={`${chip} text-muted`}>{place.zone}</span>
-        )}
-        {directions && (
-          <a href={directions} target="_blank" rel="noopener noreferrer" className={`${chip} font-bold text-primary`}>
-            <Navigation size={15} /> Cómo llegar
-          </a>
         )}
       </div>
       {showHours && (
