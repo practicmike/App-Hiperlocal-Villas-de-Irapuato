@@ -165,9 +165,14 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           ? (rank.get(a.place.id) ?? 0) - (rank.get(b.place.id) ?? 0)
           : a.place.name.localeCompare(b.place.name, "es"),
     );
+  // Casas y departamentos: en la lista, nunca en el radar.
+  const isHome = (p: PlaceSummary) => cById.get(p.constellation)?.isProperty === true;
+  const homes = inVillas
+    .filter(isHome)
+    .sort((a, b) => (result ? (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0) : a.name.localeCompare(b.name, "es")));
   // A domicilio: los que van a tu casa o aún no tienen ubicación. Sin punto en el mapa.
   const atHome = inVillas
-    .filter((p) => p.lat == null || p.lng == null)
+    .filter((p) => (p.lat == null || p.lng == null) && !isHome(p))
     .sort((a, b) => (result ? (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0) : a.name.localeCompare(b.name, "es")));
   // Negocios de vecinos fuera de Villas: bloque aparte, sin punto en el radar, con su distancia a Villas.
   const outside = shown
@@ -198,21 +203,21 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
         .map((c) => ({
           c,
           near: withDistance.filter(({ place: p }) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
-          home: atHome.filter((p) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
+          home: [...homes, ...atHome].filter((p) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
         }))
         .filter((g) => g.near.length + g.home.length > 0)
     : [];
   const jumpTo = (id: string) => document.getElementById(`grupo-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // La hoja crece con los resultados hasta SHEET_PX; con uno solo, el mapa se ve más.
-  const rows = withDistance.length + atHome.length + outside.length;
+  const rows = withDistance.length + atHome.length + homes.length + outside.length;
   const [sheetOpen, setSheetOpen] = useState(true);
   // Cada búsqueda nueva vuelve a mostrar la lista.
   useEffect(() => {
     setSheetOpen(true);
     setFocusId(null);
   }, [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : atHome.length ? 36 : 0) + (outside.length ? 56 : 0));
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (outside.length ? 56 : 0));
   const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
@@ -511,7 +516,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                     ? "Cargando…"
                     : exploring
                       ? `${shown.length} ${shown.length === 1 ? "lugar" : "lugares"}${me_at ? ", lo más cerca primero" : ""}`
-                      : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
+                      : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${homes.length ? `, ${homes.length} ${homes.length === 1 ? "casa" : "casas"}` : ""}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
                   {sheetOpen ? "Ver mapa" : "Ver lista"}
@@ -568,7 +573,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                             reason={null}
                             selected={selectedId === p.id}
                             onClick={() => setSelectedId(p.id)}
-                            sub={p.kind === "oficio" ? `${p.category} · va a tu casa` : p.delivers ? `${p.category} · a domicilio` : p.category}
+                            sub={isHome(p) ? p.category : p.kind === "oficio" ? `${p.category} · va a tu casa` : p.delivers ? `${p.category} · a domicilio` : p.category}
                           />
                         ))}
                       </ul>
@@ -588,6 +593,27 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                   onClick={() => setSelectedId(p.id)}
                 />
               ))}
+              {homes.length > 0 && (
+                <li className="pt-4">
+                  <h3 className="flex items-center gap-1.5 pb-1 text-xs font-bold tracking-widest text-casas">
+                    <Home size={13} aria-hidden /> CASAS Y DEPAS
+                  </h3>
+                  <ul>
+                    {homes.map((p) => (
+                      <ResultRow
+                        key={p.id}
+                        place={p}
+                        color={colorOf(p)}
+                        right={null}
+                        reason={reasons.get(p.id) ?? null}
+                        selected={selectedId === p.id}
+                        onClick={() => setSelectedId(p.id)}
+                        sub={p.category}
+                      />
+                    ))}
+                  </ul>
+                </li>
+              )}
               {atHome.length > 0 && (
                 <li className="pt-4">
                   <h3 className="flex items-center gap-1.5 pb-1 text-xs font-bold tracking-widest text-confianza">

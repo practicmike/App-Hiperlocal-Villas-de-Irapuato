@@ -98,7 +98,8 @@ export async function placeDetail(place: Place, viewerId: string | null, opts: {
   // Casas sin contacto directo: el visitante no ve el WhatsApp del vendedor;
   // le escribe al creador, que filtra y lo presenta.
   if (isProperty && !place.directContact) {
-    return { ...full, whatsapp: "", contactName: null, endorserNames: [], leadForm: true, viaCreator: true };
+    // Sin ubicación: la ruta exacta se saltaría el filtro del creador.
+    return { ...full, whatsapp: "", contactName: null, endorserNames: [], leadForm: true, viaCreator: true, lat: null, lng: null };
   }
   if (isProperty || opts.shared) {
     return { ...full, endorserNames: [], leadForm: isProperty };
