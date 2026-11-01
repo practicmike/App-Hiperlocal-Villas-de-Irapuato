@@ -36,6 +36,7 @@ export function RadarMap({
   onSelect,
   bottomInset,
   fitKey,
+  focus = null,
 }: {
   /** Dónde abrir: tu ubicación o el centro de los lugares. */
   center: LatLng;
@@ -48,6 +49,8 @@ export function RadarMap({
   bottomInset: number;
   /** Cambia cuando hay que volver a encuadrar (nueva búsqueda). */
   fitKey: string;
+  /** «Ver en el mapa» desde una tarjeta: acercarse a este lugar. */
+  focus?: (LatLng & { id: string }) | null;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -176,6 +179,15 @@ export function RadarMap({
     const p = points.find((x) => x.id === selectedId);
     if (m && p && !m.getBounds().pad(-0.15).contains([p.lat, p.lng])) m.panTo([p.lat, p.lng]);
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // «Ver en el mapa»: acercarse al lugar y dejarlo arriba de la hoja de resultados.
+  // Va al final para ganarle al encuadre general cuando el mapa recién se abre.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !focus) return;
+    m.setView([focus.lat, focus.lng], 17, { animate: false });
+    m.panBy([0, bottomInset / 2], { animate: false });
+  }, [focus?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={el} className="radar-map absolute inset-0 isolate z-0" role="application" aria-label="Radar de Villas" />;
 }

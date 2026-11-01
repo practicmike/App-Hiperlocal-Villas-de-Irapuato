@@ -76,6 +76,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Lugar que se pidió «Ver en el mapa» desde su tarjeta. */
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [meOpen, setMeOpen] = useState(() => !guest && new URLSearchParams(window.location.search).has("credencial"));
   const [showIntro, setShowIntro] = useState(() => !introSeen());
@@ -128,6 +130,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   };
   const backToAsk = () => {
     setScreen("ask");
+    setFocusId(null);
     setSavedOnly(false);
     setSelectedId(null);
   };
@@ -171,17 +174,45 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     .filter((p) => p.outsideVillas)
     .map((p) => ({ place: p, m: p.lat != null && p.lng != null ? distanceM(villasCenter, { lat: p.lat, lng: p.lng }) : null }))
     .sort((a, b) => (result ? (rank.get(a.place.id) ?? 0) - (rank.get(b.place.id) ?? 0) : a.place.name.localeCompare(b.place.name, "es")));
-  const points: RadarPoint[] = useMemo(
-    () => withDistance.map(({ place: p }) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, color: colorOf(p) })),
-    [shown, cById], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  // El lugar de «Ver en el mapa» se dibuja aunque no esté en la lista actual o esté fuera de Villas.
+  const focused = focusId ? places.find((p) => p.id === focusId && p.lat != null && p.lng != null) : undefined;
+  const points: RadarPoint[] = useMemo(() => {
+    const pts = withDistance.map(({ place: p }) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, color: colorOf(p) }));
+    if (focused && !pts.some((x) => x.id === focused.id)) {
+      pts.push({ id: focused.id, lat: focused.lat!, lng: focused.lng!, name: focused.name, color: colorOf(focused) });
+    }
+    return pts;
+  }, [shown, cById, focused?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const showOnMap = (id: string) => {
+    setSelectedId(null);
+    setFocusId(id);
+    setScreen("radar");
+    setSheetOpen(false);
+  };
+
+  // Explorar (sin búsqueda): agrupado por constelación, en el orden del panel.
+  // Dentro de cada grupo, lo más cercano primero (o por nombre sin tu ubicación) y al final lo que va a domicilio.
+  const exploring = !result && !savedOnly;
+  const groups = exploring
+    ? [...constellations, FALLBACK]
+        .map((c) => ({
+          c,
+          near: withDistance.filter(({ place: p }) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
+          home: atHome.filter((p) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
+        }))
+        .filter((g) => g.near.length + g.home.length > 0)
+    : [];
+  const jumpTo = (id: string) => document.getElementById(`grupo-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // La hoja crece con los resultados hasta SHEET_PX; con uno solo, el mapa se ve más.
   const rows = withDistance.length + atHome.length + outside.length;
   const [sheetOpen, setSheetOpen] = useState(true);
   // Cada búsqueda nueva vuelve a mostrar la lista.
-  useEffect(() => setSheetOpen(true), [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (atHome.length ? 36 : 0) + (outside.length ? 56 : 0));
+  useEffect(() => {
+    setSheetOpen(true);
+    setFocusId(null);
+  }, [result?.searchId]);
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : atHome.length ? 36 : 0) + (outside.length ? 56 : 0));
   const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
@@ -417,8 +448,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             center={me_at ?? villasCenter}
             me={me_at}
             points={points}
-            selectedId={selectedId}
+            selectedId={selectedId ?? focusId}
             onSelect={setSelectedId}
+            focus={focused ? { id: focused.id, lat: focused.lat!, lng: focused.lng! } : null}
             bottomInset={sheetH}
             fitKey={savedOnly ? `guardados-${saved.ids.length}` : (result?.searchId ?? "todo")}
           />
@@ -477,7 +509,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                 <span className="min-w-0 truncate text-sm text-muted">
                   {isLoading
                     ? "Cargando…"
-                    : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
+                    : exploring
+                      ? `${shown.length} ${shown.length === 1 ? "lugar" : "lugares"}${me_at ? ", lo más cerca primero" : ""}`
+                      : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
                   {sheetOpen ? "Ver mapa" : "Ver lista"}
@@ -486,6 +520,63 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
               </span>
             </button>
             <ul id="lista-resultados" hidden={!sheetOpen} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+              {exploring ? (
+                <>
+                  {groups.length > 1 && (
+                    <li className="sticky top-0 z-10 -mx-5 bg-panel px-5 pb-2">
+                      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="Ir a una constelación">
+                        {groups.map((g) => (
+                          <button
+                            key={g.c.id}
+                            type="button"
+                            onClick={() => jumpTo(g.c.id)}
+                            className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold"
+                          >
+                            <span className="h-2 w-2 rounded-full" style={{ background: g.c.color }} aria-hidden />
+                            {g.c.name}
+                            <span className="font-normal text-muted">{g.near.length + g.home.length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </li>
+                  )}
+                  {groups.map((g) => (
+                    <li key={g.c.id} id={`grupo-${g.c.id}`} className="scroll-mt-12 pt-3">
+                      <h3 className="flex items-center gap-1.5 pb-1 text-xs font-bold uppercase tracking-widest" style={{ color: g.c.color }}>
+                        <span className="h-2 w-2 rounded-full" style={{ background: g.c.color }} aria-hidden />
+                        {g.c.name}
+                        {g.c.hint && <span className="truncate font-normal normal-case tracking-normal text-muted">· {g.c.hint}</span>}
+                      </h3>
+                      <ul>
+                        {g.near.map(({ place: p, m }) => (
+                          <ResultRow
+                            key={p.id}
+                            place={p}
+                            color={g.c.color}
+                            right={m !== null ? formatDistance(m) : null}
+                            reason={null}
+                            selected={selectedId === p.id}
+                            onClick={() => setSelectedId(p.id)}
+                          />
+                        ))}
+                        {g.home.map((p) => (
+                          <ResultRow
+                            key={p.id}
+                            place={p}
+                            color={g.c.color}
+                            right={null}
+                            reason={null}
+                            selected={selectedId === p.id}
+                            onClick={() => setSelectedId(p.id)}
+                            sub={p.kind === "oficio" ? `${p.category} · va a tu casa` : p.delivers ? `${p.category} · a domicilio` : p.category}
+                          />
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
               {withDistance.map(({ place: p, m }) => (
                 <ResultRow
                   key={p.id}
@@ -517,6 +608,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                     ))}
                   </ul>
                 </li>
+              )}
+                </>
               )}
               {outside.length > 0 && (
                 <li className="pt-4">
@@ -574,6 +667,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           meName={me?.name ?? ""}
           isAdmin={me?.role === "admin"}
           onClose={() => setSelectedId(null)}
+          onShowOnMap={showOnMap}
         />
       )}
       {novedadesOpen && (
