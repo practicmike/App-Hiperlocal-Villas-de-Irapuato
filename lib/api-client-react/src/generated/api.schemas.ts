@@ -341,6 +341,18 @@ export interface AdminLead {
   createdAt: string;
 }
 
+/**
+ * Solo casas y departamentos
+ * @nullable
+ */
+export type PlaceSummaryOperation = typeof PlaceSummaryOperation[keyof typeof PlaceSummaryOperation] | null;
+
+
+export const PlaceSummaryOperation = {
+  venta: 'venta',
+  renta: 'renta',
+} as const;
+
 export interface PlaceSummary {
   id: string;
   constellation: Constellation;
@@ -373,6 +385,11 @@ export interface PlaceSummary {
      * @nullable
      */
   zone: string | null;
+  /**
+     * Solo casas y departamentos
+     * @nullable
+     */
+  operation: PlaceSummaryOperation;
   /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
   createdAt: string;
 }

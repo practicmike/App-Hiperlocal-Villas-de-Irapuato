@@ -57,6 +57,7 @@ export * from './placeInput';
 export * from './placeInputOperation';
 export * from './placeKind';
 export * from './placeSummary';
+export * from './placeSummaryOperation';
 export * from './recordVisitRequest';
 export * from './removeConstellationRequest';
 export * from './reorderRequest';

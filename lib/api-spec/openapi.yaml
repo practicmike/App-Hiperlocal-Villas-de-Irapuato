@@ -1629,11 +1629,15 @@ components:
         zone:
           type: [string, "null"]
           description: Zona o privada; para los de fuera, dónde están ("Centro de Irapuato")
+        operation:
+          type: [string, "null"]
+          enum: [venta, renta, null]
+          description: Solo casas y departamentos
         createdAt:
           type: string
           format: date-time
           description: Alta en Villas (para "Nuevos en Villas" en Novedades)
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors, lat, lng, outsideVillas, zone, createdAt]
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors, lat, lng, outsideVillas, zone, operation, createdAt]
     FrequentSearches:
       type: object
       properties:
