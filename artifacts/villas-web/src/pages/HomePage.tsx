@@ -27,12 +27,16 @@ import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet
 import { useSaved } from "@/lib/saved";
 import { PlaceTile } from "@/components/PlaceTile";
 import { FALLBACK, byId, placeConstellations } from "@/lib/constellations";
-import { centroid, distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
+import { distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
 
 /** Si no hay lugares con ubicación todavía: centro de Irapuato, solo para que el mapa abra en algún lado. */
-const IRAPUATO: LatLng = { lat: 20.6767, lng: -101.3563 };
+/**
+ * Centro de Villas de Irapuato. Fijo, no el promedio de los lugares:
+ * así el radar siempre abre en Villas aunque haya pocos lugares o algunos estén lejos.
+ */
+const VILLAS: LatLng = { lat: 20.68732, lng: -101.4033 };
 /** Más lejos que esto, tu ubicación no es "Villas" (estás en otra ciudad): el radar abre en Villas. */
-const NEAR_M = 5_000;
+const NEAR_M = 3_000;
 /** Alto de la hoja de resultados sobre el mapa. */
 const SHEET_PX = 340;
 /** Hoja plegada: solo la barra con el conteo, para ver el mapa completo. */
@@ -130,9 +134,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
   // ---------------------------------------------------------- radar
   const geo = useMyLocation(screen === "radar");
-  // El centro de Villas sale solo de lo que está en Villas: un negocio en el centro lo movería.
-  const located = places.filter((p): p is PlaceSummary & LatLng => p.lat != null && p.lng != null && !p.outsideVillas);
-  const villasCenter = useMemo(() => centroid(located) ?? IRAPUATO, [located.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const villasCenter = VILLAS;
   const me_at = geo.state.status === "ok" && distanceM(geo.state.at, villasCenter) < NEAR_M ? geo.state.at : null;
   const farAway = geo.state.status === "ok" && !me_at;
 
