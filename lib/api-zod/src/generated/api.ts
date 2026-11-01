@@ -311,6 +311,7 @@ export const GetUniverseResponse = zod.object({
   "lng": zod.number().nullable(),
   "outsideVillas": zod.boolean().describe('Negocio de un vecino fuera de Villas; va en su propio bloque de resultados y no en el radar'),
   "zone": zod.string().nullable().describe('Zona o privada; para los de fuera, dónde están ("Centro de Irapuato")'),
+  "operation": zod.union([zod.literal('venta'),zod.literal('renta'),zod.literal(null)]).nullable().describe('Solo casas y departamentos'),
   "createdAt": zod.coerce.date().describe('Alta en Villas (para "Nuevos en Villas" en Novedades)')
 }))
 })

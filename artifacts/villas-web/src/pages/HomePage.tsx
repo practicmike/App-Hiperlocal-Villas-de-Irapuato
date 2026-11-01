@@ -196,16 +196,21 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   };
 
   // Explorar (sin búsqueda): agrupado por constelación, en el orden del panel.
-  // Dentro de cada grupo, lo más cercano primero (o por nombre sin tu ubicación) y al final lo que va a domicilio.
+  // Dentro de cada grupo: lo más cercano primero (o por nombre sin tu ubicación), luego lo que va a domicilio,
+  // las casas separadas en venta y renta, y al final lo de vecinos que está fuera de Villas.
   const exploring = !result && !savedOnly;
+  const groupOf = (p: PlaceSummary) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id);
   const groups = exploring
     ? [...constellations, FALLBACK]
         .map((c) => ({
           c,
-          near: withDistance.filter(({ place: p }) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
-          home: [...homes, ...atHome].filter((p) => (cById.has(p.constellation) ? p.constellation : FALLBACK.id) === c.id),
+          near: withDistance.filter(({ place: p }) => groupOf(p) === c.id),
+          home: atHome.filter((p) => groupOf(p) === c.id),
+          houses: byOperation(homes.filter((p) => groupOf(p) === c.id)),
+          out: outside.filter(({ place: p }) => groupOf(p) === c.id),
         }))
-        .filter((g) => g.near.length + g.home.length > 0)
+        .map((g) => ({ ...g, total: g.near.length + g.home.length + g.houses.reduce((n, s) => n + s.items.length, 0) + g.out.length }))
+        .filter((g) => g.total > 0)
     : [];
   const jumpTo = (id: string) => document.getElementById(`grupo-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -217,7 +222,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     setSheetOpen(true);
     setFocusId(null);
   }, [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (outside.length ? 56 : 0));
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (!exploring && outside.length ? 56 : 0));
   const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
@@ -539,7 +544,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                           >
                             <span className="h-2 w-2 rounded-full" style={{ background: g.c.color }} aria-hidden />
                             {g.c.name}
-                            <span className="font-normal text-muted">{g.near.length + g.home.length}</span>
+                            <span className="font-normal text-muted">{g.total}</span>
                           </button>
                         ))}
                       </div>
@@ -573,9 +578,47 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                             reason={null}
                             selected={selectedId === p.id}
                             onClick={() => setSelectedId(p.id)}
-                            sub={isHome(p) ? p.category : p.kind === "oficio" ? `${p.category} · va a tu casa` : p.delivers ? `${p.category} · a domicilio` : p.category}
+                            sub={p.kind === "oficio" ? `${p.category} · va a tu casa` : p.delivers ? `${p.category} · a domicilio` : p.category}
                           />
                         ))}
+                        {g.houses.map((s) => (
+                          <li key={s.key}>
+                            {s.label && <SubHead>{s.label}</SubHead>}
+                            <ul>
+                              {s.items.map((p) => (
+                                <ResultRow
+                                  key={p.id}
+                                  place={p}
+                                  color={g.c.color}
+                                  right={null}
+                                  reason={null}
+                                  selected={selectedId === p.id}
+                                  onClick={() => setSelectedId(p.id)}
+                                  sub={p.zone ? `${p.category} · ${p.zone}` : p.category}
+                                />
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                        {g.out.length > 0 && (
+                          <li>
+                            <SubHead>Fuera de Villas · de vecinos</SubHead>
+                            <ul>
+                              {g.out.map(({ place: p, m }) => (
+                                <ResultRow
+                                  key={p.id}
+                                  place={p}
+                                  color={g.c.color}
+                                  right={m !== null ? formatDistance(m) : null}
+                                  reason={null}
+                                  selected={selectedId === p.id}
+                                  onClick={() => setSelectedId(p.id)}
+                                  sub={p.zone ?? p.category}
+                                />
+                              ))}
+                            </ul>
+                          </li>
+                        )}
                       </ul>
                     </li>
                   ))}
@@ -598,20 +641,25 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                   <h3 className="flex items-center gap-1.5 pb-1 text-xs font-bold tracking-widest text-casas">
                     <Home size={13} aria-hidden /> CASAS Y DEPAS
                   </h3>
-                  <ul>
-                    {homes.map((p) => (
-                      <ResultRow
-                        key={p.id}
-                        place={p}
-                        color={colorOf(p)}
-                        right={null}
-                        reason={reasons.get(p.id) ?? null}
-                        selected={selectedId === p.id}
-                        onClick={() => setSelectedId(p.id)}
-                        sub={p.category}
-                      />
-                    ))}
-                  </ul>
+                  {byOperation(homes).map((s) => (
+                    <div key={s.key}>
+                      {s.label && <SubHead>{s.label}</SubHead>}
+                      <ul>
+                        {s.items.map((p) => (
+                          <ResultRow
+                            key={p.id}
+                            place={p}
+                            color={colorOf(p)}
+                            right={null}
+                            reason={reasons.get(p.id) ?? null}
+                            selected={selectedId === p.id}
+                            onClick={() => setSelectedId(p.id)}
+                            sub={p.zone ? `${p.category} · ${p.zone}` : p.category}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </li>
               )}
               {atHome.length > 0 && (
@@ -637,7 +685,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
               )}
                 </>
               )}
-              {outside.length > 0 && (
+              {!exploring && outside.length > 0 && (
                 <li className="pt-4">
                   <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
                     <MapPinned size={13} aria-hidden /> FUERA DE VILLAS
@@ -802,6 +850,20 @@ function NoResults({
       )}
     </div>
   );
+}
+
+/** Casas y departamentos separados en venta y renta (las demás, al final sin título). */
+function byOperation(list: PlaceSummary[]) {
+  return [
+    { key: "venta", label: "En venta", items: list.filter((p) => p.operation === "venta") },
+    { key: "renta", label: "En renta", items: list.filter((p) => p.operation === "renta") },
+    { key: "otro", label: null, items: list.filter((p) => p.operation !== "venta" && p.operation !== "renta") },
+  ].filter((s) => s.items.length > 0);
+}
+
+/** Subtítulo dentro de un grupo de la lista. */
+function SubHead({ children }: { children: React.ReactNode }) {
+  return <p className="pt-3 text-[11px] font-bold uppercase tracking-widest text-muted">{children}</p>;
 }
 
 function ResultRow({

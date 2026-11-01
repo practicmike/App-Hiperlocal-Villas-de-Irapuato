@@ -7,6 +7,7 @@
  */
 import type { Constellation } from './constellation';
 import type { PlaceKind } from './placeKind';
+import type { PlaceSummaryOperation } from './placeSummaryOperation';
 import type { WeekHours } from './weekHours';
 
 export interface PlaceSummary {
@@ -41,6 +42,11 @@ export interface PlaceSummary {
      * @nullable
      */
   zone: string | null;
+  /**
+     * Solo casas y departamentos
+     * @nullable
+     */
+  operation: PlaceSummaryOperation;
   /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
   createdAt: Date;
 }
