@@ -58,6 +58,14 @@ const SEEDS: Seed[] = [
   { constellation: "cuidar", name: "Consultorio Dra. Salazar", category: "Médico general", contactName: "Dra. Salazar", description: "Médico general y familiar: consulta para niños y adultos, control de presión, diabetes y certificados médicos. También consultas a domicilio en Villas para adultos mayores. Lunes a sábado con cita por WhatsApp." },
   { constellation: "cuidar", name: "Dental Sonrisa", category: "Dentista", contactName: "Dr. Medina", description: "Limpieza dental, resinas, extracciones, endodoncia y ortodoncia para niños y adultos. Atendemos urgencias por dolor el mismo día. Planes de pago sin intereses." },
   { constellation: "cuidar", name: "Fisioterapia en Casa", category: "Fisioterapia", contactName: "Lic. Andrés", description: "Fisioterapia y rehabilitación a domicilio: lesiones deportivas, dolor de espalda, recuperación después de cirugía y terapia para adultos mayores. Llevo camilla y equipo. Sesiones de una hora." },
+  // ------------------------------------------- Nombres de negocios de Irapuato
+  // Al final de la lista para no mover el WhatsApp de prueba de los ejemplos anteriores.
+  // Sin precios, horarios ni regalos: no inventarle datos a un negocio con nombre real.
+  { constellation: "aprender", name: "Jardín de niños Luna Waldorf", category: "Jardín de niños", description: "Kínder con pedagogía Waldorf: juego libre, arte, música, cuentos y trabajo con materiales naturales, con un ritmo diario estable para los niños. Inscripciones y visitas con cita por WhatsApp." },
+  { constellation: "cuidar", name: "Ópticas Cardani", category: "Óptica", description: "Óptica con examen de la vista, lentes graduados, armazones para niños y adultos, lentes de sol y lentes de contacto. Ajuste y reparación de armazones. Pregunta por WhatsApp para agendar tu examen." },
+  { constellation: "antojos", name: "Lattea Café de especialidad", category: "Cafetería", description: "Café de especialidad: espresso, capuchino, latte y métodos de filtrado como V60 y prensa francesa, además de bebidas frías y algo para acompañar. También café en grano para llevar a casa." },
+  { constellation: "antojos", name: "Quesos Los Faroles", category: "Quesería", description: "Quesería con quesos frescos y madurados, crema y otros lácteos, además de botanas para acompañar. Pregunta por WhatsApp qué hay disponible y aparta tu pedido para pasar por él." },
+  { constellation: "antojos", name: "Barbaqueros", category: "Tacos de cochinita y barbacoa", description: "Tacos de cochinita pibil y de barbacoa, consomé y más. Pedidos por kilo para fiestas y reuniones. Pregunta por WhatsApp el menú del día." },
 ];
 
 // ----------------------------------------------- datos de ficha completa
