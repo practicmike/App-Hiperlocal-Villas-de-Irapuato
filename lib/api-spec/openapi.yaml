@@ -1623,11 +1623,17 @@ components:
           description: Ubicación del local para el radar; null = sin ubicación (p. ej. oficios a domicilio)
         lng:
           type: [number, "null"]
+        outsideVillas:
+          type: boolean
+          description: Negocio de un vecino fuera de Villas; va en su propio bloque de resultados y no en el radar
+        zone:
+          type: [string, "null"]
+          description: Zona o privada; para los de fuera, dónde están ("Centro de Irapuato")
         createdAt:
           type: string
           format: date-time
           description: Alta en Villas (para "Nuevos en Villas" en Novedades)
-      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors, lat, lng, createdAt]
+      required: [id, constellation, name, category, verified, sponsored, endorsementCount, welcome, kind, delivers, hours, coverUrl, hasNews, neighbors, lat, lng, outsideVillas, zone, createdAt]
     FrequentSearches:
       type: object
       properties:
@@ -1673,6 +1679,14 @@ components:
           type: string
         zone:
           type: [string, "null"]
+        outsideVillas:
+          type: boolean
+          description: Negocio de un vecino fuera de Villas
+        lat:
+          type: [number, "null"]
+          description: Para el botón "Cómo llegar"
+        lng:
+          type: [number, "null"]
         operation:
           type: [string, "null"]
           enum: [venta, renta, null]
@@ -1771,6 +1785,9 @@ components:
         - contactName
         - whatsapp
         - zone
+        - outsideVillas
+        - lat
+        - lng
         - operation
         - priceLabel
         - imageUrl
@@ -2025,6 +2042,9 @@ components:
           type: [number, "null"]
           minimum: -180
           maximum: 180
+        outsideVillas:
+          type: boolean
+          description: Negocio de un vecino fuera de Villas. Opcional; si no viene, se conserva lo guardado
         operation:
           type: [string, "null"]
           enum: [venta, renta, null]

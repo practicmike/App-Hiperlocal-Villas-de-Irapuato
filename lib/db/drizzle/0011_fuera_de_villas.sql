@@ -1,0 +1,1 @@
+ALTER TABLE "places" ADD COLUMN "outside_villas" boolean DEFAULT false NOT NULL;

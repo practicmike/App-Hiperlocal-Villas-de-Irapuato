@@ -135,5 +135,11 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"saved_places\" ADD CONSTRAINT \"saved_places_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
       "ALTER TABLE \"saved_places\" ADD CONSTRAINT \"saved_places_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;"
     ]
+  },
+  {
+    "tag": "0011_fuera_de_villas",
+    "statements": [
+      "ALTER TABLE \"places\" ADD COLUMN \"outside_villas\" boolean DEFAULT false NOT NULL;"
+    ]
   }
 ];

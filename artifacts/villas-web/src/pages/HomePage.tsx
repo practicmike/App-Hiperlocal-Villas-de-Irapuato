@@ -15,7 +15,7 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, Bookmark, Check, Heart, Sparkles, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home } from "lucide-react";
+import { ArrowLeft, Bell, Bookmark, Check, Heart, Sparkles, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home, MapPinned } from "lucide-react";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { MeSheet } from "@/components/MeSheet";
@@ -130,7 +130,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
   // ---------------------------------------------------------- radar
   const geo = useMyLocation(screen === "radar");
-  const located = places.filter((p): p is PlaceSummary & LatLng => p.lat != null && p.lng != null);
+  // El centro de Villas sale solo de lo que está en Villas: un negocio en el centro lo movería.
+  const located = places.filter((p): p is PlaceSummary & LatLng => p.lat != null && p.lng != null && !p.outsideVillas);
   const villasCenter = useMemo(() => centroid(located) ?? IRAPUATO, [located.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const me_at = geo.state.status === "ok" && distanceM(geo.state.at, villasCenter) < NEAR_M ? geo.state.at : null;
   const farAway = geo.state.status === "ok" && !me_at;
@@ -148,7 +149,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
 
   // Lugares con ubicación: por distancia si sabemos dónde estás; si no, por relevancia o por nombre.
   const rank = useMemo(() => new Map((result?.matches ?? []).map((m, i) => [m.placeId, i])), [result]);
-  const withDistance = shown
+  const inVillas = shown.filter((p) => !p.outsideVillas);
+  const withDistance = inVillas
     .filter((p): p is PlaceSummary & LatLng => p.lat != null && p.lng != null)
     .map((p) => ({ place: p, m: me_at ? distanceM(me_at, p) : null }))
     .sort((a, b) =>
@@ -159,20 +161,25 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           : a.place.name.localeCompare(b.place.name, "es"),
     );
   // A domicilio: los que van a tu casa o aún no tienen ubicación. Sin punto en el mapa.
-  const atHome = shown
+  const atHome = inVillas
     .filter((p) => p.lat == null || p.lng == null)
     .sort((a, b) => (result ? (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0) : a.name.localeCompare(b.name, "es")));
+  // Negocios de vecinos fuera de Villas: bloque aparte, sin punto en el radar, con su distancia a Villas.
+  const outside = shown
+    .filter((p) => p.outsideVillas)
+    .map((p) => ({ place: p, m: p.lat != null && p.lng != null ? distanceM(villasCenter, { lat: p.lat, lng: p.lng }) : null }))
+    .sort((a, b) => (result ? (rank.get(a.place.id) ?? 0) - (rank.get(b.place.id) ?? 0) : a.place.name.localeCompare(b.place.name, "es")));
   const points: RadarPoint[] = useMemo(
     () => withDistance.map(({ place: p }) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, color: colorOf(p) })),
     [shown, cById], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // La hoja crece con los resultados hasta SHEET_PX; con uno solo, el mapa se ve más.
-  const rows = withDistance.length + atHome.length;
+  const rows = withDistance.length + atHome.length + outside.length;
   const [sheetOpen, setSheetOpen] = useState(true);
   // Cada búsqueda nueva vuelve a mostrar la lista.
   useEffect(() => setSheetOpen(true), [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (atHome.length ? 36 : 0));
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (atHome.length ? 36 : 0) + (outside.length ? 56 : 0));
   const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
@@ -468,7 +475,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                 <span className="min-w-0 truncate text-sm text-muted">
                   {isLoading
                     ? "Cargando…"
-                    : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? ` y ${atHome.length} a domicilio` : ""}${me_at ? ", por distancia" : ""}`}
+                    : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
                   {sheetOpen ? "Ver mapa" : "Ver lista"}
@@ -504,6 +511,28 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                         selected={selectedId === p.id}
                         onClick={() => setSelectedId(p.id)}
                         sub={p.kind === "oficio" ? "Va a tu casa" : p.delivers ? "Entrega a domicilio" : "Sin ubicación en el mapa"}
+                      />
+                    ))}
+                  </ul>
+                </li>
+              )}
+              {outside.length > 0 && (
+                <li className="pt-4">
+                  <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
+                    <MapPinned size={13} aria-hidden /> FUERA DE VILLAS
+                  </h3>
+                  <p className="pb-1 text-xs text-muted">No están en Villas, pero son de vecinos.</p>
+                  <ul>
+                    {outside.map(({ place: p, m }) => (
+                      <ResultRow
+                        key={p.id}
+                        place={p}
+                        color={colorOf(p)}
+                        right={m !== null ? formatDistance(m) : null}
+                        reason={reasons.get(p.id) ?? null}
+                        selected={selectedId === p.id}
+                        onClick={() => setSelectedId(p.id)}
+                        sub={p.zone ? `De un vecino · ${p.zone}` : "De un vecino"}
                       />
                     ))}
                   </ul>

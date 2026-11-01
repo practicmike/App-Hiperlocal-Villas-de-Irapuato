@@ -78,6 +78,13 @@
       "when": 1793158102313,
       "tag": "0010_guardados",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793557989105,
+      "tag": "0011_fuera_de_villas",
+      "breakpoints": true
     }
   ]
 }
