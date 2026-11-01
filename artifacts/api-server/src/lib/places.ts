@@ -92,6 +92,8 @@ export async function placeDetail(place: Place, viewerId: string | null, opts: {
     parking: place.parking,
     photos: (await photosByPlace([place.id])).get(place.id) ?? [],
   };
+  // Casas y depas: su ubicación no sale del servidor (ni radar ni «Cómo llegar»).
+  if (isProperty) Object.assign(full, { lat: null, lng: null });
   if (viewerId !== null) return full;
   // Visitante con contacto abierto: casas (son anuncios para gente de fuera)
   // o el link público que el propio comercio compartió. Los nombres de vecinos siguen privados.

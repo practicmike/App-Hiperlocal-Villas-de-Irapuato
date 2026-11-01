@@ -146,7 +146,7 @@ export function Card({
 
       <Facts place={place} color={info.color} />
 
-      <Where place={place} onShowOnMap={info.isProperty ? undefined : onShowOnMap} />
+      {!info.isProperty && <Where place={place} onShowOnMap={onShowOnMap} />}
 
       {place.news && <TodayNews news={place.news} />}
 
@@ -343,8 +343,7 @@ function Photos({ photos, name }: { photos: PlaceDetail["photos"]; name: string 
 /** Datos duros de un vistazo: abierto ahora, a domicilio, precio y, en casas, recámaras y m². */
 /**
  * Dónde está: «Ver en el mapa» (el radar de OrbiTú) y «Cómo llegar» (Google Maps).
- * Oficios no (van a tu casa). Casas: no salen en el radar, así que solo «Cómo llegar»,
- * y nada si el visitante pasa por el creador (la ruta exacta se saltaría ese filtro).
+ * Oficios no (van a tu casa). Casas y depas tampoco: ni radar ni ruta.
  */
 function Where({ place, onShowOnMap }: { place: PlaceDetail; onShowOnMap?: (id: string) => void }) {
   if (place.lat == null || place.lng == null || place.kind === "oficio" || place.viaCreator) return null;
