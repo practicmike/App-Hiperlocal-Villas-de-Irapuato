@@ -119,10 +119,10 @@ const EXTRA: Record<string, Partial<NewPlace>> = {
 };
 
 /**
- * Centro aproximado de Irapuato: solo sirve para que el radar de prueba tenga
- * algo que mostrar. Las ubicaciones reales se capturan en el panel, en el local.
+ * Centro de Villas de Irapuato (el mismo del radar): los ejemplos caen dentro de Villas.
+ * Las ubicaciones reales se capturan en el panel, en el local.
  */
-const DEMO_CENTER = { lat: 20.6767, lng: -101.3563 };
+const DEMO_CENTER = { lat: 20.68732, lng: -101.4033 };
 
 /** Ubicación ficticia y estable (misma cada vez que se recargan los ejemplos), a 80–750 m del centro. */
 function demoCoords(i: number) {
