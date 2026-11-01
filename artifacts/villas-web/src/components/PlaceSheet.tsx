@@ -11,7 +11,7 @@ import {
   type PlaceDetail,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BadgeCheck, Bath, BedDouble, Bookmark, Car, Clock, Gift, Heart, Home, KeyRound, MessageCircle, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
+import { BadgeCheck, Bath, BedDouble, Bookmark, Car, Clock, Gift, Heart, Home, KeyRound, MapPinned, MessageCircle, Navigation, Pencil, Ruler, ShieldAlert, Sparkles, Star, Truck, Users, X } from "lucide-react";
 import { openState, weekSummary } from "@/lib/hours";
 import { Share2 } from "lucide-react";
 import { useRecordLead } from "@workspace/api-client-react";
@@ -346,7 +346,12 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
     place.landM2 != null && { icon: <Ruler size={15} />, text: `${place.landM2} m² terreno` },
     place.builtM2 != null && { icon: <Home size={15} />, text: `${place.builtM2} m² const.` },
   ].filter(Boolean) as Array<{ icon: React.ReactNode; text: string }>;
-  const hasAny = open || place.delivers || place.kind === "oficio" || place.priceLabel || place.zone || place.operation || house.length;
+  const hasAny = open || place.delivers || place.kind === "oficio" || place.priceLabel || place.zone || place.operation || house.length || place.outsideVillas;
+  // Fuera de Villas no sale en el radar: el botón lleva directo a Google Maps.
+  const directions =
+    place.outsideVillas && place.lat != null && place.lng != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`
+      : null;
   if (!hasAny) return null;
   return (
     <div className="space-y-2">
@@ -368,7 +373,18 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
         {house.map((h) => (
           <span key={h.text} className={chip}>{h.icon} {h.text}</span>
         ))}
-        {place.zone && <span className={`${chip} text-muted`}>{place.zone}</span>}
+        {place.outsideVillas ? (
+          <span className={`${chip} text-[#c38cf3]`}>
+            <MapPinned size={15} /> De un vecino{place.zone ? ` · ${place.zone}` : " · fuera de Villas"}
+          </span>
+        ) : (
+          place.zone && <span className={`${chip} text-muted`}>{place.zone}</span>
+        )}
+        {directions && (
+          <a href={directions} target="_blank" rel="noopener noreferrer" className={`${chip} font-bold text-primary`}>
+            <Navigation size={15} /> Cómo llegar
+          </a>
+        )}
       </div>
       {showHours && (
         <ul className="rounded-2xl bg-space-2/60 px-4 py-3 text-sm">

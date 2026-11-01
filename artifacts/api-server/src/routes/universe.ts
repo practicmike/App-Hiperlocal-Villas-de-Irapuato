@@ -81,6 +81,8 @@ router.get("/universe", async (_req, res) => {
         hours: placesTable.hours,
         lat: placesTable.lat,
         lng: placesTable.lng,
+        outsideVillas: placesTable.outsideVillas,
+        zone: placesTable.zone,
         createdAt: placesTable.createdAt,
       })
       .from(placesTable)

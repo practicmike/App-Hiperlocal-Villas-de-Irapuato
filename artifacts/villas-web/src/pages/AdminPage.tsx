@@ -411,6 +411,7 @@ const EMPTY: PlaceInput = {
   zone: null,
   lat: null,
   lng: null,
+  outsideVillas: false,
   operation: null,
   priceLabel: null,
   imageUrl: null,
@@ -519,7 +520,18 @@ function Places({ editId }: { editId: string | null }) {
           <AdminField label="WhatsApp (10 dígitos)" required inputMode="tel" {...txt("whatsapp")} />
           <AdminField label="Quién atiende" maxLength={80} {...opt("contactName")} />
         </div>
-        <AdminField label="Zona o privada" maxLength={80} {...opt("zone")} />
+        <label className="flex items-start gap-2 rounded-xl bg-space-2/60 p-3 text-sm">
+          <input type="checkbox" className="mt-0.5 accent-[#c38cf3]" checked={!!f.outsideVillas} onChange={(e) => set("outsideVillas", e.target.checked)} />
+          <span>
+            Está fuera de Villas (negocio de un vecino)
+            <span className="block text-xs text-muted">Sale en la búsqueda en «Fuera de Villas», con su distancia, y no en el radar. Pon su ubicación real, nunca la casa del vecino.</span>
+          </span>
+        </label>
+        <AdminField
+          label={f.outsideVillas ? "Dónde está (Centro de Irapuato, Las Plazas…)" : "Zona o privada"}
+          maxLength={80}
+          {...opt("zone")}
+        />
         {!(f.kind === "oficio" && !current?.isProperty) && (
           <LocationField
             lat={f.lat ?? null}
@@ -762,6 +774,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   zone: p.zone,
   lat: p.lat ?? null,
   lng: p.lng ?? null,
+  outsideVillas: p.outsideVillas ?? false,
   operation: p.operation,
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,

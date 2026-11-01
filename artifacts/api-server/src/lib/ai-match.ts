@@ -15,7 +15,7 @@ import { logger } from "./logger";
 
 export type MatchCandidate = Pick<
   SearchablePlace,
-  "id" | "name" | "category" | "description" | "zone" | "operation" | "priceLabel" | "kind" | "delivers" | "hours" | "landM2" | "builtM2" | "bedrooms" | "bathrooms" | "parking"
+  "id" | "name" | "category" | "description" | "zone" | "operation" | "priceLabel" | "kind" | "delivers" | "outsideVillas" | "hours" | "landM2" | "builtM2" | "bedrooms" | "bathrooms" | "parking"
 >;
 
 export interface AiMatch {

@@ -17,6 +17,7 @@ export interface SearchablePlace {
   // Datos de la ficha completa (opcionales para no romper pruebas viejas).
   kind?: "comercio" | "oficio";
   delivers?: boolean;
+  outsideVillas?: boolean;
   hours?: Array<{ open: string; close: string } | null> | null;
   landM2?: number | null;
   builtM2?: number | null;
@@ -32,6 +33,7 @@ export function placeFacts(p: SearchablePlace): string {
   const f: string[] = [];
   if (p.kind === "oficio") f.push("Va a tu casa");
   if (p.delivers) f.push("Servicio a domicilio");
+  if (p.outsideVillas) f.push(`Fuera de Villas${p.zone ? `, en ${p.zone}` : ""}; negocio de un vecino`);
   if (p.bedrooms != null) f.push(`${p.bedrooms} recámaras`);
   if (p.bathrooms != null) f.push(`${p.bathrooms} baños`);
   if (p.parking != null) f.push(`${p.parking} cajones de estacionamiento`);

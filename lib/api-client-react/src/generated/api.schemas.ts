@@ -366,6 +366,13 @@ export interface PlaceSummary {
   lat: number | null;
   /** @nullable */
   lng: number | null;
+  /** Negocio de un vecino fuera de Villas; va en su propio bloque de resultados y no en el radar */
+  outsideVillas: boolean;
+  /**
+     * Zona o privada; para los de fuera, dónde están ("Centro de Irapuato")
+     * @nullable
+     */
+  zone: string | null;
   /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
   createdAt: string;
 }
@@ -404,6 +411,15 @@ export interface PlaceDetail {
   whatsapp: string;
   /** @nullable */
   zone: string | null;
+  /** Negocio de un vecino fuera de Villas */
+  outsideVillas: boolean;
+  /**
+     * Para el botón "Cómo llegar"
+     * @nullable
+     */
+  lat: number | null;
+  /** @nullable */
+  lng: number | null;
   /** @nullable */
   operation: PlaceDetailOperation;
   /** @nullable */
@@ -701,6 +717,8 @@ export interface PlaceInput {
      * @nullable
      */
   lng?: number | null;
+  /** Negocio de un vecino fuera de Villas. Opcional; si no viene, se conserva lo guardado */
+  outsideVillas?: boolean;
   /** @nullable */
   operation: PlaceInputOperation;
   /**

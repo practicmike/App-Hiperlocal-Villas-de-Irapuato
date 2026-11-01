@@ -436,6 +436,7 @@ const toAdminPlace = (
   delivers: p.delivers,
   pickup: p.pickup,
   directContact: p.directContact,
+  outsideVillas: p.outsideVillas,
   hours: p.hours ?? null,
   landM2: p.landM2,
   builtM2: p.builtM2,
@@ -469,6 +470,8 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
     zone: blank(body.zone),
     // Sin coordenadas en el cuerpo = conservar las guardadas (clientes viejos no las mandan).
     ...(body.lat !== undefined || body.lng !== undefined ? cleanCoords(body.lat, body.lng) : {}),
+    // Igual: sin el campo, se conserva lo guardado.
+    ...(body.outsideVillas !== undefined ? { outsideVillas: body.outsideVillas } : {}),
     // Operación y datos de la casa solo aplican a inmuebles; el precio, a todos.
     operation: isProperty ? (body.operation ?? null) : null,
     priceLabel: blank(body.priceLabel),

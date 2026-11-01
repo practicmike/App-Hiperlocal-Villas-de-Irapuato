@@ -34,6 +34,13 @@ export interface PlaceSummary {
   lat: number | null;
   /** @nullable */
   lng: number | null;
+  /** Negocio de un vecino fuera de Villas; va en su propio bloque de resultados y no en el radar */
+  outsideVillas: boolean;
+  /**
+     * Zona o privada; para los de fuera, dónde están ("Centro de Irapuato")
+     * @nullable
+     */
+  zone: string | null;
   /** Alta en Villas (para "Nuevos en Villas" en Novedades) */
   createdAt: Date;
 }

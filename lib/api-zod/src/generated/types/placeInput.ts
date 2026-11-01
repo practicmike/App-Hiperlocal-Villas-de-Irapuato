@@ -52,6 +52,8 @@ export interface PlaceInput {
      * @nullable
      */
   lng?: number | null;
+  /** Negocio de un vecino fuera de Villas. Opcional; si no viene, se conserva lo guardado */
+  outsideVillas?: boolean;
   /** @nullable */
   operation: PlaceInputOperation;
   /**

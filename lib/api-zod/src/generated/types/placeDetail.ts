@@ -23,6 +23,15 @@ export interface PlaceDetail {
   whatsapp: string;
   /** @nullable */
   zone: string | null;
+  /** Negocio de un vecino fuera de Villas */
+  outsideVillas: boolean;
+  /**
+     * Para el botón "Cómo llegar"
+     * @nullable
+     */
+  lat: number | null;
+  /** @nullable */
+  lng: number | null;
   /** @nullable */
   operation: PlaceDetailOperation;
   /** @nullable */

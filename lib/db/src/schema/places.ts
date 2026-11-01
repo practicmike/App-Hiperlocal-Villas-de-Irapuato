@@ -75,6 +75,11 @@ export const placesTable = pgTable(
      */
     lat: real("lat"),
     lng: real("lng"),
+    /**
+     * Negocio de un vecino que está fuera de Villas (p. ej. su kínder en el centro).
+     * Sale en la búsqueda en su propio bloque, con su zona y distancia, pero no en el radar.
+     */
+    outsideVillas: boolean("outside_villas").notNull().default(false),
     /** Solo casas. */
     operation: text("operation", { enum: ["venta", "renta"] }),
     priceLabel: text("price_label"),
