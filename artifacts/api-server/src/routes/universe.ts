@@ -100,10 +100,13 @@ router.get("/universe", async (_req, res) => {
   ]);
   const neighborsBy = new Map(visitRows.map((r) => [r.placeId, r.n]));
   const withNews = new Set(news.map((n) => n.placeId));
+  // Casas y departamentos no van en el radar: su ubicación no sale del servidor.
+  const propertyIds = new Set(constellations.filter((c) => c.isProperty).map((c) => c.id));
   res.json({
     constellations,
     places: places.map(({ welcomeOffer, createdAt, ...p }) => ({
       ...p,
+      ...(propertyIds.has(p.constellation) ? { lat: null, lng: null } : {}),
       createdAt: createdAt.toISOString(),
       endorsementCount: counts.get(p.id) ?? 0,
       welcome: !!welcomeOffer,
