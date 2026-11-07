@@ -23,7 +23,7 @@ const ROOTS = [
   "mamada", "mamadas", "mamon", "mamona", "cabron", "cabrona", "pinche", "pinches", "joto", "jotos",
   "marica", "maricon", "zorra", "zorras", "pucha", "panocha", "panochas", "coger", "cogerm", "cogid",
   "nalgas", "chichis", "tetas", "porno", "porn", "escort", "prostitu", "putero",
-  "cocaina", "narco", "sicario",
+  "cocaina", "drogas", "narco", "sicario",
 ];
 // Fuera a propósito (falsos positivos en búsquedas reales): "matar" (plagas), "pistola" (de silicón),
 // "cristal" (vidriero), "sexo" (del bebé), "perico" (mascota). Lo grave lo atrapa la moderación de OpenAI.

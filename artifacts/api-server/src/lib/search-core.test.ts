@@ -169,7 +169,7 @@ test("el horario solo cuenta si el vecino tiene prisa", () => {
 import { hasProfanity } from "./content-filter";
 
 test("filtro: bloquea groserías y deja pasar búsquedas reales parecidas", () => {
-  for (const q of ["busco una puta", "pinche plomero", "dónde hay PENDEJOS", "algo chingón"]) assert.ok(hasProfanity(q), q);
+  for (const q of ["busco una puta", "pinche plomero", "dónde hay PENDEJOS", "algo chingón", "Busco drogas", "Puta"]) assert.ok(hasProfanity(q), q);
   for (const q of ["clases de cultura", "matar cucarachas", "pistola de silicón", "vidriero cristal roto", "computadora", "ultrasonido sexo del bebé"])
     assert.ok(!hasProfanity(q), q);
 });
