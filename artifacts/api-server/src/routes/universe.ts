@@ -38,6 +38,7 @@ import { activeNews } from "../lib/news";
 import { embed } from "../lib/ai";
 import { audioExt, transcribe } from "../lib/transcribe";
 import { aiMatch, keepKeywordHits, AI_MAX_CANDIDATES } from "../lib/ai-match";
+import { isBlockedSearch, BLOCKED_MESSAGE } from "../lib/content-filter";
 import { logger } from "../lib/logger";
 import {
   MATCH_MIN,
@@ -423,6 +424,21 @@ router.post(
 
     const effectiveQuery = raw;
 
+    // Groserías o contenido fuera de lugar: no se busca, no se gasta IA y no le llega al creador como "sin resultado".
+    if (await isBlockedSearch(raw)) {
+      logger.info({ blocked: true }, "search blocked");
+      res.json({
+        searchId: `bloqueada-${Date.now()}`,
+        matches: [],
+        refinedQuery: null,
+        constellation: null,
+        mode: "keywords",
+        intro: BLOCKED_MESSAGE,
+        blocked: true,
+      });
+      return;
+    }
+
     const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
     const queryVector = await embed(effectiveQuery);
 
@@ -497,6 +513,7 @@ router.post(
       constellation: null,
       mode,
       intro,
+      blocked: false,
     });
   },
 );

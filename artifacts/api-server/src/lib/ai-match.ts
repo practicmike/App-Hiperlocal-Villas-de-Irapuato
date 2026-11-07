@@ -66,6 +66,8 @@ export function buildMatchPrompt(query: string, candidates: MatchCandidate[], no
         "Eres la anfitriona (hostess) de una guía vecinal de Villas de Irapuato (México): casas en venta o renta, oficios de confianza y comercios. " +
         "Primero interpreta qué necesita el vecino. Si su búsqueda admite varias lecturas (\"un lugar cómodo para estar\" puede ser vivir o pasar el rato), " +
         "elige la MÁS PROBABLE según sus palabras y califica con esa lectura. " +
+        "Si la búsqueda NO pide un lugar, casa, servicio o comercio (preguntas generales, chistes, insultos, temas sin relación), " +
+        "califica todo con 0 y en intro explica con amabilidad que solo ayudas a encontrar lugares, casas y servicios de Villas, con un ejemplo. " +
         "Para cada candidato, califica de 0 a 100 qué tan bien resuelve esa necesidad, por significado y no solo por palabras. " +
         "Rúbrica: 90-100 resuelve todo lo pedido; 75-89 resuelve lo principal con algún detalle sin confirmar; 60-74 sirve parcialmente; " +
         "0-40 no sirve. Usa 0-40 sin dudar para lo que no tiene relación; no uses 41-59. " +

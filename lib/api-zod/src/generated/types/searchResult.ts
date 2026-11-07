@@ -21,4 +21,6 @@ export interface SearchResult {
      * @nullable
      */
   intro?: string | null;
+  /** La búsqueda tenía groserías o contenido fuera de lugar y no se realizó. */
+  blocked?: boolean;
 }

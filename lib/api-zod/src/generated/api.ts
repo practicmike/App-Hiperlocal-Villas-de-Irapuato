@@ -913,7 +913,8 @@ export const SearchResponse = zod.object({
   "refinedQuery": zod.string().nullable(),
   "constellation": zod.string().nullable(),
   "mode": zod.enum(['ai', 'semantic', 'keywords']),
-  "intro": zod.string().nullish().describe('Mensaje de la anfitriona (IA) para arriba de los resultados.')
+  "intro": zod.string().nullish().describe('Mensaje de la anfitriona (IA) para arriba de los resultados.'),
+  "blocked": zod.boolean().optional().describe('La búsqueda tenía groserías o contenido fuera de lugar y no se realizó.')
 })
 
 
