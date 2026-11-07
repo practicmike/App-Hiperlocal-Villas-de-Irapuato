@@ -554,6 +554,11 @@ export interface SearchResult {
   /** @nullable */
   constellation: string | null;
   mode: SearchResultMode;
+  /**
+     * Mensaje de la anfitriona (IA) para arriba de los resultados.
+     * @nullable
+     */
+  intro?: string | null;
 }
 
 export interface AdminOverview {

@@ -1860,6 +1860,9 @@ components:
         mode:
           type: string
           enum: [ai, semantic, keywords]
+        intro:
+          type: [string, "null"]
+          description: Mensaje de la anfitriona (IA) para arriba de los resultados.
       required: [searchId, matches, refinedQuery, constellation, mode]
     AdminOverview:
       type: object

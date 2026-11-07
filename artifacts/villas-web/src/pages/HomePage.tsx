@@ -179,6 +179,31 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     .filter((p) => p.outsideVillas)
     .map((p) => ({ place: p, m: p.lat != null && p.lng != null ? distanceM(villasCenter, { lat: p.lat, lng: p.lng }) : null }))
     .sort((a, b) => (result ? (rank.get(a.place.id) ?? 0) - (rank.get(b.place.id) ?? 0) : a.place.name.localeCompare(b.place.name, "es")));
+  // Con búsqueda: UNA sola lista, del mejor match al peor (casa, café u oficio, todo junto).
+  // Agrupar por tipo escondía un 90% de una casa debajo de un 50% de un café.
+  const searching = !!result && !savedOnly;
+  const scoreOf = useMemo(() => new Map((result?.matches ?? []).map((m) => [m.placeId, m.score])), [result]);
+  const ranked = searching
+    ? [...shown]
+        .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+        .map((p) => {
+          const at = p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null;
+          const m = at ? distanceM(p.outsideVillas ? villasCenter : me_at ?? villasCenter, at) : null;
+          return { place: p, m: p.outsideVillas || me_at ? m : null };
+        })
+    : [];
+  const kindLabel = (p: PlaceSummary) =>
+    p.outsideVillas
+      ? `${p.category} · fuera de Villas`
+      : cById.get(p.constellation)?.isProperty
+        ? p.zone ? `${p.category} · ${p.zone}` : p.category
+        : p.kind === "oficio"
+          ? `${p.category} · va a tu casa`
+          : p.delivers && (p.lat == null || p.lng == null)
+            ? `${p.category} · a domicilio`
+            : p.category;
+  const intro = searching && result?.mode === "ai" ? (result.intro ?? null) : null;
+
   // El lugar de «Ver en el mapa» se dibuja aunque no esté en la lista actual o esté fuera de Villas.
   const focused = focusId ? places.find((p) => p.id === focusId && p.lat != null && p.lng != null) : undefined;
   const points: RadarPoint[] = useMemo(() => {
@@ -222,7 +247,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     setSheetOpen(true);
     setFocusId(null);
   }, [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (!exploring && outside.length ? 56 : 0));
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (intro ? 96 : 0) + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (!exploring && outside.length ? 56 : 0));
   const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
 
   // ---------------------------------------------------------- atajos
@@ -521,6 +546,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                     ? "Cargando…"
                     : exploring
                       ? `${shown.length} ${shown.length === 1 ? "lugar" : "lugares"}${me_at ? ", lo más cerca primero" : ""}`
+                      : searching
+                        ? `${shown.length} ${shown.length === 1 ? "resultado" : "resultados"}, del mejor match al menor`
                       : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${homes.length ? `, ${homes.length} ${homes.length === 1 ? "casa" : "casas"}` : ""}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
@@ -623,6 +650,37 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                     </li>
                   ))}
                 </>
+              ) : searching ? (
+                <>
+                  {intro && (
+                    <li className="mb-2 rounded-2xl border border-[#c38cf3]/30 bg-[#c38cf3]/10 p-3 text-[15px] leading-snug">
+                      <span className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
+                        <Sparkles size={13} aria-hidden /> PARA TU BÚSQUEDA
+                      </span>
+                      {intro}
+                    </li>
+                  )}
+                  {ranked.map(({ place: p, m }) => {
+                    const sc = scoreOf.get(p.id);
+                    return (
+                      <ResultRow
+                        key={p.id}
+                        place={p}
+                        color={colorOf(p)}
+                        right={result?.mode === "ai" && sc != null ? `${Math.round(sc * 100)}%` : m !== null ? formatDistance(m) : null}
+                        reason={reasons.get(p.id) ?? null}
+                        selected={selectedId === p.id}
+                        onClick={() => setSelectedId(p.id)}
+                        sub={kindLabel(p)}
+                      />
+                    );
+                  })}
+                  {!isLoading && ranked.length === 0 && !intro && (
+                    <li className="py-6 text-center text-sm text-muted">
+                      No encontré algo así todavía. Prueba describirlo con otras palabras.
+                    </li>
+                  )}
+                </>
               ) : (
                 <>
               {withDistance.map(({ place: p, m }) => (
@@ -685,7 +743,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
               )}
                 </>
               )}
-              {!exploring && outside.length > 0 && (
+              {!exploring && !searching && outside.length > 0 && (
                 <li className="pt-4">
                   <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
                     <MapPinned size={13} aria-hidden /> FUERA DE VILLAS

@@ -121,7 +121,22 @@ test("match IA: ignora índices inventados, repetidos y JSON roto", () => {
   );
   assert.equal(out!.length, 1);
   assert.equal(out![0]!.score, 0.8);
-  assert.ok(AI_MATCH_MIN === 50);
+  assert.ok(AI_MATCH_MIN === 60);
+});
+
+test("match IA: un 50 ya no pasa (antes se colaba con razón negativa)", () => {
+  const out = parseMatchResponse(
+    JSON.stringify({ matches: [{ i: 0, score: 50, reason: "no es lo que busca" }, { i: 1, score: 60, reason: "sirve" }] }),
+    cands,
+  );
+  assert.deepEqual(out!.map((m) => m.placeId), ["b"]);
+});
+
+import { parseIntro } from "./ai-match";
+test("intro de la anfitriona: se lee, se recorta y tolera basura", () => {
+  assert.equal(parseIntro(JSON.stringify({ intro: "  Hola, encontré esto.  ", matches: [] })), "Hola, encontré esto.");
+  assert.equal(parseIntro(JSON.stringify({ matches: [] })), null);
+  assert.equal(parseIntro("roto"), null);
 });
 
 // ------------------------------------------------- IA: no esconder lo obvio

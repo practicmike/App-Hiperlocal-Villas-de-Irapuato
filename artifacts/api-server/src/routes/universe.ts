@@ -440,13 +440,15 @@ router.post(
     // 2) Match con IA (solo vecinos): califica los mejores candidatos y explica por qué.
     let mode: "ai" | "semantic" | "keywords" = queryVector ? "semantic" : "keywords";
     let matches: Array<{ placeId: string; score: number; reason: string | null }> = [];
+    let intro: string | null = null;
     if (isResident) {
       const candidates = all.filter((m) => m.score > 0.12).slice(0, AI_MAX_CANDIDATES);
       const ai = await aiMatch(raw, candidates.map((m) => m.place));
       if (ai) {
         mode = "ai";
+        intro = ai.intro;
         const boostOf = new Map(candidates.map((m) => [m.placeId, m.boost]));
-        const approved = rankMatches(ai.map((m) => ({ ...m, boost: boostOf.get(m.placeId) ?? 0 }))).map(
+        const approved = rankMatches(ai.matches.map((m) => ({ ...m, boost: boostOf.get(m.placeId) ?? 0 }))).map(
           ({ placeId, score, reason }) => ({ placeId, score, reason }),
         );
         // Se revisa toda la lista, no solo los 12 candidatos: lo obvio nunca se pierde.
@@ -457,7 +459,7 @@ router.post(
           {
             query: raw,
             candidates: candidates.map((m) => `${m.place.name} kw=${m.keyword.toFixed(2)} s=${m.score.toFixed(2)}`),
-            ai: ai.map((m) => `${nameOf.get(m.placeId)} ${Math.round(m.score * 100)}`),
+            ai: ai.matches.map((m) => `${nameOf.get(m.placeId)} ${Math.round(m.score * 100)}`),
             rescued: matches.length - approved.length,
           },
           "search ai",
@@ -494,6 +496,7 @@ router.post(
       refinedQuery: null,
       constellation: null,
       mode,
+      intro,
     });
   },
 );

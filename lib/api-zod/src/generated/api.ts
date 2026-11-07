@@ -912,7 +912,8 @@ export const SearchResponse = zod.object({
 })),
   "refinedQuery": zod.string().nullable(),
   "constellation": zod.string().nullable(),
-  "mode": zod.enum(['ai', 'semantic', 'keywords'])
+  "mode": zod.enum(['ai', 'semantic', 'keywords']),
+  "intro": zod.string().nullish().describe('Mensaje de la anfitriona (IA) para arriba de los resultados.')
 })
 
 
