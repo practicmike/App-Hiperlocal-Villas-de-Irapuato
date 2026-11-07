@@ -399,7 +399,7 @@ function Facts({ place, color }: { place: PlaceDetail; color: string }) {
         ))}
         {place.outsideVillas ? (
           <span className={`${chip} text-[#c38cf3]`}>
-            <MapPinned size={15} /> De un vecino{place.zone ? ` · ${place.zone}` : " · fuera de Villas"}
+            <MapPinned size={15} /> Negocio de un vecino · {place.zone ? `en ${place.zone}` : "afuera de Villas"}
           </span>
         ) : (
           place.zone && <span className={`${chip} text-muted`}>{place.zone}</span>

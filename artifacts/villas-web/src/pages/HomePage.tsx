@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { Link } from "wouter";
 import {
   useGetUniverse,
@@ -27,6 +27,7 @@ import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet
 import { useSaved } from "@/lib/saved";
 import { PlaceTile } from "@/components/PlaceTile";
 import { FALLBACK, byId, placeConstellations } from "@/lib/constellations";
+import { useBackLayers } from "@/lib/back-stack";
 import { distanceM, formatDistance, useMyLocation, type LatLng } from "@/lib/geo";
 
 /** Si no hay lugares con ubicación todavía: centro de Irapuato, solo para que el mapa abra en algún lado. */
@@ -135,6 +136,19 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     setSelectedId(null);
   };
 
+  // «Atrás» del celular o gesto de deslizar: cierra la capa de arriba en vez de salir de la app.
+  const overlayOpen = !!selectedId || creatorOpen || meOpen || novedadesOpen;
+  useBackLayers((screen === "radar" ? 1 : 0) + (overlayOpen ? 1 : 0), () => {
+    if (overlayOpen) {
+      setSelectedId(null);
+      setCreatorOpen(false);
+      setMeOpen(false);
+      setNovedadesOpen(false);
+    } else {
+      backToAsk();
+    }
+  });
+
   // ---------------------------------------------------------- radar
   const geo = useMyLocation(screen === "radar");
   const villasCenter = VILLAS;
@@ -179,6 +193,31 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     .filter((p) => p.outsideVillas)
     .map((p) => ({ place: p, m: p.lat != null && p.lng != null ? distanceM(villasCenter, { lat: p.lat, lng: p.lng }) : null }))
     .sort((a, b) => (result ? (rank.get(a.place.id) ?? 0) - (rank.get(b.place.id) ?? 0) : a.place.name.localeCompare(b.place.name, "es")));
+  // Con búsqueda: UNA sola lista, del mejor match al peor (casa, café u oficio, todo junto).
+  // Agrupar por tipo escondía un 90% de una casa debajo de un 50% de un café.
+  const searching = !!result && !savedOnly;
+  const scoreOf = useMemo(() => new Map((result?.matches ?? []).map((m) => [m.placeId, m.score])), [result]);
+  const ranked = searching
+    ? [...shown]
+        .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+        .map((p) => {
+          const at = p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null;
+          const m = at ? distanceM(p.outsideVillas ? villasCenter : me_at ?? villasCenter, at) : null;
+          return { place: p, m: p.outsideVillas || me_at ? m : null };
+        })
+    : [];
+  const kindLabel = (p: PlaceSummary) =>
+    p.outsideVillas
+      ? `${p.category} · negocio de un vecino, afuera`
+      : cById.get(p.constellation)?.isProperty
+        ? p.zone ? `${p.category} · ${p.zone}` : p.category
+        : p.kind === "oficio"
+          ? `${p.category} · va a tu casa`
+          : p.delivers && (p.lat == null || p.lng == null)
+            ? `${p.category} · a domicilio`
+            : p.category;
+  const intro = searching && result?.mode === "ai" ? (result.intro ?? null) : null;
+
   // El lugar de «Ver en el mapa» se dibuja aunque no esté en la lista actual o esté fuera de Villas.
   const focused = focusId ? places.find((p) => p.id === focusId && p.lat != null && p.lng != null) : undefined;
   const points: RadarPoint[] = useMemo(() => {
@@ -222,8 +261,48 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
     setSheetOpen(true);
     setFocusId(null);
   }, [result?.searchId]);
-  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (!exploring && outside.length ? 56 : 0));
-  const sheetH = sheetOpen ? sheetFull : SHEET_FOLDED_PX;
+  const sheetFull = Math.min(SHEET_PX, 92 + Math.max(rows, 1) * 69 + (intro ? 96 : 0) + (exploring ? groups.length * 36 + 48 : (atHome.length ? 36 : 0) + (homes.length ? 36 : 0)) + (!exploring && outside.length ? 56 : 0));
+  // Alto que el vecino eligió arrastrando el borde (null = automático según resultados).
+  const [snapH, setSnapH] = useState<number | null>(null);
+  // Alto en vivo mientras arrastra.
+  const [dragH, setDragH] = useState<number | null>(null);
+  const settledH = sheetOpen ? (snapH ?? sheetFull) : SHEET_FOLDED_PX;
+  const sheetH = dragH ?? settledH;
+  const drag = useRef<{ y: number; h: number; moved: boolean } | null>(null);
+  const dragged = useRef(false);
+  /** Paradas: plegada, 1/4, 1/2 y casi pantalla completa (deja ver la barra de búsqueda). */
+  const sheetStops = () => {
+    const vh = window.innerHeight;
+    return [SHEET_FOLDED_PX, Math.round(vh * 0.25), Math.round(vh * 0.5), vh - 84].filter((h, i, a) => i === 0 || h > a[i - 1]!);
+  };
+  const onSheetDown = (e: RPointerEvent) => {
+    drag.current = { y: e.clientY, h: settledH, moved: false };
+    dragged.current = false;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onSheetMove = (e: RPointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dy = d.y - e.clientY;
+    if (!d.moved && Math.abs(dy) < 6) return;
+    d.moved = true;
+    const stops = sheetStops();
+    setDragH(Math.min(stops.at(-1)!, Math.max(SHEET_FOLDED_PX, d.h + dy)));
+  };
+  const onSheetUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d?.moved || dragH === null) return;
+    dragged.current = true;
+    const nearest = sheetStops().reduce((best, h) => (Math.abs(h - dragH) < Math.abs(best - dragH) ? h : best));
+    setDragH(null);
+    if (nearest === SHEET_FOLDED_PX) {
+      setSheetOpen(false);
+    } else {
+      setSheetOpen(true);
+      setSnapH(nearest);
+    }
+  };
 
   // ---------------------------------------------------------- atajos
   const shortcuts = useMemo(() => {
@@ -380,7 +459,28 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
               </div>
             )}
 
-            {noResults && result && (
+            {noResults && result?.blocked && (
+              <div className="mt-6 rounded-2xl border border-[#ffabab]/40 bg-[#ffabab]/10 p-4 text-[15px] leading-snug" role="alert">
+                {result.intro}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setResult(null);
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                  className="mt-3 block min-h-11 font-bold text-primary"
+                >
+                  Buscar otra cosa
+                </button>
+              </div>
+            )}
+
+            {noResults && result && !result.blocked && result.intro && (
+              <p className="mt-6 rounded-2xl border border-[#c38cf3]/30 bg-[#c38cf3]/10 p-4 text-[15px] leading-snug">{result.intro}</p>
+            )}
+
+            {noResults && result && !result.blocked && (
               <NoResults
                 key={result.searchId}
                 query={query}
@@ -461,7 +561,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             selectedId={selectedId ?? focusId}
             onSelect={setSelectedId}
             focus={focused ? { id: focused.id, lat: focused.lat!, lng: focused.lng! } : null}
-            bottomInset={sheetH}
+            bottomInset={settledH}
             fitKey={savedOnly ? `guardados-${saved.ids.length}` : (result?.searchId ?? "todo")}
           />
 
@@ -505,22 +605,36 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           <section
             aria-label="Resultados"
             className="pb-safe absolute inset-x-0 bottom-0 z-10 mx-auto flex max-w-lg flex-col rounded-t-3xl border-t border-white/10 bg-panel/[0.97] shadow-2xl"
-            style={{ height: sheetH, transition: "height 220ms ease" }}
+            style={{ height: sheetH, transition: dragH === null ? "height 220ms ease" : "none" }}
           >
             <button
               type="button"
-              onClick={() => setSheetOpen((o) => !o)}
+              onPointerDown={onSheetDown}
+              onPointerMove={onSheetMove}
+              onPointerUp={onSheetUp}
+              onPointerCancel={onSheetUp}
+              onClick={() => {
+                // Al soltar un arrastre también llega un clic: ese no cuenta.
+                if (dragged.current) {
+                  dragged.current = false;
+                  return;
+                }
+                setSheetOpen((o) => !o);
+              }}
               aria-expanded={sheetOpen}
               aria-controls="lista-resultados"
-              className="flex w-full flex-col px-5 pb-2 pt-3 text-left"
+              className="flex w-full touch-none select-none flex-col px-5 pb-2 pt-3 text-left"
+              title="Arrastra para ajustar el tamaño de la lista"
             >
-              <span className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20" aria-hidden />
+              <span className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-white/30" aria-hidden />
               <span className="flex w-full items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-sm text-muted">
                   {isLoading
                     ? "Cargando…"
                     : exploring
                       ? `${shown.length} ${shown.length === 1 ? "lugar" : "lugares"}${me_at ? ", lo más cerca primero" : ""}`
+                      : searching
+                        ? `${shown.length} ${shown.length === 1 ? "resultado" : "resultados"}, del mejor match al menor`
                       : `${withDistance.length} ${withDistance.length === 1 ? "lugar" : "lugares"}${homes.length ? `, ${homes.length} ${homes.length === 1 ? "casa" : "casas"}` : ""}${atHome.length ? `, ${atHome.length} a domicilio` : ""}${outside.length ? `, ${outside.length} fuera de Villas` : ""}${me_at ? ", por distancia" : ""}`}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-bold text-primary">
@@ -529,7 +643,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                 </span>
               </span>
             </button>
-            <ul id="lista-resultados" hidden={!sheetOpen} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+            <ul id="lista-resultados" hidden={sheetH <= SHEET_FOLDED_PX + 8} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
               {exploring ? (
                 <>
                   {groups.length > 1 && (
@@ -602,7 +716,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                         ))}
                         {g.out.length > 0 && (
                           <li>
-                            <SubHead>Fuera de Villas · de vecinos</SubHead>
+                            <SubHead>Negocios de vecinos, afuera de Villas</SubHead>
                             <ul>
                               {g.out.map(({ place: p, m }) => (
                                 <ResultRow
@@ -622,6 +736,37 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                       </ul>
                     </li>
                   ))}
+                </>
+              ) : searching ? (
+                <>
+                  {intro && (
+                    <li className="mb-2 rounded-2xl border border-[#c38cf3]/30 bg-[#c38cf3]/10 p-3 text-[15px] leading-snug">
+                      <span className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
+                        <Sparkles size={13} aria-hidden /> PARA TU BÚSQUEDA
+                      </span>
+                      {intro}
+                    </li>
+                  )}
+                  {ranked.map(({ place: p, m }) => {
+                    const sc = scoreOf.get(p.id);
+                    return (
+                      <ResultRow
+                        key={p.id}
+                        place={p}
+                        color={colorOf(p)}
+                        right={result?.mode === "ai" && sc != null ? `${Math.round(sc * 100)}%` : m !== null ? formatDistance(m) : null}
+                        reason={reasons.get(p.id) ?? null}
+                        selected={selectedId === p.id}
+                        onClick={() => setSelectedId(p.id)}
+                        sub={kindLabel(p)}
+                      />
+                    );
+                  })}
+                  {!isLoading && ranked.length === 0 && !intro && (
+                    <li className="py-6 text-center text-sm text-muted">
+                      No encontré algo así todavía. Prueba describirlo con otras palabras.
+                    </li>
+                  )}
                 </>
               ) : (
                 <>
@@ -685,12 +830,12 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
               )}
                 </>
               )}
-              {!exploring && outside.length > 0 && (
+              {!exploring && !searching && outside.length > 0 && (
                 <li className="pt-4">
                   <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-widest text-[#c38cf3]">
                     <MapPinned size={13} aria-hidden /> FUERA DE VILLAS
                   </h3>
-                  <p className="pb-1 text-xs text-muted">No están en Villas, pero son de vecinos.</p>
+                  <p className="pb-1 text-xs text-muted">Están afuera del fraccionamiento, pero sus dueños viven en Villas.</p>
                   <ul>
                     {outside.map(({ place: p, m }) => (
                       <ResultRow
@@ -701,7 +846,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                         reason={reasons.get(p.id) ?? null}
                         selected={selectedId === p.id}
                         onClick={() => setSelectedId(p.id)}
-                        sub={p.zone ? `De un vecino · ${p.zone}` : "De un vecino"}
+                        sub={p.zone ? `Negocio de un vecino · en ${p.zone}` : "Negocio de un vecino"}
                       />
                     ))}
                   </ul>

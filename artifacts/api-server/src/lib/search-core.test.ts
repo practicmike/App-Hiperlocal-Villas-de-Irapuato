@@ -121,7 +121,22 @@ test("match IA: ignora índices inventados, repetidos y JSON roto", () => {
   );
   assert.equal(out!.length, 1);
   assert.equal(out![0]!.score, 0.8);
-  assert.ok(AI_MATCH_MIN === 50);
+  assert.ok(AI_MATCH_MIN === 60);
+});
+
+test("match IA: un 50 ya no pasa (antes se colaba con razón negativa)", () => {
+  const out = parseMatchResponse(
+    JSON.stringify({ matches: [{ i: 0, score: 50, reason: "no es lo que busca" }, { i: 1, score: 60, reason: "sirve" }] }),
+    cands,
+  );
+  assert.deepEqual(out!.map((m) => m.placeId), ["b"]);
+});
+
+import { parseIntro } from "./ai-match";
+test("intro de la anfitriona: se lee, se recorta y tolera basura", () => {
+  assert.equal(parseIntro(JSON.stringify({ intro: "  Hola, encontré esto.  ", matches: [] })), "Hola, encontré esto.");
+  assert.equal(parseIntro(JSON.stringify({ matches: [] })), null);
+  assert.equal(parseIntro("roto"), null);
 });
 
 // ------------------------------------------------- IA: no esconder lo obvio
@@ -148,4 +163,13 @@ test("el horario solo cuenta si el vecino tiene prisa", () => {
   assert.equal(wantsNow("busco un colegio para mi niña"), false);
   assert.equal(wantsNow("tacos abiertos ahorita"), true);
   assert.equal(wantsNow("plomero que venga hoy"), true);
+});
+
+// ------------------------------------------------- búsquedas ofensivas
+import { hasProfanity } from "./content-filter";
+
+test("filtro: bloquea groserías y deja pasar búsquedas reales parecidas", () => {
+  for (const q of ["busco una puta", "pinche plomero", "dónde hay PENDEJOS", "algo chingón"]) assert.ok(hasProfanity(q), q);
+  for (const q of ["clases de cultura", "matar cucarachas", "pistola de silicón", "vidriero cristal roto", "computadora", "ultrasonido sexo del bebé"])
+    assert.ok(!hasProfanity(q), q);
 });

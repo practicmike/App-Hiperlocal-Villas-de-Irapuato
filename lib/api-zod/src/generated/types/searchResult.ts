@@ -16,4 +16,11 @@ export interface SearchResult {
   /** @nullable */
   constellation: string | null;
   mode: SearchResultMode;
+  /**
+     * Mensaje de la anfitriona (IA) para arriba de los resultados.
+     * @nullable
+     */
+  intro?: string | null;
+  /** La búsqueda tenía groserías o contenido fuera de lugar y no se realizó. */
+  blocked?: boolean;
 }
