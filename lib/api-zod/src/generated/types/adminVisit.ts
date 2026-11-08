@@ -16,4 +16,9 @@ export interface AdminVisit {
   welcomeApplied: boolean;
   /** @nullable */
   welcomeOffer: string | null;
+  /**
+     * Comercio que mandó al vecino con pase
+     * @nullable
+     */
+  referredBy: string | null;
 }

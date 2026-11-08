@@ -16,4 +16,9 @@ export interface MemberLookup {
   welcomeOffer: string | null;
   /** Ya se registró una visita en las últimas 2 horas */
   recentlyRecorded: boolean;
+  /**
+     * Comercio que le pasó a este vecino con un pase vivo
+     * @nullable
+     */
+  referredBy: string | null;
 }

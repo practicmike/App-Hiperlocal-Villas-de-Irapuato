@@ -80,6 +80,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Tarjeta: quién es, qué ofrece, quién lo recomienda, botón a WhatsApp, "Lo recomiendo" y queja privada.
 - Vista en lista equivalente.
 - Panel del creador: señales de que funciona, invitaciones, aprobar vecinos y enviar llaves, alta de lugares, búsquedas sin resultado y quejas.
+- «Te lo paso» (la hoja de referencia de BNI, `src/lib/passes.ts` en la API): cada lugar tiene hasta 2 socios (Panel → Lugares). Al registrar una visita en A, el vecino recibe un pase al primer socio que aún no conoce y que tiene regalo de bienvenida (vale 7 días); en la caja, un toque lo cambia al otro socio. Cuando B escanea al vecino, ve «Viene de parte de A» y el pase se canjea. El regalo lo paga B, como siempre; no hay puntos ni dinero entre comercios. El vecino ve sus pases en el inicio y en Credencial (reemplazan la barra «Lugares visitados X de Y»). Cada comercio ve «Mandaste / Te mandaron» del mes. Quien manda vecinos sube en búsquedas: +1 de impulso por vecino que llegó en 30 días, máximo 5, con el mismo tope que el impulso pagado.
 
 ## Gotchas
 
@@ -93,6 +94,7 @@ pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · Postgres + Drizzle 
 - Tras editar `openapi.yaml`, corre codegen; si no, los tipos del frontend y la validación del backend quedan desfasados.
 - El límite de intentos vive en la tabla `rate_limits` (sirve igual en Replit y en Vercel). Si pruebas muchas llaves falsas desde tu IP, te bloqueas 15 minutos.
 - Cambios al esquema: corre `db push` contra Neon **antes** de desplegar el código que los usa.
+- Borrar una visita en Panel → Visitas también borra el pase que generó o canjeó (limpieza de pruebas).
 - Al editar un lugar se borra su embedding y se recalcula en segundo plano; si OpenAI falla, el lugar sigue encontrándose por palabras.
 - Los sinónimos del buscador están en `search-core.ts` (`SYNONYMS`). Amplíalos con lo que aparezca en "Búsquedas sin resultado".
 

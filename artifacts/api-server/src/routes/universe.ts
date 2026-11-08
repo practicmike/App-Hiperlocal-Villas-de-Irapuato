@@ -1,3 +1,4 @@
+import { referralBoost, referralCounts } from "../lib/passes";
 import express, { Router, type IRouter } from "express";
 import { and, desc, eq, gt, gte, isNull, sql } from "drizzle-orm";
 import {
@@ -439,7 +440,12 @@ router.post(
       return;
     }
 
-    const places = await db.select().from(placesTable).where(eq(placesTable.active, true));
+    const [places0, referrals] = await Promise.all([
+      db.select().from(placesTable).where(eq(placesTable.active, true)),
+      referralCounts(),
+    ]);
+    // «Te lo paso»: quien manda vecinos a otros comercios sube un poco en los resultados.
+    const places = places0.map((p) => ({ ...p, boost: p.boost + referralBoost(referrals.sent.get(p.id) ?? 0) }));
     const queryVector = await embed(effectiveQuery);
 
     // 1) Búsqueda rápida: palabras (con peso por rareza) + significado (embeddings).

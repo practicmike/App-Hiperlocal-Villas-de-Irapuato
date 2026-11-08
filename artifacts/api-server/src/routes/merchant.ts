@@ -1,13 +1,16 @@
 import express, { Router, type IRouter } from "express";
-import { and, desc, eq, gt, sql } from "drizzle-orm";
-import { db, placesTable, residentsTable, visitsTable, merchantSessionsTable } from "@workspace/db";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { db, placesTable, residentsTable, visitsTable, merchantSessionsTable, type Place } from "@workspace/db";
 import {
   MerchantLoginBody,
   MerchantLookupMemberParams,
   MerchantRecordVisitBody,
   MerchantPublishNewsBody,
   MerchantNewsPhotoParams,
+  MerchantChangePassParams,
+  MerchantChangePassBody,
 } from "@workspace/api-zod";
+import { changePass, givePass, livePassTo, monthScore, redeemPass, residentPasses } from "../lib/passes";
 import { activeNews, newsById, publishNews, removeNews, setNewsPhoto } from "../lib/news";
 import { ensureSlug } from "../lib/slug";
 import { hashToken, requireResident } from "../lib/auth";
@@ -32,7 +35,7 @@ const OWN_PLACE = "Es la credencial del dueño de este comercio. La credencial e
 // ---------------------------------------------------------- vecino: su cielo
 router.get("/me/sky", requireResident, async (req, res) => {
   const r = req.resident!;
-  const [memberCode, visits] = await Promise.all([
+  const [memberCode, visits, passes] = await Promise.all([
     ensureMemberCode(r.id, r.memberCode),
     db
       .select({
@@ -43,9 +46,11 @@ router.get("/me/sky", requireResident, async (req, res) => {
       .from(visitsTable)
       .where(eq(visitsTable.residentId, r.id))
       .groupBy(visitsTable.placeId),
+    residentPasses(r.id),
   ]);
   res.json({
     memberCode,
+    passes,
     visits: visits.map((v) => ({ placeId: v.placeId, count: v.count, lastAt: new Date(v.lastAt).toISOString() })),
   });
 });
@@ -64,7 +69,7 @@ router.post("/merchant/login", rateLimit("merchant-login", 20, 15 * 60_000), asy
   }
   await startMerchantSession(res, place.id);
   req.merchantPlace = place;
-  res.json(await merchantSummary(place.id, place.name, place.welcomeOffer, place.kind, await ensureSlug(place).catch(() => null)));
+  res.json(await merchantSummary(place, await ensureSlug(place).catch(() => null)));
 });
 
 router.post("/merchant/logout", async (req, res) => {
@@ -74,17 +79,12 @@ router.post("/merchant/logout", async (req, res) => {
 
 router.get("/merchant/me", requireMerchant, async (req, res) => {
   const p = req.merchantPlace!;
-  res.json(await merchantSummary(p.id, p.name, p.welcomeOffer, p.kind, await ensureSlug(p).catch(() => null)));
+  res.json(await merchantSummary(p, await ensureSlug(p).catch(() => null)));
 });
 
-async function merchantSummary(
-  placeId: string,
-  placeName: string,
-  welcomeOffer: string | null,
-  kind: "comercio" | "oficio",
-  slug: string | null,
-) {
-  const [[stats], recent] = await Promise.all([
+async function merchantSummary(place: Place, slug: string | null) {
+  const placeId = place.id;
+  const [[stats], recent, score, partners] = await Promise.all([
     db
       .select({
         total: sql<number>`count(*)::int`,
@@ -94,26 +94,53 @@ async function merchantSummary(
       .from(visitsTable)
       .where(eq(visitsTable.placeId, placeId)),
     db
-      .select({ name: residentsTable.name, at: visitsTable.createdAt, welcomeApplied: visitsTable.welcomeApplied })
+      .select({
+        name: residentsTable.name,
+        at: visitsTable.createdAt,
+        welcomeApplied: visitsTable.welcomeApplied,
+        referredBy: sql<string | null>`(select p."name" from "passes" x join "places" p on p."id" = x."from_place_id" where x."redeemed_visit_id" = ${visitsTable.id} limit 1)`,
+      })
       .from(visitsTable)
       .innerJoin(residentsTable, eq(visitsTable.residentId, residentsTable.id))
       .where(eq(visitsTable.placeId, placeId))
       .orderBy(desc(visitsTable.createdAt))
       .limit(10),
+    monthScore(placeId),
+    partnerRefs(place),
   ]);
   const [news] = await activeNews([placeId]);
   return {
     placeId,
-    placeName,
-    welcomeOffer,
-    kind,
+    placeName: place.name,
+    welcomeOffer: place.welcomeOffer,
+    kind: place.kind,
     slug,
+    partners,
+    sentThisMonth: score.sent,
+    receivedThisMonth: score.received,
     news: news ?? null,
     todayVisits: stats?.today ?? 0,
     totalVisits: stats?.total ?? 0,
     neighbors: stats?.neighbors ?? 0,
-    recent: recent.map((v) => ({ firstName: firstName(v.name), at: v.at.toISOString(), welcomeApplied: v.welcomeApplied })),
+    recent: recent.map((v) => ({
+      firstName: firstName(v.name),
+      at: v.at.toISOString(),
+      welcomeApplied: v.welcomeApplied,
+      referredBy: v.referredBy ?? null,
+    })),
   };
+}
+
+/** Socios de este comercio (activos), en el orden que puso el creador. */
+async function partnerRefs(place: Place) {
+  const ids = (place.partnerIds ?? []).filter((id) => id !== place.id);
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ placeId: placesTable.id, name: placesTable.name, offer: placesTable.welcomeOffer })
+    .from(placesTable)
+    .where(and(inArray(placesTable.id, ids), eq(placesTable.active, true)));
+  const byId = new Map(rows.map((r) => [r.placeId, r]));
+  return ids.map((id) => byId.get(id)).filter((r) => !!r);
 }
 
 async function memberState(placeId: string, rawCode: string) {
@@ -137,7 +164,8 @@ async function memberState(placeId: string, rawCode: string) {
       )
       .limit(1),
   ]);
-  return { resident, visitsHere: agg?.n ?? 0, recentlyRecorded: !!recent };
+  const pass = await livePassTo(resident.id, placeId);
+  return { resident, visitsHere: agg?.n ?? 0, recentlyRecorded: !!recent, referredBy: pass?.fromPlaceName ?? null };
 }
 
 /** Lo que ve el comercio al escanear, antes de confirmar. */
@@ -158,6 +186,7 @@ router.get("/merchant/members/:code", requireMerchant, rateLimit("merchant-looku
     visitsHere: s.visitsHere,
     welcomeOffer: s.visitsHere === 0 ? p.welcomeOffer : null,
     recentlyRecorded: s.recentlyRecorded,
+    referredBy: s.referredBy,
   });
 });
 
@@ -176,16 +205,32 @@ router.post("/merchant/visits", requireMerchant, rateLimit("merchant-visit", 120
   const name = firstName(s.resident.name);
   if (s.recentlyRecorded) {
     // Doble escaneo: se responde igual pero sin sumar otra visita.
-    res.json({ firstName: name, visitsHere: s.visitsHere, welcomeApplied: false, welcomeOffer: null, duplicate: true });
+    res.json({
+      firstName: name,
+      visitsHere: s.visitsHere,
+      welcomeApplied: false,
+      welcomeOffer: null,
+      duplicate: true,
+      referredBy: null,
+      pass: null,
+      passOptions: [],
+    });
     return;
   }
   const welcome = s.visitsHere === 0 && !!p.welcomeOffer;
-  await db.insert(visitsTable).values({
-    placeId: p.id,
-    residentId: s.resident.id,
-    welcomeApplied: welcome,
-    welcomeOffer: welcome ? p.welcomeOffer : null,
-  });
+  const [visit] = await db
+    .insert(visitsTable)
+    .values({
+      placeId: p.id,
+      residentId: s.resident.id,
+      welcomeApplied: welcome,
+      welcomeOffer: welcome ? p.welcomeOffer : null,
+    })
+    .returning({ id: visitsTable.id });
+  // «Te lo paso»: primero se canjea el pase con el que llegó (si traía uno),
+  // luego este comercio le pasa el vecino a uno de sus socios.
+  const referredBy = await redeemPass(s.resident.id, p.id, visit!.id);
+  const given = await givePass(p, s.resident.id, visit!.id);
   void db
     .update(merchantSessionsTable)
     .set({ lastUsedAt: new Date() })
@@ -197,7 +242,26 @@ router.post("/merchant/visits", requireMerchant, rateLimit("merchant-visit", 120
     welcomeApplied: welcome,
     welcomeOffer: welcome ? p.welcomeOffer : null,
     duplicate: false,
+    referredBy,
+    pass: given.pass,
+    passOptions: given.options,
   });
+});
+
+/** Un toque: el pase que se acaba de dar se va a otro socio. */
+router.put("/merchant/passes/:id", requireMerchant, rateLimit("merchant-pass", 60, 15 * 60_000), async (req, res) => {
+  const { id } = MerchantChangePassParams.parse(req.params);
+  const { toPlaceId } = MerchantChangePassBody.parse(req.body);
+  const r = await changePass(req.merchantPlace!, id, toPlaceId);
+  if (r.error === 404) {
+    res.status(404).json({ message: "Ese pase ya no se puede cambiar." });
+    return;
+  }
+  if (r.error === 400 || !r.pass) {
+    res.status(400).json({ message: "A ese socio no se le puede pasar este vecino (ya lo conoce o no tiene regalo)." });
+    return;
+  }
+  res.json(r.pass);
 });
 
 // ---------------------------------------------------------- hoy en villas

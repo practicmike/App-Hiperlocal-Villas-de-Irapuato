@@ -179,9 +179,38 @@ export interface SkyVisit {
   lastAt: string;
 }
 
+export interface SkyPass {
+  id: string;
+  toPlaceId: string;
+  toPlaceName: string;
+  fromPlaceName: string;
+  offer: string;
+  expiresAt: string;
+}
+
 export interface Sky {
   memberCode: string;
   visits: SkyVisit[];
+  /** Pases vivos («Te lo paso»), del que vence primero al último */
+  passes: SkyPass[];
+}
+
+export interface PartnerRef {
+  placeId: string;
+  name: string;
+  /** @nullable */
+  offer: string | null;
+}
+
+export interface MerchantPass {
+  id: string;
+  toPlaceId: string;
+  toPlaceName: string;
+  offer: string;
+}
+
+export interface ChangePassRequest {
+  toPlaceId: string;
 }
 
 export interface MerchantKey {
@@ -194,6 +223,11 @@ export interface MerchantRecentVisit {
   firstName: string;
   at: string;
   welcomeApplied: boolean;
+  /**
+     * Comercio que mandó al vecino, si llegó con pase
+     * @nullable
+     */
+  referredBy: string | null;
 }
 
 export type PlaceKind = typeof PlaceKind[keyof typeof PlaceKind];
@@ -229,6 +263,12 @@ export interface MerchantMe {
   news: NewsItem | null;
   /** @nullable */
   slug: string | null;
+  /** Socios a los que este comercio pasa vecinos */
+  partners: PartnerRef[];
+  /** Vecinos que mandó y que ya llegaron, este mes */
+  sentThisMonth: number;
+  /** Vecinos que le mandaron otros comercios, este mes */
+  receivedThisMonth: number;
 }
 
 export interface MemberLookup {
@@ -241,6 +281,11 @@ export interface MemberLookup {
   welcomeOffer: string | null;
   /** Ya se registró una visita en las últimas 2 horas */
   recentlyRecorded: boolean;
+  /**
+     * Comercio que le pasó a este vecino con un pase vivo
+     * @nullable
+     */
+  referredBy: string | null;
 }
 
 export interface RecordVisitRequest {
@@ -258,6 +303,15 @@ export interface VisitResult {
   /** @nullable */
   welcomeOffer: string | null;
   duplicate: boolean;
+  /**
+     * El vecino llegó con pase de este comercio (se canjeó)
+     * @nullable
+     */
+  referredBy: string | null;
+  /** Pase que se le dio al vecino hacia un socio */
+  pass: MerchantPass | null;
+  /** Socios a los que se puede cambiar el pase */
+  passOptions: PartnerRef[];
 }
 
 export interface PhotoRef {
@@ -417,6 +471,11 @@ export const PlaceDetailOperation = {
   renta: 'renta',
 } as const;
 
+export interface PlacePass {
+  fromPlaceName: string;
+  expiresAt: string;
+}
+
 export interface PlaceDetail {
   id: string;
   constellation: Constellation;
@@ -461,6 +520,8 @@ export interface PlaceDetail {
   viaCreator?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
+  /** Pase vivo del vecino hacia este lugar */
+  myPass: PlacePass | null;
   myVisits: number;
   kind: PlaceKind;
   delivers: boolean;
@@ -604,6 +665,11 @@ export interface AdminVisit {
   welcomeApplied: boolean;
   /** @nullable */
   welcomeOffer: string | null;
+  /**
+     * Comercio que mandó al vecino con pase
+     * @nullable
+     */
+  referredBy: string | null;
 }
 
 export interface ClearVisitsRequest {
@@ -760,6 +826,11 @@ export interface PlaceInput {
      * @nullable
      */
   welcomeOffer: string | null;
+  /**
+     * Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan
+     * @maxItems 2
+     */
+  partnerIds?: string[];
   kind: PlaceKind;
   delivers: boolean;
   pickup: boolean;
@@ -811,7 +882,27 @@ export type AdminPlace = PlaceInput & ({
   leadCount: number;
   /** @nullable */
   slug: string | null;
-});
+  /** Vecinos que mandó y llegaron, últimos 30 días */
+  passesSent: number;
+  /** Vecinos que le mandaron y llegaron, últimos 30 días */
+  passesReceived: number;
+}) & Required<Pick<PlaceInput & ({
+  id: string;
+  whatsappClicks: number;
+  endorsementCount: number;
+  hasEmbedding: boolean;
+  isDemo: boolean;
+  visitCount: number;
+  hasMerchantKey: boolean;
+  photos: PhotoRef[];
+  leadCount: number;
+  /** @nullable */
+  slug: string | null;
+  /** Vecinos que mandó y llegaron, últimos 30 días */
+  passesSent: number;
+  /** Vecinos que le mandaron y llegaron, últimos 30 días */
+  passesReceived: number;
+}), 'partnerIds'>>;
 
 export interface DemoResult {
   inserted: number;

@@ -300,6 +300,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VisitResult"
+  /merchant/passes/{id}:
+    put:
+      operationId: merchantChangePass
+      tags: [merchant]
+      summary: Cambia a qué socio va el pase que el comercio acaba de dar
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePassRequest"
+      responses:
+        "200":
+          description: Pase actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MerchantPass"
+        "400":
+          description: Ese socio no aplica
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Pase no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # -------------------------------------------------------------- universe
   /universe:
@@ -1388,7 +1420,58 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SkyVisit"
-      required: [memberCode, visits]
+        passes:
+          description: Pases vivos («Te lo paso»), del que vence primero al último
+          type: array
+          items:
+            $ref: "#/components/schemas/SkyPass"
+      required: [memberCode, visits, passes]
+    SkyPass:
+      type: object
+      properties:
+        id:
+          type: string
+        toPlaceId:
+          type: string
+        toPlaceName:
+          type: string
+        fromPlaceName:
+          type: string
+        offer:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required: [id, toPlaceId, toPlaceName, fromPlaceName, offer, expiresAt]
+    PartnerRef:
+      type: object
+      properties:
+        placeId:
+          type: string
+        name:
+          type: string
+        offer:
+          type: [string, "null"]
+      required: [placeId, name, offer]
+    MerchantPass:
+      type: object
+      properties:
+        id:
+          type: string
+        toPlaceId:
+          type: string
+        toPlaceName:
+          type: string
+        offer:
+          type: string
+      required: [id, toPlaceId, toPlaceName, offer]
+    ChangePassRequest:
+      type: object
+      properties:
+        toPlaceId:
+          type: string
+          format: uuid
+      required: [toPlaceId]
     SkyVisit:
       type: object
       properties:
@@ -1437,7 +1520,18 @@ components:
             - type: "null"
         slug:
           type: [string, "null"]
-      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news, slug]
+        partners:
+          description: Socios a los que este comercio pasa vecinos
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerRef"
+        sentThisMonth:
+          type: integer
+          description: Vecinos que mandó y que ya llegaron, este mes
+        receivedThisMonth:
+          type: integer
+          description: Vecinos que le mandaron otros comercios, este mes
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news, slug, partners, sentThisMonth, receivedThisMonth]
     MerchantRecentVisit:
       type: object
       properties:
@@ -1448,7 +1542,10 @@ components:
           format: date-time
         welcomeApplied:
           type: boolean
-      required: [firstName, at, welcomeApplied]
+        referredBy:
+          type: [string, "null"]
+          description: Comercio que mandó al vecino, si llegó con pase
+      required: [firstName, at, welcomeApplied, referredBy]
     MemberLookup:
       type: object
       properties:
@@ -1462,7 +1559,10 @@ components:
         recentlyRecorded:
           type: boolean
           description: Ya se registró una visita en las últimas 2 horas
-      required: [firstName, visitsHere, welcomeOffer, recentlyRecorded]
+        referredBy:
+          type: [string, "null"]
+          description: Comercio que le pasó a este vecino con un pase vivo
+      required: [firstName, visitsHere, welcomeOffer, recentlyRecorded, referredBy]
     RecordVisitRequest:
       type: object
       properties:
@@ -1484,7 +1584,20 @@ components:
           type: [string, "null"]
         duplicate:
           type: boolean
-      required: [firstName, visitsHere, welcomeApplied, welcomeOffer, duplicate]
+        referredBy:
+          type: [string, "null"]
+          description: El vecino llegó con pase de este comercio (se canjeó)
+        pass:
+          description: Pase que se le dio al vecino hacia un socio
+          anyOf:
+            - $ref: "#/components/schemas/MerchantPass"
+            - type: "null"
+        passOptions:
+          description: Socios a los que se puede cambiar el pase
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerRef"
+      required: [firstName, visitsHere, welcomeApplied, welcomeOffer, duplicate, referredBy, pass, passOptions]
     PhotoRef:
       type: object
       properties:
@@ -1727,6 +1840,11 @@ components:
         neighborsServed:
           type: integer
           description: Vecinos distintos con visita registrada
+        myPass:
+          description: Pase vivo del vecino hacia este lugar
+          anyOf:
+            - $ref: "#/components/schemas/PlacePass"
+            - type: "null"
         myVisits:
           type: integer
         kind:
@@ -1780,6 +1898,7 @@ components:
 
         - welcomeOffer
         - neighborsServed
+        - myPass
         - myVisits
         - id
         - constellation
@@ -1801,6 +1920,15 @@ components:
         - endorserNames
         - endorsedByMe
         - locked
+    PlacePass:
+      type: object
+      properties:
+        fromPlaceName:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required: [fromPlaceName, expiresAt]
     EndorseRequest:
       type: object
       properties:
@@ -1936,7 +2064,10 @@ components:
           type: boolean
         welcomeOffer:
           type: [string, "null"]
-      required: [id, at, residentId, residentName, placeId, placeName, welcomeApplied, welcomeOffer]
+        referredBy:
+          type: [string, "null"]
+          description: Comercio que mandó al vecino con pase
+      required: [id, at, residentId, residentName, placeId, placeName, welcomeApplied, welcomeOffer, referredBy]
     ClearVisitsRequest:
       type: object
       properties:
@@ -2067,6 +2198,13 @@ components:
         welcomeOffer:
           type: [string, "null"]
           maxLength: 80
+        partnerIds:
+          description: Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan
+          type: array
+          maxItems: 2
+          items:
+            type: string
+            format: uuid
         kind:
           $ref: "#/components/schemas/PlaceKind"
         delivers:
@@ -2152,7 +2290,13 @@ components:
               type: integer
             slug:
               type: [string, "null"]
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos, leadCount, slug]
+            passesSent:
+              type: integer
+              description: Vecinos que mandó y llegaron, últimos 30 días
+            passesReceived:
+              type: integer
+              description: Vecinos que le mandaron y llegaron, últimos 30 días
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos, leadCount, slug, partnerIds, passesSent, passesReceived]
     DemoResult:
       type: object
       properties:

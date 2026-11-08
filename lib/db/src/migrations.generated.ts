@@ -141,5 +141,20 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
     "statements": [
       "ALTER TABLE \"places\" ADD COLUMN \"outside_villas\" boolean DEFAULT false NOT NULL;"
     ]
+  },
+  {
+    "tag": "0012_pases",
+    "statements": [
+      "CREATE TABLE \"passes\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"resident_id\" uuid NOT NULL,\n\t\"from_place_id\" uuid NOT NULL,\n\t\"to_place_id\" uuid NOT NULL,\n\t\"offer\" text NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"from_visit_id\" uuid,\n\t\"redeemed_visit_id\" uuid,\n\t\"redeemed_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"places\" ADD COLUMN \"partner_ids\" jsonb DEFAULT '[]'::jsonb NOT NULL;",
+      "ALTER TABLE \"passes\" ADD CONSTRAINT \"passes_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"passes\" ADD CONSTRAINT \"passes_from_place_id_places_id_fk\" FOREIGN KEY (\"from_place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"passes\" ADD CONSTRAINT \"passes_to_place_id_places_id_fk\" FOREIGN KEY (\"to_place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"passes\" ADD CONSTRAINT \"passes_from_visit_id_visits_id_fk\" FOREIGN KEY (\"from_visit_id\") REFERENCES \"public\".\"visits\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"passes\" ADD CONSTRAINT \"passes_redeemed_visit_id_visits_id_fk\" FOREIGN KEY (\"redeemed_visit_id\") REFERENCES \"public\".\"visits\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE INDEX \"passes_resident_idx\" ON \"passes\" USING btree (\"resident_id\",\"expires_at\");",
+      "CREATE INDEX \"passes_from_idx\" ON \"passes\" USING btree (\"from_place_id\",\"redeemed_at\");",
+      "CREATE INDEX \"passes_to_idx\" ON \"passes\" USING btree (\"to_place_id\",\"redeemed_at\");"
+    ]
   }
 ];

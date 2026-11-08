@@ -114,6 +114,12 @@ export const placesTable = pgTable(
     whatsappClicks: integer("whatsapp_clicks").notNull().default(0),
     /** Beneficio para la primera visita desde el universo: "Primer café 2x1". */
     welcomeOffer: text("welcome_offer"),
+    /**
+     * Socios («Te lo paso»): hasta 2 lugares a los que este comercio manda
+     * vecinos. Al registrar una visita aquí, el vecino recibe un pase al primero
+     * que aún no conoce. Ids sueltos: si un socio se borra, se ignora al usarlo.
+     */
+    partnerIds: jsonb("partner_ids").$type<string[]>().notNull().default([]),
     /** Para el link público: /e/pizzas-del-parque. Se crea al guardar. */
     slug: text("slug").unique(),
     /** Hash del link del modo comercio; null = sin modo comercio. */
@@ -179,6 +185,41 @@ export const visitsTable = pgTable(
   (t) => [
     index("visits_resident_idx").on(t.residentId),
     index("visits_place_idx").on(t.placeId, t.createdAt),
+  ],
+);
+
+/**
+ * Pase («Te lo paso»): el comercio A le pasa un vecino al comercio B.
+ * Lleva el regalo de bienvenida de B y vence en 7 días. Se canjea cuando B
+ * registra la visita del vecino; así queda que A le mandó un cliente a B.
+ */
+export const passesTable = pgTable(
+  "passes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    residentId: uuid("resident_id")
+      .notNull()
+      .references(() => residentsTable.id, { onDelete: "cascade" }),
+    fromPlaceId: uuid("from_place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    toPlaceId: uuid("to_place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    /** Copia del regalo de B al momento de pasar (si B lo cambia, el pase respeta lo prometido). */
+    offer: text("offer").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Visita en A que generó el pase. Si se borra (limpieza de pruebas), el pase se va con ella. */
+    fromVisitId: uuid("from_visit_id").references(() => visitsTable.id, { onDelete: "cascade" }),
+    /** Visita en B que canjeó el pase; null = sigue vivo o venció. Se borra con esa visita. */
+    redeemedVisitId: uuid("redeemed_visit_id").references(() => visitsTable.id, { onDelete: "cascade" }),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("passes_resident_idx").on(t.residentId, t.expiresAt),
+    index("passes_from_idx").on(t.fromPlaceId, t.redeemedAt),
+    index("passes_to_idx").on(t.toPlaceId, t.redeemedAt),
   ],
 );
 
@@ -260,4 +301,5 @@ export const merchantSessionsTable = pgTable(
 export type Place = typeof placesTable.$inferSelect;
 export type NewPlace = typeof placesTable.$inferInsert;
 export type Visit = typeof visitsTable.$inferSelect;
+export type Pass = typeof passesTable.$inferSelect;
 export type ConstellationRow = typeof constellationsTable.$inferSelect;

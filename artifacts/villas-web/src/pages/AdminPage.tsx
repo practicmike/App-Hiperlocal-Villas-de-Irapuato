@@ -551,6 +551,14 @@ function Places({ editId }: { editId: string | null }) {
             Lo paga el comercio a cambio de un cliente nuevo. Se aplica solo la primera vez que escanea a cada vecino. Vacío = sin regalo.
           </span>
         </label>
+        {!current?.isProperty && (
+          <PartnerPicker
+            selfId={editing.id}
+            value={f.partnerIds ?? []}
+            places={(places ?? []).filter((p) => p.active && !consMap.get(p.constellation)?.isProperty)}
+            onChange={(ids) => set("partnerIds", ids)}
+          />
+        )}
         <AdminField
           label={current?.isProperty ? "Precio" : "Precio o rango (opcional)"}
           placeholder={current?.isProperty ? "$3.2 M · $14,500 / mes" : "Desde $95 · $28 el kilo · Visita $300"}
@@ -779,6 +787,7 @@ const toInput = (p: AdminPlace): PlaceInput => ({
   priceLabel: p.priceLabel,
   imageUrl: p.imageUrl,
   welcomeOffer: p.welcomeOffer,
+  partnerIds: p.partnerIds ?? [],
   kind: p.kind,
   delivers: p.delivers,
   pickup: p.pickup,
@@ -845,6 +854,66 @@ function DemoTools({ places, onChange }: { places: AdminPlace[]; onChange: () =>
   );
 }
 
+/**
+ * «Te lo paso»: hasta 2 socios. Al registrar una visita aquí, el vecino recibe
+ * un pase al primero que aún no conoce (y que tenga regalo); el comercio puede cambiarlo al otro.
+ */
+function PartnerPicker({
+  selfId,
+  value,
+  places,
+  onChange,
+}: {
+  selfId: string | null;
+  value: string[];
+  places: AdminPlace[];
+  onChange: (ids: string[]) => void;
+}) {
+  const options = places.filter((p) => p.id !== selfId).sort((a, b) => a.name.localeCompare(b.name, "es"));
+  const pick = (i: number, id: string) => {
+    const next = [...value];
+    if (id) next[i] = id;
+    else next.splice(i, 1);
+    onChange([...new Set(next.filter(Boolean))].slice(0, 2));
+  };
+  const slot = (i: number) => (
+    <select
+      value={value[i] ?? ""}
+      onChange={(e) => pick(i, e.target.value)}
+      disabled={i === 1 && !value[0]}
+      className="w-full rounded-xl border border-white/15 bg-space-2 px-3 py-2 text-sm outline-none focus:border-confianza disabled:opacity-40"
+    >
+      <option value="">{i === 0 ? "Sin socio" : "Sin segundo socio"}</option>
+      {options
+        .filter((p) => p.id === value[i] || !value.includes(p.id))
+        .map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+            {p.welcomeOffer ? ` · ${p.welcomeOffer}` : " · sin regalo"}
+          </option>
+        ))}
+    </select>
+  );
+  const noGift = value.map((id) => options.find((p) => p.id === id)).filter((p) => p && !p.welcomeOffer);
+  return (
+    <div className="block rounded-xl border border-confianza/30 p-3">
+      <span className="mb-1 block text-xs font-bold text-confianza">Te lo paso: socios (máximo 2)</span>
+      <span className="mb-2 block text-[11px] text-muted">
+        Cada visita registrada aquí le pasa el vecino al primer socio que aún no conoce, con el regalo de ese socio (vale 7 días). Elige negocios que se complementen: panadería → café.
+      </span>
+      <div className="space-y-2">
+        {slot(0)}
+        {slot(1)}
+      </div>
+      {noGift.length > 0 && (
+        <span className="mt-2 block text-[11px] text-casas">
+          {noGift.map((p) => p!.name).join(" y ")} no tiene regalo de bienvenida: no recibirá pases hasta que tenga uno.
+        </span>
+      )}
+    </div>
+  );
+}
+
 function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: () => void }) {
   return (
     <li>
@@ -856,6 +925,12 @@ function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: 
             {p.isDemo && <span className="font-bold text-casas">Ejemplo · </span>}
             {p.category} · {p.visitCount} visitas · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
             {p.welcomeOffer && <span className="text-[#E6C882]"> · regalo</span>}
+            {(p.passesSent > 0 || p.passesReceived > 0) && (
+              <span className="text-confianza">
+                {" "}
+                · mandó {p.passesSent} · recibió {p.passesReceived}
+              </span>
+            )}
             {p.hasMerchantKey && <span className="text-confianza"> · comercio</span>}
             {p.leadCount > 0 && <span className="text-[#25D366]"> · {p.leadCount} interesados</span>}
             {p.hasEmbedding && <span className="text-ai"> · IA</span>}
@@ -1398,6 +1473,7 @@ function Visits() {
                 </p>
                 <p className="text-xs text-muted">{fmtDate(v.at)}</p>
                 {v.welcomeApplied && <p className="mt-1 text-xs font-bold text-[#E6C882]">Regalo: {v.welcomeOffer}</p>}
+                {v.referredBy && <p className="mt-1 text-xs font-bold text-confianza">De parte de {v.referredBy}</p>}
               </div>
               <button
                 aria-label="Borrar visita"

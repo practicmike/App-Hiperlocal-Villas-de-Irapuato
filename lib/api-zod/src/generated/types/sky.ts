@@ -5,9 +5,12 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { SkyPass } from './skyPass';
 import type { SkyVisit } from './skyVisit';
 
 export interface Sky {
   memberCode: string;
   visits: SkyVisit[];
+  /** Pases vivos («Te lo paso»), del que vence primero al último */
+  passes: SkyPass[];
 }
