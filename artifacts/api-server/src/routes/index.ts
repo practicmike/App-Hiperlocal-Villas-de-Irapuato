@@ -6,6 +6,7 @@ import universeRouter from "./universe";
 import adminRouter from "./admin";
 import merchantRouter from "./merchant";
 import noticesRouter from "./notices";
+import pushRouter from "./push";
 
 const router: IRouter = Router();
 
@@ -14,6 +15,7 @@ router.use(healthRouter);
 router.use(setupRouter);
 router.use(authRouter);
 router.use(merchantRouter);
+router.use(pushRouter);
 router.use(noticesRouter);
 router.use(universeRouter);
 router.use(adminRouter);

@@ -799,6 +799,71 @@ paths:
       responses:
         "204":
           description: Descartados
+  /admin/push:
+    get:
+      operationId: adminGetPush
+      tags: [admin]
+      summary: Estado de las notificaciones push del creador
+      responses:
+        "200":
+          description: Estado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPush"
+  /admin/push/prefs:
+    put:
+      operationId: adminUpdatePushPrefs
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushPrefsInput"
+      responses:
+        "204":
+          description: Guardado
+  /admin/push/subscriptions:
+    post:
+      operationId: adminAddPushSubscription
+      tags: [admin]
+      summary: Activar push en este teléfono
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscriptionInput"
+      responses:
+        "204":
+          description: Activado
+  /admin/push/subscriptions/remove:
+    post:
+      operationId: adminRemovePushSubscription
+      tags: [admin]
+      summary: Desactivar push en un teléfono
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushEndpointInput"
+      responses:
+        "204":
+          description: Desactivado
+  /admin/push/test:
+    post:
+      operationId: adminTestPush
+      tags: [admin]
+      summary: Mandar una notificación de prueba
+      responses:
+        "200":
+          description: Resultado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushTestResult"
   /admin/kpis:
     get:
       operationId: adminKpis
@@ -2312,6 +2377,107 @@ components:
             type: string
             format: uuid
       required: [ids]
+    PushKindInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        hint:
+          type: string
+        ignoresQuiet:
+          type: boolean
+      required: [id, label, hint, ignoresQuiet]
+    PushDevice:
+      type: object
+      properties:
+        endpoint:
+          type: string
+        label:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [endpoint, label, createdAt]
+    AdminPush:
+      type: object
+      properties:
+        available:
+          type: boolean
+          description: false si faltan las llaves VAPID en el servidor
+        publicKey:
+          type: [string, "null"]
+        kinds:
+          type: array
+          items:
+            $ref: "#/components/schemas/PushKindInfo"
+        muted:
+          type: array
+          items:
+            type: string
+        quietStart:
+          type: [integer, "null"]
+        quietEnd:
+          type: [integer, "null"]
+        digest:
+          type: boolean
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/PushDevice"
+      required: [available, publicKey, kinds, muted, quietStart, quietEnd, digest, devices]
+    PushPrefsInput:
+      type: object
+      properties:
+        muted:
+          type: array
+          items:
+            type: string
+        quietStart:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 23
+        quietEnd:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 23
+        digest:
+          type: boolean
+      required: [muted, quietStart, quietEnd, digest]
+    PushSubscriptionInput:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        keys:
+          type: object
+          properties:
+            p256dh:
+              type: string
+              maxLength: 200
+            auth:
+              type: string
+              maxLength: 100
+          required: [p256dh, auth]
+        label:
+          type: [string, "null"]
+          maxLength: 60
+      required: [endpoint, keys, label]
+    PushEndpointInput:
+      type: object
+      properties:
+        endpoint:
+          type: string
+      required: [endpoint]
+    PushTestResult:
+      type: object
+      properties:
+        sent:
+          type: integer
+      required: [sent]
     AdminKpi:
       type: object
       properties:

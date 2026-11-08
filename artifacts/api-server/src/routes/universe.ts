@@ -37,6 +37,7 @@ import { rateLimit } from "../lib/rate-limit";
 import { endorsementCounts, getActivePlace, placeDetail } from "../lib/places";
 import { photosByPlace } from "../lib/photos";
 import { activeNews } from "../lib/news";
+import { notifyCreator } from "../lib/push";
 import { embed } from "../lib/ai";
 import { audioExt, transcribe } from "../lib/transcribe";
 import { aiMatch, keepKeywordHits, AI_MAX_CANDIDATES } from "../lib/ai-match";
@@ -159,6 +160,14 @@ router.post("/places/:id/lead", rateLimit("lead", 20, 60 * 60_000), async (req, 
     .limit(1);
   const via = c?.isProperty && !place.directContact ? "creador" : "vendedor";
   await db.insert(leadsTable).values({ placeId: id, source: body.source, via, name, phone });
+  if (body.source === "casa") {
+    notifyCreator("interesado", {
+      title: `🏠 Interesado en ${place.name}`,
+      body: via === "creador" ? `${name ?? "Alguien"} pasa por ti: preséntalo con el vendedor.` : `${name ?? "Alguien"} va a contactar al vendedor.`,
+      url: "/panel?tab=interesados",
+      tag: `interesado-${id}`,
+    });
+  }
   await db
     .update(placesTable)
     .set({ whatsappClicks: sql`${placesTable.whatsappClicks} + 1` })
@@ -365,11 +374,16 @@ router.post("/searches/:id/suggestion", rateLimit("suggestion", 10, 60 * 60_000)
     .update(searchesTable)
     .set({ suggestion: text.trim(), handled: false })
     .where(and(eq(searchesTable.id, id), eq(searchesTable.resultCount, 0), owner))
-    .returning({ id: searchesTable.id });
+    .returning({ id: searchesTable.id, query: searchesTable.query });
   if (!row) {
     res.status(404).json({ message: "No encontramos esa búsqueda." });
     return;
   }
+  notifyCreator("recomendacion", {
+    title: `💡 Buscaban «${row.query.slice(0, 40)}»`,
+    body: text.trim().slice(0, 140),
+    url: "/panel?tab=busquedas",
+  });
   res.status(204).end();
 });
 
@@ -383,6 +397,11 @@ router.post("/places/:id/complaints", requireResident, rateLimit("complaint", 10
     return;
   }
   await db.insert(complaintsTable).values({ placeId: id, residentId: req.resident!.id, message });
+  notifyCreator("queja", {
+    title: `🔒 Queja sobre ${place.name}`,
+    body: message.slice(0, 140),
+    url: "/panel?tab=quejas",
+  });
   res.status(201).end();
 });
 

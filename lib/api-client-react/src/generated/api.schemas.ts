@@ -778,6 +778,81 @@ export interface IdsRequest {
   ids: string[];
 }
 
+export interface PushKindInfo {
+  id: string;
+  label: string;
+  hint: string;
+  ignoresQuiet: boolean;
+}
+
+export interface PushDevice {
+  endpoint: string;
+  /** @nullable */
+  label: string | null;
+  createdAt: string;
+}
+
+export interface AdminPush {
+  /** false si faltan las llaves VAPID en el servidor */
+  available: boolean;
+  /** @nullable */
+  publicKey: string | null;
+  kinds: PushKindInfo[];
+  muted: string[];
+  /** @nullable */
+  quietStart: number | null;
+  /** @nullable */
+  quietEnd: number | null;
+  digest: boolean;
+  devices: PushDevice[];
+}
+
+export interface PushPrefsInput {
+  muted: string[];
+  /**
+     * @minimum 0
+     * @maximum 23
+     * @nullable
+     */
+  quietStart: number | null;
+  /**
+     * @minimum 0
+     * @maximum 23
+     * @nullable
+     */
+  quietEnd: number | null;
+  digest: boolean;
+}
+
+export type PushSubscriptionInputKeys = {
+  /** @maxLength 200 */
+  p256dh: string;
+  /** @maxLength 100 */
+  auth: string;
+};
+
+export interface PushSubscriptionInput {
+  /**
+     * @minLength 10
+     * @maxLength 1000
+     */
+  endpoint: string;
+  keys: PushSubscriptionInputKeys;
+  /**
+     * @maxLength 60
+     * @nullable
+     */
+  label: string | null;
+}
+
+export interface PushEndpointInput {
+  endpoint: string;
+}
+
+export interface PushTestResult {
+  sent: number;
+}
+
 export type AdminKpiStatus = typeof AdminKpiStatus[keyof typeof AdminKpiStatus];
 
 

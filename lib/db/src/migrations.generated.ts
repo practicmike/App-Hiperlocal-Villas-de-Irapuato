@@ -179,5 +179,14 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "CREATE INDEX \"notice_reports_created_idx\" ON \"notice_reports\" USING btree (\"created_at\");",
       "CREATE INDEX \"notices_expires_idx\" ON \"notices\" USING btree (\"expires_at\");"
     ]
+  },
+  {
+    "tag": "0015_push",
+    "statements": [
+      "CREATE TABLE \"push_prefs\" (\n\t\"resident_id\" uuid PRIMARY KEY NOT NULL,\n\t\"muted\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"quiet_start\" integer,\n\t\"quiet_end\" integer,\n\t\"digest\" boolean DEFAULT true NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"push_subscriptions\" (\n\t\"endpoint\" text PRIMARY KEY NOT NULL,\n\t\"resident_id\" uuid NOT NULL,\n\t\"p256dh\" text NOT NULL,\n\t\"auth\" text NOT NULL,\n\t\"label\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"last_sent_at\" timestamp with time zone\n);",
+      "ALTER TABLE \"push_prefs\" ADD CONSTRAINT \"push_prefs_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"push_subscriptions\" ADD CONSTRAINT \"push_subscriptions_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+    ]
   }
 ];
