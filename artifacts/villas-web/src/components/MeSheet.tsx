@@ -38,7 +38,7 @@ function Credential({ code, name }: { code: string; name: string }) {
         />
         <p className="mt-3 font-mono text-base font-bold tracking-widest">{pretty(code)}</p>
         <p className="mt-2 text-xs text-muted">
-          Enséñala en los negocios de OrbiTú Villas. Cuando la escanean, te pueden regalar algo en otro negocio de la colonia.
+          Enséñala en los negocios de OrbiTú Villas y gana regalos en otros de la colonia.
         </p>
       </div>
     </div>
