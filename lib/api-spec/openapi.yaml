@@ -304,7 +304,7 @@ paths:
     put:
       operationId: merchantChangePass
       tags: [merchant]
-      summary: Cambia a qué socio va el pase que el comercio acaba de dar
+      summary: Cambia el pase recién dado a la alternativa que ofreció el sistema
       parameters:
         - $ref: "#/components/parameters/IdParam"
       requestBody:
@@ -321,7 +321,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/MerchantPass"
         "400":
-          description: Ese socio no aplica
+          description: Ese comercio no aplica para este vecino
           content:
             application/json:
               schema:
@@ -1520,18 +1520,13 @@ components:
             - type: "null"
         slug:
           type: [string, "null"]
-        partners:
-          description: Socios a los que este comercio pasa vecinos
-          type: array
-          items:
-            $ref: "#/components/schemas/PartnerRef"
         sentThisMonth:
           type: integer
           description: Vecinos que mandó y que ya llegaron, este mes
         receivedThisMonth:
           type: integer
           description: Vecinos que le mandaron otros comercios, este mes
-      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news, slug, partners, sentThisMonth, receivedThisMonth]
+      required: [placeId, placeName, welcomeOffer, todayVisits, totalVisits, neighbors, recent, kind, news, slug, sentThisMonth, receivedThisMonth]
     MerchantRecentVisit:
       type: object
       properties:
@@ -1593,7 +1588,7 @@ components:
             - $ref: "#/components/schemas/MerchantPass"
             - type: "null"
         passOptions:
-          description: Socios a los que se puede cambiar el pase
+          description: Otro comercio al que se puede cambiar el pase (elegido por el sistema)
           type: array
           items:
             $ref: "#/components/schemas/PartnerRef"
@@ -2198,13 +2193,6 @@ components:
         welcomeOffer:
           type: [string, "null"]
           maxLength: 80
-        partnerIds:
-          description: Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan
-          type: array
-          maxItems: 2
-          items:
-            type: string
-            format: uuid
         kind:
           $ref: "#/components/schemas/PlaceKind"
         delivers:
@@ -2296,7 +2284,7 @@ components:
             passesReceived:
               type: integer
               description: Vecinos que le mandaron y llegaron, últimos 30 días
-          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos, leadCount, slug, partnerIds, passesSent, passesReceived]
+          required: [id, whatsappClicks, endorsementCount, hasEmbedding, isDemo, visitCount, hasMerchantKey, photos, leadCount, slug, passesSent, passesReceived]
     DemoResult:
       type: object
       properties:

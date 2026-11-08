@@ -7,7 +7,6 @@
  */
 import type { MerchantRecentVisit } from './merchantRecentVisit';
 import type { NewsItem } from './newsItem';
-import type { PartnerRef } from './partnerRef';
 import type { PlaceKind } from './placeKind';
 
 export interface MerchantMe {
@@ -23,8 +22,6 @@ export interface MerchantMe {
   news: NewsItem | null;
   /** @nullable */
   slug: string | null;
-  /** Socios a los que este comercio pasa vecinos */
-  partners: PartnerRef[];
   /** Vecinos que mandó y que ya llegaron, este mes */
   sentThisMonth: number;
   /** Vecinos que le mandaron otros comercios, este mes */

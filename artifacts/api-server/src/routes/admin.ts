@@ -1,4 +1,4 @@
-import { cleanPartnerIds, referralCounts } from "../lib/passes";
+import { referralCounts } from "../lib/passes";
 import crypto from "node:crypto";
 import express, { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
@@ -449,7 +449,6 @@ const toAdminPlace = (
   photos: photos.get(p.id) ?? [],
   leadCount: leads.get(p.id) ?? 0,
   slug: p.slug,
-  partnerIds: p.partnerIds ?? [],
   passesSent: referrals.sent.get(p.id) ?? 0,
   passesReceived: referrals.received.get(p.id) ?? 0,
 });
@@ -521,11 +520,7 @@ router.post("/admin/places", async (req, res) => {
     res.status(400).json({ message: "Esa categoría no existe." });
     return;
   }
-  const partners = body.partnerIds !== undefined ? { partnerIds: await cleanPartnerIds(null, body.partnerIds) } : {};
-  const [place0] = await db
-    .insert(placesTable)
-    .values({ ...cleanPlaceInput(body, c.isProperty), ...partners })
-    .returning();
+  const [place0] = await db.insert(placesTable).values(cleanPlaceInput(body, c.isProperty)).returning();
   const place = { ...place0!, slug: await ensureSlug(place0!).catch(() => null) };
   refreshEmbedding(place);
   res.status(201).json(toAdminPlace(place, new Map()));
@@ -543,8 +538,6 @@ router.put("/admin/places/:id", async (req, res) => {
     .update(placesTable)
     .set({
       ...cleanPlaceInput(body, c.isProperty),
-      // Sin el campo (clientes viejos), se conservan los socios guardados.
-      ...(body.partnerIds !== undefined ? { partnerIds: await cleanPartnerIds(id, body.partnerIds) } : {}),
       embedding: null,
       updatedAt: new Date(),
     })

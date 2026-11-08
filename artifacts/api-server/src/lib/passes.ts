@@ -1,18 +1,23 @@
 /**
- * «Te lo paso»: la hoja de referencia de BNI, entre comercios de Villas.
+ * «Te lo paso»: la hoja de referencia de BNI, entre comercios de Villas, sin que nadie elija a mano.
  *
- * - Cada lugar tiene hasta 2 socios (los elige el creador en el panel).
- * - Al registrar una visita en A, el vecino recibe un pase al primer socio de A
- *   que aún no conoce y que tiene regalo de bienvenida. Vence en 7 días.
- * - Cuando B registra la visita de ese vecino, el pase se canjea: queda que A le
- *   mandó un cliente a B. El regalo lo paga B, como hoy: es su costo por un cliente nuevo.
- * - No hay puntos ni dinero entre comercios. A gana visibilidad (impulso en búsquedas).
+ * - Al registrar una visita en A, el sistema le pasa el vecino a otro comercio que
+ *   él aún no conoce y que tiene regalo de bienvenida. Vence en 7 días.
+ * - Reparto parejo: va primero al comercio que MENOS pases ha recibido este mes,
+ *   así todos reciben vecinos, no solo los populares. Empate: de otra categoría
+ *   (para que el vecino brinque de Antojos a Cuidar) y luego el más cercano a A.
+ * - Nunca a un competidor (mismo giro), ni a casas, ni de un ejemplo a un lugar real.
+ * - El comercio puede cambiarlo a la segunda opción con un toque.
+ * - Cuando el otro comercio registra la visita del vecino, el pase se canjea:
+ *   queda que A le mandó un cliente. El regalo lo paga ese comercio, como hoy;
+ *   no hay puntos ni dinero entre comercios. A gana visibilidad (impulso en búsquedas).
  */
 import { and, asc, eq, gt, gte, inArray, isNull, sql } from "drizzle-orm";
-import { db, passesTable, placesTable, visitsTable, type Place } from "@workspace/db";
+import { db, constellationsTable, passesTable, placesTable, visitsTable, type Place } from "@workspace/db";
+import { DEMO_WHATSAPP_PREFIX } from "./demo-places";
+import { rankCandidates } from "./passes-rank";
 
 export const PASS_DAYS = 7;
-export const MAX_PARTNERS = 2;
 /** Ventana para el marcador del panel y el impulso en búsquedas. */
 export const REFERRAL_WINDOW_DAYS = 30;
 /** Impulso máximo por referencias (de 10 posibles; cada punto = 0.01 de relevancia). */
@@ -21,41 +26,75 @@ export const MAX_REFERRAL_BOOST = 5;
 const TZ = "America/Mexico_City";
 
 const isLive = () => and(isNull(passesTable.redeemedAt), gt(passesTable.expiresAt, new Date()));
+const isDemo = (p: Pick<Place, "whatsapp">) => p.whatsapp.startsWith(DEMO_WHATSAPP_PREFIX);
+const sameGiro = (a: string, b: string) =>
+  a.trim().toLocaleLowerCase("es") === b.trim().toLocaleLowerCase("es");
 
-export type PartnerOption = { placeId: string; name: string; offer: string | null };
+export type PassOption = { placeId: string; name: string; offer: string | null };
+
+type Candidate = Place & { issued: number; otherConstellation: boolean; distance: number | null };
+
+/** Metros entre dos puntos (suficiente para ordenar por cercanía dentro de una colonia). */
+function meters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const r = 6_371_000;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(h));
+}
 
 /**
- * Socios de `place` a los que se le puede pasar este vecino ahora:
- * activos, con regalo, que el vecino no ha visitado y sin pase vivo hacia ellos.
- * En el orden en que el creador los puso.
+ * A quién se le puede pasar este vecino desde `from`, ya en el orden del reparto.
+ * Solo comercios activos con regalo, que el vecino no ha visitado, sin pase vivo
+ * hacia ellos, que no son competencia de `from` y que no son casas.
  */
-export async function eligiblePartners(place: Place, residentId: string): Promise<PartnerOption[]> {
-  const ids = (place.partnerIds ?? []).filter((id) => id !== place.id);
-  if (ids.length === 0) return [];
-  const [partners, visited, live] = await Promise.all([
-    db.select().from(placesTable).where(and(inArray(placesTable.id, ids), eq(placesTable.active, true))),
+export async function passCandidates(from: Place, residentId: string): Promise<PassOption[]> {
+  const monthStart = sql`date_trunc('month', now() at time zone ${TZ}) at time zone ${TZ}`;
+  const [places, visited, live, issued] = await Promise.all([
     db
-      .selectDistinct({ placeId: visitsTable.placeId })
-      .from(visitsTable)
-      .where(and(eq(visitsTable.residentId, residentId), inArray(visitsTable.placeId, ids))),
+      .select({ p: placesTable })
+      .from(placesTable)
+      .innerJoin(constellationsTable, eq(placesTable.constellation, constellationsTable.id))
+      .where(
+        and(
+          eq(placesTable.active, true),
+          eq(constellationsTable.isProperty, false),
+          sql`coalesce(trim(${placesTable.welcomeOffer}), '') <> ''`,
+        ),
+      ),
+    db.selectDistinct({ placeId: visitsTable.placeId }).from(visitsTable).where(eq(visitsTable.residentId, residentId)),
     db
       .select({ placeId: passesTable.toPlaceId })
       .from(passesTable)
-      .where(and(eq(passesTable.residentId, residentId), inArray(passesTable.toPlaceId, ids), isLive())),
+      .where(and(eq(passesTable.residentId, residentId), isLive())),
+    // Pases DADOS este mes por destino (canjeados o no): el reparto se empareja desde el primer día.
+    db
+      .select({ placeId: passesTable.toPlaceId, n: sql<number>`count(*)::int` })
+      .from(passesTable)
+      .where(sql`${passesTable.createdAt} >= ${monthStart}`)
+      .groupBy(passesTable.toPlaceId),
   ]);
-  const skip = new Set([...visited.map((v) => v.placeId), ...live.map((p) => p.placeId)]);
-  const byId = new Map(partners.map((p) => [p.id, p]));
-  return ids
-    .map((id) => byId.get(id))
-    .filter((p): p is Place => !!p && !!p.welcomeOffer?.trim() && !skip.has(p.id))
-    .map((p) => ({ placeId: p.id, name: p.name, offer: p.welcomeOffer }));
+  const skip = new Set([from.id, ...visited.map((v) => v.placeId), ...live.map((l) => l.placeId)]);
+  const issuedBy = new Map(issued.map((i) => [i.placeId, i.n]));
+  const origin = from.lat != null && from.lng != null ? { lat: from.lat, lng: from.lng } : null;
+  const candidates: Candidate[] = places
+    .map(({ p }) => p)
+    .filter((p) => !skip.has(p.id) && isDemo(p) === isDemo(from) && !sameGiro(p.category, from.category))
+    .map((p) => ({
+      ...p,
+      issued: issuedBy.get(p.id) ?? 0,
+      otherConstellation: p.constellation !== from.constellation,
+      distance: origin && p.lat != null && p.lng != null ? meters(origin, { lat: p.lat, lng: p.lng }) : null,
+    }));
+  return rankCandidates(candidates).map((p) => ({ placeId: p.id, name: p.name, offer: p.welcomeOffer }));
 }
 
-/** Da el pase al primer socio que aplique. Devuelve el pase y los otros socios a los que se puede cambiar. */
+/** Da el pase al primero del reparto. Devuelve el pase y una alternativa por si el comercio quiere cambiarlo. */
 export async function givePass(from: Place, residentId: string, fromVisitId: string) {
-  const options = await eligiblePartners(from, residentId);
+  const options = await passCandidates(from, residentId);
   const target = options[0];
-  if (!target) return { pass: null, options: [] as PartnerOption[] };
+  if (!target) return { pass: null, options: [] as PassOption[] };
   const [row] = await db
     .insert(passesTable)
     .values({
@@ -69,11 +108,11 @@ export async function givePass(from: Place, residentId: string, fromVisitId: str
     .returning();
   return {
     pass: { id: row!.id, toPlaceId: target.placeId, toPlaceName: target.name, offer: row!.offer },
-    options: options.slice(1),
+    options: options.slice(1, 2),
   };
 }
 
-/** El comercio cambia a qué socio va el pase que acaba de dar (un toque). */
+/** El comercio cambia el pase que acaba de dar a otro comercio que también aplica (un toque). */
 export async function changePass(from: Place, passId: string, toPlaceId: string) {
   const [pass] = await db
     .select()
@@ -81,7 +120,7 @@ export async function changePass(from: Place, passId: string, toPlaceId: string)
     .where(and(eq(passesTable.id, passId), eq(passesTable.fromPlaceId, from.id), isLive()))
     .limit(1);
   if (!pass) return { error: 404 as const };
-  const target = (await eligiblePartners(from, pass.residentId)).find((o) => o.placeId === toPlaceId);
+  const target = (await passCandidates(from, pass.residentId)).find((o) => o.placeId === toPlaceId);
   if (!target) return { error: 400 as const };
   await db
     .update(passesTable)
@@ -185,13 +224,4 @@ export async function referralCounts() {
  */
 export function referralBoost(sentLast30: number): number {
   return Math.min(MAX_REFERRAL_BOOST, Math.max(0, sentLast30));
-}
-
-/** Socios válidos para guardar: existen, no es el mismo lugar, sin repetidos, máximo 2. */
-export async function cleanPartnerIds(placeId: string | null, ids: string[]): Promise<string[]> {
-  const unique = [...new Set(ids)].filter((id) => id !== placeId).slice(0, MAX_PARTNERS);
-  if (unique.length === 0) return [];
-  const found = await db.select({ id: placesTable.id }).from(placesTable).where(inArray(placesTable.id, unique));
-  const ok = new Set(found.map((f) => f.id));
-  return unique.filter((id) => ok.has(id));
 }

@@ -216,11 +216,6 @@ export const MerchantLoginResponse = zod.object({
   "expiresAt": zod.coerce.date()
 }),zod.null()]),
   "slug": zod.string().nullable(),
-  "partners": zod.array(zod.object({
-  "placeId": zod.string(),
-  "name": zod.string(),
-  "offer": zod.string().nullable()
-})).describe('Socios a los que este comercio pasa vecinos'),
   "sentThisMonth": zod.number().int().describe('Vecinos que mandó y que ya llegaron, este mes'),
   "receivedThisMonth": zod.number().int().describe('Vecinos que le mandaron otros comercios, este mes')
 })
@@ -254,11 +249,6 @@ export const GetMerchantMeResponse = zod.object({
   "expiresAt": zod.coerce.date()
 }),zod.null()]),
   "slug": zod.string().nullable(),
-  "partners": zod.array(zod.object({
-  "placeId": zod.string(),
-  "name": zod.string(),
-  "offer": zod.string().nullable()
-})).describe('Socios a los que este comercio pasa vecinos'),
   "sentThisMonth": zod.number().int().describe('Vecinos que mandó y que ya llegaron, este mes'),
   "receivedThisMonth": zod.number().int().describe('Vecinos que le mandaron otros comercios, este mes')
 })
@@ -303,12 +293,12 @@ export const MerchantRecordVisitResponse = zod.object({
   "placeId": zod.string(),
   "name": zod.string(),
   "offer": zod.string().nullable()
-})).describe('Socios a los que se puede cambiar el pase')
+})).describe('Otro comercio al que se puede cambiar el pase (elegido por el sistema)')
 })
 
 
 /**
- * @summary Cambia a qué socio va el pase que el comercio acaba de dar
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
  */
 export const MerchantChangePassParams = zod.object({
   "id": zod.coerce.string().uuid()
@@ -1214,8 +1204,6 @@ export const adminListPlacesResponseOneImageUrlMax = 500;
 
 export const adminListPlacesResponseOneWelcomeOfferMax = 80;
 
-export const adminListPlacesResponseOnePartnerIdsMax = 2;
-
 export const adminListPlacesResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 export const adminListPlacesResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
 export const adminListPlacesResponseOneHoursMin = 7;
@@ -1253,7 +1241,6 @@ export const AdminListPlacesResponseItem = zod.object({
   "priceLabel": zod.string().max(adminListPlacesResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminListPlacesResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminListPlacesResponseOneWelcomeOfferMax).nullable(),
-  "partnerIds": zod.array(zod.string().uuid()).max(adminListPlacesResponseOnePartnerIdsMax).describe('Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan'),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
@@ -1318,8 +1305,6 @@ export const adminCreatePlaceBodyImageUrlMax = 500;
 
 export const adminCreatePlaceBodyWelcomeOfferMax = 80;
 
-export const adminCreatePlaceBodyPartnerIdsMax = 2;
-
 export const adminCreatePlaceBodyHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 export const adminCreatePlaceBodyHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
 export const adminCreatePlaceBodyHoursMin = 7;
@@ -1357,7 +1342,6 @@ export const AdminCreatePlaceBody = zod.object({
   "priceLabel": zod.string().max(adminCreatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceBodyImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminCreatePlaceBodyWelcomeOfferMax).nullable(),
-  "partnerIds": zod.array(zod.string().uuid()).max(adminCreatePlaceBodyPartnerIdsMax).optional().describe('Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan'),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
@@ -1402,8 +1386,6 @@ export const adminCreatePlaceResponseOneImageUrlMax = 500;
 
 export const adminCreatePlaceResponseOneWelcomeOfferMax = 80;
 
-export const adminCreatePlaceResponseOnePartnerIdsMax = 2;
-
 export const adminCreatePlaceResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 export const adminCreatePlaceResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
 export const adminCreatePlaceResponseOneHoursMin = 7;
@@ -1441,7 +1423,6 @@ export const AdminCreatePlaceResponse = zod.object({
   "priceLabel": zod.string().max(adminCreatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminCreatePlaceResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminCreatePlaceResponseOneWelcomeOfferMax).nullable(),
-  "partnerIds": zod.array(zod.string().uuid()).max(adminCreatePlaceResponseOnePartnerIdsMax).describe('Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan'),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
@@ -1509,8 +1490,6 @@ export const adminUpdatePlaceBodyImageUrlMax = 500;
 
 export const adminUpdatePlaceBodyWelcomeOfferMax = 80;
 
-export const adminUpdatePlaceBodyPartnerIdsMax = 2;
-
 export const adminUpdatePlaceBodyHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 export const adminUpdatePlaceBodyHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
 export const adminUpdatePlaceBodyHoursMin = 7;
@@ -1548,7 +1527,6 @@ export const AdminUpdatePlaceBody = zod.object({
   "priceLabel": zod.string().max(adminUpdatePlaceBodyPriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceBodyImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminUpdatePlaceBodyWelcomeOfferMax).nullable(),
-  "partnerIds": zod.array(zod.string().uuid()).max(adminUpdatePlaceBodyPartnerIdsMax).optional().describe('Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan'),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),
@@ -1593,8 +1571,6 @@ export const adminUpdatePlaceResponseOneImageUrlMax = 500;
 
 export const adminUpdatePlaceResponseOneWelcomeOfferMax = 80;
 
-export const adminUpdatePlaceResponseOnePartnerIdsMax = 2;
-
 export const adminUpdatePlaceResponseOneHoursItemOneOpenRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 export const adminUpdatePlaceResponseOneHoursItemOneCloseRegExp = new RegExp('^([01][0-9]|2[0-4]):[0-5][0-9]$');
 export const adminUpdatePlaceResponseOneHoursMin = 7;
@@ -1632,7 +1608,6 @@ export const AdminUpdatePlaceResponse = zod.object({
   "priceLabel": zod.string().max(adminUpdatePlaceResponseOnePriceLabelMax).nullable(),
   "imageUrl": zod.string().max(adminUpdatePlaceResponseOneImageUrlMax).nullable(),
   "welcomeOffer": zod.string().max(adminUpdatePlaceResponseOneWelcomeOfferMax).nullable(),
-  "partnerIds": zod.array(zod.string().uuid()).max(adminUpdatePlaceResponseOnePartnerIdsMax).describe('Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan'),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
   "pickup": zod.boolean(),

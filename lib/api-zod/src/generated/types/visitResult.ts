@@ -22,6 +22,6 @@ export interface VisitResult {
   referredBy: string | null;
   /** Pase que se le dio al vecino hacia un socio */
   pass: MerchantPass | null;
-  /** Socios a los que se puede cambiar el pase */
+  /** Otro comercio al que se puede cambiar el pase (elegido por el sistema) */
   passOptions: PartnerRef[];
 }

@@ -114,12 +114,6 @@ export const placesTable = pgTable(
     whatsappClicks: integer("whatsapp_clicks").notNull().default(0),
     /** Beneficio para la primera visita desde el universo: "Primer café 2x1". */
     welcomeOffer: text("welcome_offer"),
-    /**
-     * Socios («Te lo paso»): hasta 2 lugares a los que este comercio manda
-     * vecinos. Al registrar una visita aquí, el vecino recibe un pase al primero
-     * que aún no conoce. Ids sueltos: si un socio se borra, se ignora al usarlo.
-     */
-    partnerIds: jsonb("partner_ids").$type<string[]>().notNull().default([]),
     /** Para el link público: /e/pizzas-del-parque. Se crea al guardar. */
     slug: text("slug").unique(),
     /** Hash del link del modo comercio; null = sin modo comercio. */

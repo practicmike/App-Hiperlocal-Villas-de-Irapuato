@@ -1,5 +1,5 @@
 import express, { Router, type IRouter } from "express";
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { db, placesTable, residentsTable, visitsTable, merchantSessionsTable, type Place } from "@workspace/db";
 import {
   MerchantLoginBody,
@@ -84,7 +84,7 @@ router.get("/merchant/me", requireMerchant, async (req, res) => {
 
 async function merchantSummary(place: Place, slug: string | null) {
   const placeId = place.id;
-  const [[stats], recent, score, partners] = await Promise.all([
+  const [[stats], recent, score] = await Promise.all([
     db
       .select({
         total: sql<number>`count(*)::int`,
@@ -106,7 +106,6 @@ async function merchantSummary(place: Place, slug: string | null) {
       .orderBy(desc(visitsTable.createdAt))
       .limit(10),
     monthScore(placeId),
-    partnerRefs(place),
   ]);
   const [news] = await activeNews([placeId]);
   return {
@@ -115,7 +114,6 @@ async function merchantSummary(place: Place, slug: string | null) {
     welcomeOffer: place.welcomeOffer,
     kind: place.kind,
     slug,
-    partners,
     sentThisMonth: score.sent,
     receivedThisMonth: score.received,
     news: news ?? null,
@@ -129,18 +127,6 @@ async function merchantSummary(place: Place, slug: string | null) {
       referredBy: v.referredBy ?? null,
     })),
   };
-}
-
-/** Socios de este comercio (activos), en el orden que puso el creador. */
-async function partnerRefs(place: Place) {
-  const ids = (place.partnerIds ?? []).filter((id) => id !== place.id);
-  if (ids.length === 0) return [];
-  const rows = await db
-    .select({ placeId: placesTable.id, name: placesTable.name, offer: placesTable.welcomeOffer })
-    .from(placesTable)
-    .where(and(inArray(placesTable.id, ids), eq(placesTable.active, true)));
-  const byId = new Map(rows.map((r) => [r.placeId, r]));
-  return ids.map((id) => byId.get(id)).filter((r) => !!r);
 }
 
 async function memberState(placeId: string, rawCode: string) {
@@ -258,7 +244,7 @@ router.put("/merchant/passes/:id", requireMerchant, rateLimit("merchant-pass", 6
     return;
   }
   if (r.error === 400 || !r.pass) {
-    res.status(400).json({ message: "A ese socio no se le puede pasar este vecino (ya lo conoce o no tiene regalo)." });
+    res.status(400).json({ message: "A ese comercio ya no se le puede pasar este vecino." });
     return;
   }
   res.json(r.pass);

@@ -263,8 +263,6 @@ export interface MerchantMe {
   news: NewsItem | null;
   /** @nullable */
   slug: string | null;
-  /** Socios a los que este comercio pasa vecinos */
-  partners: PartnerRef[];
   /** Vecinos que mandó y que ya llegaron, este mes */
   sentThisMonth: number;
   /** Vecinos que le mandaron otros comercios, este mes */
@@ -310,7 +308,7 @@ export interface VisitResult {
   referredBy: string | null;
   /** Pase que se le dio al vecino hacia un socio */
   pass: MerchantPass | null;
-  /** Socios a los que se puede cambiar el pase */
+  /** Otro comercio al que se puede cambiar el pase (elegido por el sistema) */
   passOptions: PartnerRef[];
 }
 
@@ -826,11 +824,6 @@ export interface PlaceInput {
      * @nullable
      */
   welcomeOffer: string | null;
-  /**
-     * Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan
-     * @maxItems 2
-     */
-  partnerIds?: string[];
   kind: PlaceKind;
   delivers: boolean;
   pickup: boolean;
@@ -886,23 +879,7 @@ export type AdminPlace = PlaceInput & ({
   passesSent: number;
   /** Vecinos que le mandaron y llegaron, últimos 30 días */
   passesReceived: number;
-}) & Required<Pick<PlaceInput & ({
-  id: string;
-  whatsappClicks: number;
-  endorsementCount: number;
-  hasEmbedding: boolean;
-  isDemo: boolean;
-  visitCount: number;
-  hasMerchantKey: boolean;
-  photos: PhotoRef[];
-  leadCount: number;
-  /** @nullable */
-  slug: string | null;
-  /** Vecinos que mandó y llegaron, últimos 30 días */
-  passesSent: number;
-  /** Vecinos que le mandaron y llegaron, últimos 30 días */
-  passesReceived: number;
-}), 'partnerIds'>>;
+});
 
 export interface DemoResult {
   inserted: number;

@@ -1,5 +1,5 @@
 {
-  "id": "36dcbca9-6ddb-4e1b-9ace-cec86bba91dc",
+  "id": "c876b161-afcd-4a37-b81d-aafe427ff178",
   "prevId": "37ab02f5-5b88-40f6-ae2a-b237244eb73a",
   "version": "7",
   "dialect": "postgresql",
@@ -1290,13 +1290,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "partner_ids": {
-          "name": "partner_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
         },
         "slug": {
           "name": "slug",

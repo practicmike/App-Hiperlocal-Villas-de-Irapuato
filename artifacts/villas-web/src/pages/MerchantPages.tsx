@@ -150,7 +150,7 @@ export function MerchantHomePage() {
         </p>
       )}
 
-      <TeLoPaso partners={m.partners} sent={m.sentThisMonth} received={m.receivedThisMonth} />
+      <TeLoPaso sent={m.sentThisMonth} received={m.receivedThisMonth} />
 
       <div className="mb-4 grid grid-cols-3 gap-2 text-center">
         <Stat label="Hoy" value={m.todayVisits} />
@@ -183,19 +183,10 @@ export function MerchantHomePage() {
 }
 
 /**
- * «Te lo paso»: a quién le pasa vecinos este comercio y el marcador del mes.
- * Así el comercio sabe que cada visita que registra también le manda un cliente a su socio.
+ * «Te lo paso»: el marcador del mes. El sistema elige a quién pasar a cada vecino,
+ * repartiendo parejo entre los comercios de Villas que tienen regalo.
  */
-function TeLoPaso({
-  partners,
-  sent,
-  received,
-}: {
-  partners: { placeId: string; name: string }[];
-  sent: number;
-  received: number;
-}) {
-  if (partners.length === 0 && sent === 0 && received === 0) return null;
+function TeLoPaso({ sent, received }: { sent: number; received: number }) {
   return (
     <div className="mb-4 rounded-3xl border border-confianza/30 bg-panel p-4">
       <p className="flex items-center gap-2 font-black">
@@ -212,12 +203,10 @@ function TeLoPaso({
         </div>
       </div>
       <p className="mt-1 text-xs text-muted">Vecinos que llegaron con pase este mes.</p>
-      {partners.length > 0 && (
-        <p className="mt-2 text-sm text-ink/80">
-          Cada visita que registras le pasa el vecino a <b>{partners.map((p) => p.name).join(" o ")}</b>, con su regalo de bienvenida.
-          Quien más vecinos manda, sale más arriba en las búsquedas.
-        </p>
-      )}
+      <p className="mt-2 text-sm text-ink/80">
+        Cada visita que registras le pasa el vecino a otro comercio de Villas que aún no conoce, con su regalo de bienvenida.
+        Otros comercios te mandan vecinos igual. Quien más vecinos manda, sale más arriba en las búsquedas.
+      </p>
     </div>
   );
 }
@@ -270,14 +259,14 @@ export function MemberPassPage({ code }: { code: string }) {
   return <ConfirmVisit code={code} placeName={merchant.data.placeName} chamba={merchant.data.kind === "oficio"} />;
 }
 
-/** Al cambiar de socio, el anterior pasa a ser la opción y el nuevo sale de la lista. */
+/** Al cambiar de comercio, el anterior pasa a ser la opción y el nuevo sale de la lista. */
 function swapOption(done: VisitResult, next: MerchantPass) {
   const prev = done.pass;
   const rest = done.passOptions.filter((o) => o.placeId !== next.toPlaceId);
   return prev ? [{ placeId: prev.toPlaceId, name: prev.toPlaceName, offer: prev.offer }, ...rest] : rest;
 }
 
-/** «Te lo paso»: el vecino ya va con pase a un socio; un toque lo cambia al otro. */
+/** «Te lo paso»: el vecino ya va con pase a otro comercio; un toque lo cambia a la alternativa. */
 function PassGiven({
   firstName,
   pass,

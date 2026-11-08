@@ -71,11 +71,6 @@ export interface PlaceInput {
      * @nullable
      */
   welcomeOffer: string | null;
-  /**
-     * Socios («Te lo paso»), máximo 2. Opcional; si no viene, se conservan
-     * @maxItems 2
-     */
-  partnerIds?: string[];
   kind: PlaceKind;
   delivers: boolean;
   pickup: boolean;

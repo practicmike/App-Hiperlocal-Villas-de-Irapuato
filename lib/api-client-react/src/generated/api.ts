@@ -1366,7 +1366,7 @@ export const getMerchantChangePassUrl = (id: string,) => {
 }
 
 /**
- * @summary Cambia a qué socio va el pase que el comercio acaba de dar
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
  */
 export const merchantChangePass = async (id: string,
     changePassRequest: ChangePassRequest, options?: Parameters<typeof customFetch>[1]): Promise<MerchantPass> => {
@@ -1433,7 +1433,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type MerchantChangePassMutationVariables = {id: string;data: BodyType<ChangePassRequest>}
 
     /**
- * @summary Cambia a qué socio va el pase que el comercio acaba de dar
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
  */
 export const useMerchantChangePass = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof merchantChangePass>>, TError,MerchantChangePassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
