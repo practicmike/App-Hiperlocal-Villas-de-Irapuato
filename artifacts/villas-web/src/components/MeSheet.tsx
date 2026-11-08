@@ -129,7 +129,7 @@ function Gifts({ passes, onOpenPlace }: { passes: SkyPass[]; onOpenPlace: (place
       <div className="mb-6 rounded-2xl bg-space-2/60 p-4 text-sm">
         <p className="font-bold">Regalos esperándote</p>
         <p className="mt-1 text-xs text-muted">
-          Cuando pagues con tu credencial, el comercio te puede pasar a otro de Villas con regalo de bienvenida. Aquí lo verás.
+          Cuando un comercio de Villas registre tu visita con tu credencial, te puede pasar a otro con regalo de bienvenida. Aquí lo verás.
         </p>
       </div>
     );
