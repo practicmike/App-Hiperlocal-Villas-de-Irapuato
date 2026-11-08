@@ -167,6 +167,11 @@ export interface Me {
   name: string;
   role: MeRole;
   showNameOnEndorsements: boolean;
+  /**
+     * Privada del vecino (para avisos de su zona)
+     * @nullable
+     */
+  zone: string | null;
 }
 
 export interface UpdateMeRequest {
@@ -646,6 +651,131 @@ export interface AdminOverview {
   openComplaints: number;
   guestSearches30d: number;
   visits30d: number;
+}
+
+export type NoticeKind = typeof NoticeKind[keyof typeof NoticeKind];
+
+
+export const NoticeKind = {
+  agua: 'agua',
+  luz: 'luz',
+  calle: 'calle',
+  general: 'general',
+} as const;
+
+export interface Notice {
+  id: string;
+  kind: NoticeKind;
+  title: string;
+  /** @nullable */
+  body: string | null;
+  /** @nullable */
+  zone: string | null;
+  source: string;
+  confirmed: boolean;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface NoticeReportRequest {
+  kind: NoticeKind;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  zone: string | null;
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  text: string;
+}
+
+export interface NoticeReportResult {
+  /** true si con este reporte ya se publicó (o ya había) un aviso */
+  published: boolean;
+}
+
+export type NoticeEventRequestKind = typeof NoticeEventRequestKind[keyof typeof NoticeEventRequestKind];
+
+
+export const NoticeEventRequestKind = {
+  view: 'view',
+  share: 'share',
+} as const;
+
+export interface NoticeEventRequest {
+  kind: NoticeEventRequestKind;
+}
+
+export type AdminNotice = Notice & {
+  views: number;
+  shares: number;
+  reports: number;
+};
+
+export interface AdminNoticeReport {
+  id: string;
+  text: string;
+  residentName: string;
+  createdAt: string;
+}
+
+export interface AdminNoticeReportGroup {
+  kind: NoticeKind;
+  /** @nullable */
+  zone: string | null;
+  /** Vecinos distintos que lo reportaron */
+  residents: number;
+  latestAt: string;
+  reports: AdminNoticeReport[];
+}
+
+export interface AdminNotices {
+  active: AdminNotice[];
+  pending: AdminNoticeReportGroup[];
+  /** Privadas registradas por los vecinos (para elegir a quién va el aviso) */
+  zones: string[];
+}
+
+export interface AdminNoticeInput {
+  kind: NoticeKind;
+  /**
+     * @minLength 3
+     * @maxLength 90
+     */
+  title: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  body: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  zone: string | null;
+  /**
+     * @minLength 2
+     * @maxLength 60
+     */
+  source: string;
+  /**
+     * @minimum 1
+     * @maximum 168
+     */
+  hours: number;
+  reportIds?: string[];
+}
+
+export interface AdminNoticeUpdate {
+  confirm?: boolean;
+  close?: boolean;
+}
+
+export interface IdsRequest {
+  /** @minItems 1 */
+  ids: string[];
 }
 
 export type AdminKpiStatus = typeof AdminKpiStatus[keyof typeof AdminKpiStatus];

@@ -190,6 +190,34 @@ async function currentExtras(now: Date) {
   };
 }
 
+/** Avisos: cuántos, de dónde salieron, cuánto se vieron y qué tan rápido se publicaron. */
+async function noticeStats(since: Date, until: Date) {
+  const { rows } = await db.execute(sql`
+    with n as (select * from notices where created_at >= ${since} and created_at < ${until}),
+    first_report as (
+      select n.id, n.created_at - min(r.created_at) as lag
+      from n join notice_reports r on r.notice_id = n.id and r.created_at <= n.created_at
+      group by n.id, n.created_at
+    )
+    select
+      (select count(*) from n) as published,
+      (select count(*) from n where source like 'Reportado por%') as auto,
+      (select count(*) from notice_events e join n on n.id = e.notice_id where e.kind = 'view') as views,
+      (select count(*) from notice_events e join n on n.id = e.notice_id where e.kind = 'share') as shares,
+      (select extract(epoch from percentile_cont(0.5) within group (order by lag)) / 60 from first_report) as lag_min,
+      (select count(*) from notice_reports where created_at >= ${since} and created_at < ${until}) as reports
+  `);
+  const r = rows[0] as Record<string, unknown>;
+  return {
+    published: num(r["published"]),
+    auto: num(r["auto"]),
+    views: num(r["views"]),
+    shares: num(r["shares"]),
+    lagMin: r["lag_min"] == null ? null : Number(r["lag_min"]),
+    reports: num(r["reports"]),
+  };
+}
+
 // ------------------------------------------------------------------ armado
 
 const fmtPct = (v: number | null) => (v == null ? "—" : `${Math.round(v)}%`);
@@ -254,6 +282,9 @@ export async function buildKpis(now = new Date()) {
   const shareCur = await passesShare(curFrom, now);
   const sharePrev = await passesShare(prevFrom, curFrom);
   const x = await currentExtras(now);
+  const nc = await noticeStats(curFrom, now);
+  const np = await noticeStats(prevFrom, curFrom);
+  const fmtMin = (v: number | null) => (v == null ? "—" : v < 60 ? `${Math.round(v)} min` : `${(v / 60).toFixed(1)} h`);
   const weeks = WINDOW_DAYS / 7;
 
   const sections: KpiSection[] = [
@@ -382,6 +413,51 @@ export async function buildKpis(now = new Date()) {
           prev: p.directions,
           fmt: fmtNum,
           why: "La intención más fuerte: el vecino ya va en camino.",
+        }),
+      ],
+    },
+    {
+      id: "avisos",
+      title: "Avisos",
+      question: "¿Los avisos le sirven a la colonia?",
+      note: "Los avisos son la razón para abrir OrbiTú cada semana, no solo cuando se necesita un negocio.",
+      kpis: [
+        kpi({
+          id: "avisos-publicados",
+          label: "Avisos publicados",
+          cur: nc.published,
+          prev: np.published,
+          fmt: fmtNum,
+          detail: `${nc.auto} se publicaron solos por reportes · ${nc.reports} reportes de vecinos`,
+          why: "Sin avisos, la franja del inicio nunca aparece y el vecino no tiene motivo para volver.",
+        }),
+        kpi({
+          id: "avisos-alcance",
+          label: "Vecinos que vieron cada aviso",
+          cur: nc.published ? nc.views / nc.published : null,
+          prev: np.published ? np.views / np.published : null,
+          fmt: fmtNum,
+          detail: `${nc.views} vistas en total`,
+          why: "Un aviso que nadie ve no evitó ningún mal rato.",
+        }),
+        kpi({
+          id: "avisos-compartidos",
+          label: "Compartidos por WhatsApp",
+          cur: nc.shares,
+          prev: np.shares,
+          fmt: fmtNum,
+          why: "Cada aviso compartido lleva OrbiTú a vecinos que todavía no lo tienen.",
+        }),
+        kpi({
+          id: "avisos-rapidez",
+          label: "Del primer reporte a publicado",
+          cur: nc.lagMin,
+          prev: np.lagMin,
+          fmt: fmtMin,
+          detail: "Mediana, solo avisos que nacieron de reportes",
+          target: { label: "Meta: 60 min o menos", good: 60, warnAt: 180 },
+          higherIsBetter: false,
+          why: "Un aviso de corte de agua que llega tarde ya no sirve.",
         }),
       ],
     },

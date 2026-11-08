@@ -25,6 +25,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
 import { RadarMap, type RadarPoint } from "@/components/RadarMap";
 import { NovedadesSheet, hasUnseen, markSeen } from "@/components/NovedadesSheet";
+import { NoticesBar, NoticesSheet, useNotices } from "@/components/Notices";
 import { useSaved } from "@/lib/saved";
 import { PlaceTile } from "@/components/PlaceTile";
 import { FALLBACK, byId, placeConstellations } from "@/lib/constellations";
@@ -82,6 +83,9 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const [meOpen, setMeOpen] = useState(() => !guest && new URLSearchParams(window.location.search).has("credencial"));
   const [showIntro, setShowIntro] = useState(() => !introSeen());
   const [novedadesOpen, setNovedadesOpen] = useState(false);
+  /** Avisos de la colonia: null = cerrado; "ver" o "reportar" = qué abre primero. */
+  const [noticesOpen, setNoticesOpen] = useState<null | "ver" | "reportar">(null);
+  const notices = useNotices(!guest);
   const [unseen, setUnseen] = useState(false);
   useEffect(() => setUnseen(hasUnseen(news, places)), [news, places]);
 
@@ -136,13 +140,14 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   };
 
   // «Atrás» del celular o gesto de deslizar: cierra la capa de arriba en vez de salir de la app.
-  const overlayOpen = !!selectedId || creatorOpen || meOpen || novedadesOpen;
+  const overlayOpen = !!selectedId || creatorOpen || meOpen || novedadesOpen || !!noticesOpen;
   useBackLayers((screen === "radar" ? 1 : 0) + (overlayOpen ? 1 : 0), () => {
     if (overlayOpen) {
       setSelectedId(null);
       setCreatorOpen(false);
       setMeOpen(false);
       setNovedadesOpen(false);
+      setNoticesOpen(null);
     } else {
       backToAsk();
     }
@@ -359,6 +364,7 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
             {bell}
             <CreatorAvatar creator={creator} onClick={() => setCreatorOpen(true)} />
           </header>
+          <NoticesBar notices={notices} onOpen={() => setNoticesOpen("ver")} />
 
           <main className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-5">
             <h1 className="text-[40px] font-light leading-tight">
@@ -927,6 +933,15 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           onClose={() => setNovedadesOpen(false)}
         />
       )}
+      {noticesOpen && me && (
+        <NoticesSheet
+          notices={notices}
+          myZone={me.zone}
+          creatorFirst={firstName}
+          startReporting={noticesOpen === "reportar"}
+          onClose={() => setNoticesOpen(null)}
+        />
+      )}
       {showIntro && <Intro creator={creator} guest={guest} onDone={() => setShowIntro(false)} />}
       {creatorOpen && <CreatorSheet creator={creator} onClose={() => setCreatorOpen(false)} />}
       {meOpen && me && (
@@ -938,6 +953,10 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           onOpenPlace={(id) => {
             setMeOpen(false);
             setSelectedId(id);
+          }}
+          onReport={() => {
+            setMeOpen(false);
+            setNoticesOpen("reportar");
           }}
           onClose={() => setMeOpen(false)}
         />

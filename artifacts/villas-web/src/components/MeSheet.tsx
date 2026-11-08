@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { useLogout, getGetMeQueryKey, type Me, type SkyPass } from "@workspace/api-client-react";
-import { ChevronRight, Gift, LogOut, X } from "lucide-react";
+import { ChevronRight, Gift, LogOut, Megaphone, X } from "lucide-react";
 import { expiresLabel } from "@/lib/passes";
 
 /** Link que va dentro del QR: el comercio lo abre con la cámara normal de su celular. */
@@ -52,6 +52,7 @@ export function MeSheet({
   memberCode,
   passes,
   onOpenPlace,
+  onReport,
   onClose,
 }: {
   me: Me;
@@ -59,6 +60,8 @@ export function MeSheet({
   memberCode: string | null;
   passes: SkyPass[];
   onOpenPlace: (placeId: string) => void;
+  /** Abre «Reportar algo en Villas» (corte de agua, apagón, calle cerrada...). */
+  onReport: () => void;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
@@ -93,6 +96,12 @@ export function MeSheet({
         </div>
         {memberCode ? <Credential code={memberCode} name={me.name} /> : <p className="mb-5 text-sm text-muted">Cargando tu credencial…</p>}
         <Gifts passes={passes} onOpenPlace={onOpenPlace} />
+        <button
+          onClick={onReport}
+          className="mb-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/15 font-bold text-primary"
+        >
+          <Megaphone size={16} /> Reportar algo en Villas
+        </button>
         {!confirming ? (
           <button onClick={() => setConfirming(true)} className="mb-2 flex items-center gap-2 text-sm text-muted">
             <LogOut size={16} /> Cerrar sesión en este teléfono

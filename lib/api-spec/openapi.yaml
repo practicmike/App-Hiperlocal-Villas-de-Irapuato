@@ -692,6 +692,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminOverview"
+  /notices:
+    get:
+      operationId: listNotices
+      tags: [notices]
+      summary: Avisos vigentes que le afectan al vecino (por su privada)
+      responses:
+        "200":
+          description: Avisos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notice"
+  /notices/reports:
+    post:
+      operationId: reportNotice
+      tags: [notices]
+      summary: Un vecino reporta algo (corte de agua, apagón...). Llega al creador; con 3 vecinos se publica solo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeReportRequest"
+      responses:
+        "201":
+          description: Reporte recibido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeReportResult"
+  /notices/{id}/events:
+    post:
+      operationId: recordNoticeEvent
+      tags: [notices]
+      summary: Registrar que el vecino vio o compartió un aviso
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeEventRequest"
+      responses:
+        "204":
+          description: Registrado
+  /admin/notices:
+    get:
+      operationId: adminListNotices
+      tags: [admin]
+      summary: Avisos activos y reportes por confirmar
+      responses:
+        "200":
+          description: Avisos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminNotices"
+    post:
+      operationId: adminCreateNotice
+      tags: [admin]
+      summary: Publicar un aviso (nuevo o a partir de reportes de vecinos)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminNoticeInput"
+      responses:
+        "201":
+          description: Publicado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+  /admin/notices/{id}:
+    patch:
+      operationId: adminUpdateNotice
+      tags: [admin]
+      summary: Confirmar un aviso auto-publicado o cerrarlo antes de tiempo
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminNoticeUpdate"
+      responses:
+        "204":
+          description: Actualizado
+  /admin/notice-reports/dismiss:
+    post:
+      operationId: adminDismissNoticeReports
+      tags: [admin]
+      summary: Descartar reportes de vecinos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdsRequest"
+      responses:
+        "204":
+          description: Descartados
   /admin/kpis:
     get:
       operationId: adminKpis
@@ -1416,7 +1523,10 @@ components:
           enum: [resident, admin]
         showNameOnEndorsements:
           type: boolean
-      required: [id, name, role, showNameOnEndorsements]
+        zone:
+          type: [string, "null"]
+          description: Privada del vecino (para avisos de su zona)
+      required: [id, name, role, showNameOnEndorsements, zone]
     UpdateMeRequest:
       type: object
       properties:
@@ -2040,6 +2150,168 @@ components:
         - searchesNoResult30d
         - openComplaints
         - guestSearches30d
+    NoticeKind:
+      type: string
+      enum: [agua, luz, calle, general]
+    Notice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/NoticeKind"
+        title:
+          type: string
+        body:
+          type: [string, "null"]
+        zone:
+          type: [string, "null"]
+        source:
+          type: string
+        confirmed:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, kind, title, body, zone, source, confirmed, expiresAt, createdAt]
+    NoticeReportRequest:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeKind"
+        zone:
+          type: [string, "null"]
+          maxLength: 80
+        text:
+          type: string
+          minLength: 3
+          maxLength: 300
+      required: [kind, zone, text]
+    NoticeReportResult:
+      type: object
+      properties:
+        published:
+          type: boolean
+          description: true si con este reporte ya se publicó (o ya había) un aviso
+      required: [published]
+    NoticeEventRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [view, share]
+      required: [kind]
+    AdminNotice:
+      allOf:
+        - $ref: "#/components/schemas/Notice"
+        - type: object
+          properties:
+            views:
+              type: integer
+            shares:
+              type: integer
+            reports:
+              type: integer
+          required: [views, shares, reports]
+    AdminNoticeReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        residentName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, text, residentName, createdAt]
+    AdminNoticeReportGroup:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeKind"
+        zone:
+          type: [string, "null"]
+        residents:
+          type: integer
+          description: Vecinos distintos que lo reportaron
+        latestAt:
+          type: string
+          format: date-time
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminNoticeReport"
+      required: [kind, zone, residents, latestAt, reports]
+    AdminNotices:
+      type: object
+      properties:
+        active:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminNotice"
+        pending:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminNoticeReportGroup"
+        zones:
+          type: array
+          description: Privadas registradas por los vecinos (para elegir a quién va el aviso)
+          items:
+            type: string
+      required: [active, pending, zones]
+    AdminNoticeInput:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeKind"
+        title:
+          type: string
+          minLength: 3
+          maxLength: 90
+        body:
+          type: [string, "null"]
+          maxLength: 500
+        zone:
+          type: [string, "null"]
+          maxLength: 80
+        source:
+          type: string
+          minLength: 2
+          maxLength: 60
+        hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+        reportIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required: [kind, title, body, zone, source, hours]
+    AdminNoticeUpdate:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+        close:
+          type: boolean
+    IdsRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+      required: [ids]
     AdminKpi:
       type: object
       properties:
