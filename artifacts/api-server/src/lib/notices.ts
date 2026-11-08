@@ -17,6 +17,7 @@ import {
   type Notice,
   type NoticeKind,
 } from "@workspace/db";
+import { notifyCreator } from "./push";
 
 export const CONSENSUS_RESIDENTS = 3;
 export const CONSENSUS_WINDOW_MS = 60 * 60_000;
@@ -161,7 +162,18 @@ export async function fileReport(input: {
       ),
     );
   const { count, reached } = hasConsensus(recent, input.kind, zone, now);
-  if (!reached) return { published: false };
+  if (!reached) {
+    // Solo el primer reporte de su tipo y zona avisa; los siguientes no repiten.
+    if (count === 1) {
+      notifyCreator("reporte", {
+        title: `📣 Reporte: ${KIND_TITLE[input.kind]}${zone ? ` en ${zone}` : " en Villas"}`,
+        body: input.text.trim().slice(0, 140),
+        url: "/panel?tab=avisos",
+        tag: `reporte-${input.kind}-${key ?? "villas"}`,
+      });
+    }
+    return { published: false };
+  }
 
   const group = recent.filter((r) => normZone(r.zone) === key);
   const shownZone = canonicalZone(displayZone(group.map((r) => r.zone)), await knownZones());
@@ -182,6 +194,13 @@ export async function fileReport(input: {
     .update(noticeReportsTable)
     .set({ status: "published", noticeId: notice!.id })
     .where(inArray(noticeReportsTable.id, ids));
+  notifyCreator("aviso_auto", {
+    title: `⚠️ Se publicó solo: ${notice!.title}`,
+    body: `${count} vecinos lo reportaron. Confírmalo o quítalo.`,
+    url: "/panel?tab=avisos",
+    // Mismo tag que el primer reporte: Android lo reemplaza en vez de apilar.
+    tag: `reporte-${input.kind}-${key ?? "villas"}`,
+  });
   return { published: true };
 }
 

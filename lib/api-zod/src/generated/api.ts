@@ -1154,6 +1154,92 @@ export const AdminDismissNoticeReportsResponse = zod.void()
 
 
 /**
+ * @summary Estado de las notificaciones push del creador
+ */
+export const AdminGetPushResponse = zod.object({
+  "available": zod.boolean().describe('false si faltan las llaves VAPID en el servidor'),
+  "publicKey": zod.string().nullable(),
+  "kinds": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "hint": zod.string(),
+  "ignoresQuiet": zod.boolean()
+})),
+  "muted": zod.array(zod.string()),
+  "quietStart": zod.number().int().nullable(),
+  "quietEnd": zod.number().int().nullable(),
+  "digest": zod.boolean(),
+  "devices": zod.array(zod.object({
+  "endpoint": zod.string(),
+  "label": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+export const adminUpdatePushPrefsBodyQuietStartMin = 0;
+export const adminUpdatePushPrefsBodyQuietStartMax = 23;
+
+export const adminUpdatePushPrefsBodyQuietEndMin = 0;
+export const adminUpdatePushPrefsBodyQuietEndMax = 23;
+
+
+
+export const AdminUpdatePushPrefsBody = zod.object({
+  "muted": zod.array(zod.string()),
+  "quietStart": zod.number().int().min(adminUpdatePushPrefsBodyQuietStartMin).max(adminUpdatePushPrefsBodyQuietStartMax).nullable(),
+  "quietEnd": zod.number().int().min(adminUpdatePushPrefsBodyQuietEndMin).max(adminUpdatePushPrefsBodyQuietEndMax).nullable(),
+  "digest": zod.boolean()
+})
+
+export const AdminUpdatePushPrefsResponse = zod.void()
+
+
+/**
+ * @summary Activar push en este teléfono
+ */
+export const adminAddPushSubscriptionBodyEndpointMin = 10;
+export const adminAddPushSubscriptionBodyEndpointMax = 1000;
+
+export const adminAddPushSubscriptionBodyKeysP256dhMax = 200;
+
+export const adminAddPushSubscriptionBodyKeysAuthMax = 100;
+
+export const adminAddPushSubscriptionBodyLabelMax = 60;
+
+
+
+export const AdminAddPushSubscriptionBody = zod.object({
+  "endpoint": zod.string().min(adminAddPushSubscriptionBodyEndpointMin).max(adminAddPushSubscriptionBodyEndpointMax),
+  "keys": zod.object({
+  "p256dh": zod.string().max(adminAddPushSubscriptionBodyKeysP256dhMax),
+  "auth": zod.string().max(adminAddPushSubscriptionBodyKeysAuthMax)
+}),
+  "label": zod.string().max(adminAddPushSubscriptionBodyLabelMax).nullable()
+})
+
+export const AdminAddPushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Desactivar push en un teléfono
+ */
+export const AdminRemovePushSubscriptionBody = zod.object({
+  "endpoint": zod.string()
+})
+
+export const AdminRemovePushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Mandar una notificación de prueba
+ */
+export const AdminTestPushResponse = zod.object({
+  "sent": zod.number().int()
+})
+
+
+/**
  * @summary Indicadores de impacto (últimos 30 días contra los 30 anteriores)
  */
 export const AdminKpisResponse = zod.object({

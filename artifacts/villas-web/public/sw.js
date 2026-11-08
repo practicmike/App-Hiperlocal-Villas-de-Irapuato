@@ -3,8 +3,9 @@
  * - Archivos de la app (/assets) y fotos: se guardan en el celular (nunca cambian).
  * - Páginas: siempre de la red; si no hay señal, la última versión guardada.
  * - API: siempre de la red (datos al día, sesiones seguras).
+ * - Push: solo el creador las recibe (los vecinos no se suscriben).
  */
-const VERSION = "orbitu-v3";
+const VERSION = "orbitu-v4";
 const SHELL = "/index.html";
 
 self.addEventListener("install", (e) => {
@@ -53,4 +54,40 @@ self.addEventListener("fetch", (e) => {
     );
   }
   // Todo lo demás (API incluida) va directo a la red.
+});
+
+// Notificación para el creador: interesado en casa, avisos, quejas...
+self.addEventListener("push", (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch {
+    data = { title: "OrbiTú Villas", body: e.data ? e.data.text() : "" };
+  }
+  e.waitUntil(
+    self.registration.showNotification(data.title || "OrbiTú Villas", {
+      body: data.body || "",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: data.tag,
+      renotify: Boolean(data.tag),
+      data: { url: data.url || "/panel" },
+    }),
+  );
+});
+
+// Tocar la notificación abre (o enfoca) OrbiTú en la pantalla correcta del panel.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || "/panel", self.location.origin).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.startsWith(self.location.origin) && "focus" in c) {
+          return c.navigate(url).then((w) => (w || c).focus());
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });

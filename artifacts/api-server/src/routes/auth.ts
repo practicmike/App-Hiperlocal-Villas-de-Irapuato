@@ -16,6 +16,7 @@ import {
   requireResident,
 } from "../lib/auth";
 import { rateLimit } from "../lib/rate-limit";
+import { notifyCreator } from "../lib/push";
 import { config, aiEnabled } from "../lib/config";
 
 const router: IRouter = Router();
@@ -94,6 +95,11 @@ router.post("/auth/join", rateLimit("join", 10, 60 * 60_000), async (req, res) =
     res.status(400).json({ message: result.error });
     return;
   }
+  notifyCreator("solicitud", {
+    title: `🙋 ${body.name.trim()} pide entrar`,
+    body: `Con código de ${result.invitedBy}. Apruébalo en el panel.`,
+    url: "/panel?tab=vecinos",
+  });
   res.status(201).json({ status: "pending", invitedBy: result.invitedBy });
 });
 
@@ -123,6 +129,11 @@ router.post("/auth/request", rateLimit("request", 5, 60 * 60_000), async (req, r
     return;
   }
   await db.insert(residentsTable).values({ name: body.name.trim(), phone, zone: body.zone?.trim() || null });
+  notifyCreator("solicitud", {
+    title: `🙋 ${body.name.trim()} pide entrar`,
+    body: body.zone?.trim() ? `De ${body.zone.trim()}. Apruébalo en el panel.` : "Apruébalo en el panel.",
+    url: "/panel?tab=vecinos",
+  });
   res.status(201).end();
 });
 

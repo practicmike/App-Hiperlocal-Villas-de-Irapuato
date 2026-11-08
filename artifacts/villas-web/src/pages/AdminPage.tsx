@@ -68,6 +68,7 @@ import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
 import { NewsComposer } from "@/components/NewsComposer";
 import { KpiPanel } from "@/components/KpiPanel";
 import { AdminNotices } from "@/components/AdminNotices";
+import { PushSettings } from "@/components/PushSettings";
 import { ShareButton } from "@/components/PlaceSheet";
 
 type Tab = "resumen" | "kpis" | "avisos" | "vecinos" | "lugares" | "visitas" | "interesados" | "constelaciones" | "busquedas" | "quejas";
@@ -90,8 +91,11 @@ const fmtDate = (iso: string) =>
 
 export function AdminPage({ creator }: { creator: Creator }) {
   // Desde la tarjeta de una estrella: /panel?editar=<id> abre su edición.
-  const editId = new URLSearchParams(window.location.search).get("editar");
-  const [tab, setTab] = useState<Tab>(editId ? "lugares" : "resumen");
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get("editar");
+  // ?tab=avisos: lo usan las notificaciones para abrir la pantalla correcta.
+  const asked = params.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(editId ? "lugares" : asked && TABS.some(([id]) => id === asked) ? asked : "resumen");
   const me = creator.name.split(" ")[0] ?? creator.name;
   return (
     <div className="h-full overflow-y-auto bg-space">
@@ -139,6 +143,7 @@ function Overview() {
   const pct = o.searches30d ? Math.round((o.searchesWithContact30d / o.searches30d) * 100) : 0;
   return (
     <div className="space-y-6">
+      <PushSettings />
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Señales de que funciona · 30 días</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
