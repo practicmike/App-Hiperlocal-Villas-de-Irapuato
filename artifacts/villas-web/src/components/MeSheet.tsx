@@ -38,7 +38,7 @@ function Credential({ code, name }: { code: string; name: string }) {
         />
         <p className="mt-3 font-mono text-base font-bold tracking-widest">{pretty(code)}</p>
         <p className="mt-2 text-xs text-muted">
-          Enséñala al pagar en cualquier lugar de OrbiTú Villas. El comercio la escanea con la cámara de su celular y queda registrada tu visita.
+          Enséñala al pagar en cualquier lugar de OrbiTú Villas. El comercio la escanea, registra tu visita y te puede pasar a otro con regalo.
         </p>
       </div>
     </div>
@@ -124,8 +124,9 @@ export function MeSheet({
  * y cuándo vencen; tocarlos abre el lugar.
  */
 function Gifts({ passes, onOpenPlace }: { passes: SkyPass[]; onOpenPlace: (placeId: string) => void }) {
-  if (passes.length === 0) {
-    return (
+  // Sin regalos no se muestra nada: la credencial ya explica cómo llegan.
+  if (passes.length === 0) return null;
+  return (
       <div className="mb-6 rounded-2xl bg-space-2/60 p-4 text-sm">
         <p className="font-bold">Regalos esperándote</p>
         <p className="mt-1 text-xs text-muted">
