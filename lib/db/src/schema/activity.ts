@@ -38,6 +38,25 @@ export const searchesTable = pgTable(
   (t) => [index("searches_created_idx").on(t.createdAt)],
 );
 
+/**
+ * Cada vez que un vecino toca WhatsApp o «Cómo llegar» en la tarjeta de un lugar.
+ * Con fecha, para medir conversión por periodo (el contador whatsappClicks del
+ * lugar es acumulado y no sirve para comparar meses).
+ */
+export const contactEventsTable = pgTable(
+  "contact_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => placesTable.id, { onDelete: "cascade" }),
+    residentId: uuid("resident_id").references(() => residentsTable.id, { onDelete: "set null" }),
+    kind: text("kind", { enum: ["whatsapp", "directions"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("contact_events_created_idx").on(t.createdAt)],
+);
+
 /** Quejas privadas: nunca se publican, solo las ve el creador. */
 export const complaintsTable = pgTable("complaints", {
   id: uuid("id").primaryKey().defaultRandom(),

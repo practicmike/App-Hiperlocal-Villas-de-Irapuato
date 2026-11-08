@@ -563,9 +563,22 @@ export interface EndorseRequest {
   showName: boolean;
 }
 
+/**
+ * Qué tocó el vecino. Sin valor = whatsapp.
+ */
+export type ContactRequestKind = typeof ContactRequestKind[keyof typeof ContactRequestKind];
+
+
+export const ContactRequestKind = {
+  whatsapp: 'whatsapp',
+  directions: 'directions',
+} as const;
+
 export interface ContactRequest {
   /** @nullable */
   searchId: string | null;
+  /** Qué tocó el vecino. Sin valor = whatsapp. */
+  kind?: ContactRequestKind;
 }
 
 export interface ComplaintRequest {
@@ -633,6 +646,67 @@ export interface AdminOverview {
   openComplaints: number;
   guestSearches30d: number;
   visits30d: number;
+}
+
+export type AdminKpiStatus = typeof AdminKpiStatus[keyof typeof AdminKpiStatus];
+
+
+export const AdminKpiStatus = {
+  good: 'good',
+  warn: 'warn',
+  bad: 'bad',
+  none: 'none',
+} as const;
+
+export type AdminKpiTrend = typeof AdminKpiTrend[keyof typeof AdminKpiTrend];
+
+
+export const AdminKpiTrend = {
+  up: 'up',
+  down: 'down',
+  flat: 'flat',
+  none: 'none',
+} as const;
+
+export interface AdminKpi {
+  id: string;
+  label: string;
+  /** Valor ya formateado para mostrar */
+  display: string;
+  /**
+     * Cómo se calculó (ej. "12 de 40")
+     * @nullable
+     */
+  detail: string | null;
+  /** @nullable */
+  targetLabel: string | null;
+  status: AdminKpiStatus;
+  trend: AdminKpiTrend;
+  /**
+     * Si el cambio contra el periodo anterior es bueno
+     * @nullable
+     */
+  trendGood: boolean | null;
+  /** @nullable */
+  previousDisplay: string | null;
+  why: string;
+}
+
+export interface AdminKpiSection {
+  id: string;
+  title: string;
+  question: string;
+  kpis: AdminKpi[];
+  /** @nullable */
+  note: string | null;
+}
+
+export interface AdminKpis {
+  households: number;
+  avgTicket: number;
+  sections: AdminKpiSection[];
+  /** Comercios sin contactos ni visitas en 30 días */
+  idlePlaces: string[];
 }
 
 export interface ResidentUpdate {

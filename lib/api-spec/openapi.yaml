@@ -692,6 +692,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminOverview"
+  /admin/kpis:
+    get:
+      operationId: adminKpis
+      tags: [admin]
+      summary: Indicadores de impacto (últimos 30 días contra los 30 anteriores)
+      responses:
+        "200":
+          description: KPIs por sección
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminKpis"
   /admin/residents:
     get:
       operationId: adminListResidents
@@ -1936,6 +1948,10 @@ components:
         searchId:
           type: [string, "null"]
           format: uuid
+        kind:
+          type: string
+          enum: [whatsapp, directions]
+          description: Qué tocó el vecino. Sin valor = whatsapp.
       required: [searchId]
     ComplaintRequest:
       type: object
@@ -2024,6 +2040,68 @@ components:
         - searchesNoResult30d
         - openComplaints
         - guestSearches30d
+    AdminKpi:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        display:
+          type: string
+          description: Valor ya formateado para mostrar
+        detail:
+          type: [string, "null"]
+          description: Cómo se calculó (ej. "12 de 40")
+        targetLabel:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [good, warn, bad, none]
+        trend:
+          type: string
+          enum: [up, down, flat, none]
+        trendGood:
+          type: [boolean, "null"]
+          description: Si el cambio contra el periodo anterior es bueno
+        previousDisplay:
+          type: [string, "null"]
+        why:
+          type: string
+      required: [id, label, display, detail, targetLabel, status, trend, trendGood, previousDisplay, why]
+    AdminKpiSection:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        question:
+          type: string
+        kpis:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminKpi"
+        note:
+          type: [string, "null"]
+      required: [id, title, question, kpis, note]
+    AdminKpis:
+      type: object
+      properties:
+        households:
+          type: integer
+        avgTicket:
+          type: integer
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminKpiSection"
+        idlePlaces:
+          type: array
+          description: Comercios sin contactos ni visitas en 30 días
+          items:
+            type: string
+      required: [households, avgTicket, sections, idlePlaces]
     ResidentUpdate:
       type: object
       properties:

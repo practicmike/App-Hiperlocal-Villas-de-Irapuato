@@ -155,5 +155,14 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "CREATE INDEX \"passes_from_idx\" ON \"passes\" USING btree (\"from_place_id\",\"redeemed_at\");",
       "CREATE INDEX \"passes_to_idx\" ON \"passes\" USING btree (\"to_place_id\",\"redeemed_at\");"
     ]
+  },
+  {
+    "tag": "0013_kpis",
+    "statements": [
+      "CREATE TABLE \"contact_events\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"place_id\" uuid NOT NULL,\n\t\"resident_id\" uuid,\n\t\"kind\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"contact_events\" ADD CONSTRAINT \"contact_events_place_id_places_id_fk\" FOREIGN KEY (\"place_id\") REFERENCES \"public\".\"places\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"contact_events\" ADD CONSTRAINT \"contact_events_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE INDEX \"contact_events_created_idx\" ON \"contact_events\" USING btree (\"created_at\");"
+    ]
   }
 ];
