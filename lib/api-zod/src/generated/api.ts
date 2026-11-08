@@ -134,7 +134,8 @@ export const LoginWithKeyResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "role": zod.enum(['resident', 'admin']),
-  "showNameOnEndorsements": zod.boolean()
+  "showNameOnEndorsements": zod.boolean(),
+  "zone": zod.string().nullable().describe('Privada del vecino (para avisos de su zona)')
 })
 
 
@@ -145,7 +146,8 @@ export const GetMeResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "role": zod.enum(['resident', 'admin']),
-  "showNameOnEndorsements": zod.boolean()
+  "showNameOnEndorsements": zod.boolean(),
+  "zone": zod.string().nullable().describe('Privada del vecino (para avisos de su zona)')
 })
 
 
@@ -157,7 +159,8 @@ export const UpdateMeResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "role": zod.enum(['resident', 'admin']),
-  "showNameOnEndorsements": zod.boolean()
+  "showNameOnEndorsements": zod.boolean(),
+  "zone": zod.string().nullable().describe('Privada del vecino (para avisos de su zona)')
 })
 
 
@@ -993,6 +996,161 @@ export const AdminOverviewResponse = zod.object({
   "guestSearches30d": zod.number().int(),
   "visits30d": zod.number().int()
 })
+
+
+/**
+ * @summary Avisos vigentes que le afectan al vecino (por su privada)
+ */
+export const ListNoticesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "zone": zod.string().nullable(),
+  "source": zod.string(),
+  "confirmed": zod.boolean(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})
+export const ListNoticesResponse = zod.array(ListNoticesResponseItem)
+
+
+/**
+ * @summary Un vecino reporta algo (corte de agua, apagón...). Llega al creador; con 3 vecinos se publica solo
+ */
+export const reportNoticeBodyZoneMax = 80;
+
+export const reportNoticeBodyTextMin = 3;
+export const reportNoticeBodyTextMax = 300;
+
+
+
+export const ReportNoticeBody = zod.object({
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "zone": zod.string().max(reportNoticeBodyZoneMax).nullable(),
+  "text": zod.string().min(reportNoticeBodyTextMin).max(reportNoticeBodyTextMax)
+})
+
+export const ReportNoticeResponse = zod.object({
+  "published": zod.boolean().describe('true si con este reporte ya se publicó (o ya había) un aviso')
+})
+
+
+/**
+ * @summary Registrar que el vecino vio o compartió un aviso
+ */
+export const RecordNoticeEventParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RecordNoticeEventBody = zod.object({
+  "kind": zod.enum(['view', 'share'])
+})
+
+export const RecordNoticeEventResponse = zod.void()
+
+
+/**
+ * @summary Avisos activos y reportes por confirmar
+ */
+export const AdminListNoticesResponse = zod.object({
+  "active": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "zone": zod.string().nullable(),
+  "source": zod.string(),
+  "confirmed": zod.boolean(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "views": zod.number().int(),
+  "shares": zod.number().int(),
+  "reports": zod.number().int()
+}))),
+  "pending": zod.array(zod.object({
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "zone": zod.string().nullable(),
+  "residents": zod.number().int().describe('Vecinos distintos que lo reportaron'),
+  "latestAt": zod.coerce.date(),
+  "reports": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "text": zod.string(),
+  "residentName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "zones": zod.array(zod.string()).describe('Privadas registradas por los vecinos (para elegir a quién va el aviso)')
+})
+
+
+/**
+ * @summary Publicar un aviso (nuevo o a partir de reportes de vecinos)
+ */
+export const adminCreateNoticeBodyTitleMin = 3;
+export const adminCreateNoticeBodyTitleMax = 90;
+
+export const adminCreateNoticeBodyBodyMax = 500;
+
+export const adminCreateNoticeBodyZoneMax = 80;
+
+export const adminCreateNoticeBodySourceMin = 2;
+export const adminCreateNoticeBodySourceMax = 60;
+
+export const adminCreateNoticeBodyHoursMax = 168;
+
+
+
+export const AdminCreateNoticeBody = zod.object({
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "title": zod.string().min(adminCreateNoticeBodyTitleMin).max(adminCreateNoticeBodyTitleMax),
+  "body": zod.string().max(adminCreateNoticeBodyBodyMax).nullable(),
+  "zone": zod.string().max(adminCreateNoticeBodyZoneMax).nullable(),
+  "source": zod.string().min(adminCreateNoticeBodySourceMin).max(adminCreateNoticeBodySourceMax),
+  "hours": zod.number().int().min(1).max(adminCreateNoticeBodyHoursMax),
+  "reportIds": zod.array(zod.string().uuid()).optional()
+})
+
+export const AdminCreateNoticeResponse = zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['agua', 'luz', 'calle', 'general']),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "zone": zod.string().nullable(),
+  "source": zod.string(),
+  "confirmed": zod.boolean(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Confirmar un aviso auto-publicado o cerrarlo antes de tiempo
+ */
+export const AdminUpdateNoticeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminUpdateNoticeBody = zod.object({
+  "confirm": zod.boolean().optional(),
+  "close": zod.boolean().optional()
+})
+
+export const AdminUpdateNoticeResponse = zod.void()
+
+
+/**
+ * @summary Descartar reportes de vecinos
+ */
+
+
+
+export const AdminDismissNoticeReportsBody = zod.object({
+  "ids": zod.array(zod.string().uuid()).min(1)
+})
+
+export const AdminDismissNoticeReportsResponse = zod.void()
 
 
 /**

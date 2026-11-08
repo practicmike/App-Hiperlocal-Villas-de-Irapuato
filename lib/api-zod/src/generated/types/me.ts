@@ -12,4 +12,9 @@ export interface Me {
   name: string;
   role: MeRole;
   showNameOnEndorsements: boolean;
+  /**
+     * Privada del vecino (para avisos de su zona)
+     * @nullable
+     */
+  zone: string | null;
 }

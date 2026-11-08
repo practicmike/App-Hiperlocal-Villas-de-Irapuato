@@ -25,6 +25,9 @@ import type {
   AdminConstellation,
   AdminKpis,
   AdminLead,
+  AdminNoticeInput,
+  AdminNoticeUpdate,
+  AdminNotices,
   AdminOverview,
   AdminPlace,
   AdminResident,
@@ -43,6 +46,7 @@ import type {
   ErrorResponse,
   FrequentSearches,
   HealthStatus,
+  IdsRequest,
   Invite,
   JoinRequest,
   JoinResult,
@@ -55,6 +59,10 @@ import type {
   MerchantPass,
   NewsInput,
   NewsItem,
+  Notice,
+  NoticeEventRequest,
+  NoticeReportRequest,
+  NoticeReportResult,
   PhotoRef,
   PlaceDetail,
   PlaceInput,
@@ -3366,6 +3374,602 @@ export function useAdminOverview<TData = Awaited<ReturnType<typeof adminOverview
 
 
 
+
+export const getListNoticesUrl = () => {
+
+
+
+
+  return `/api/notices`
+}
+
+/**
+ * @summary Avisos vigentes que le afectan al vecino (por su privada)
+ */
+export const listNotices = async ( options?: Parameters<typeof customFetch>[1]): Promise<Notice[]> => {
+
+  return customFetch<Notice[]>(getListNoticesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNoticesQueryKey = () => {
+    return [
+    `/api/notices`
+    ] as const;
+    }
+
+
+export const getListNoticesQueryOptions = <TData = Awaited<ReturnType<typeof listNotices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNoticesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotices>>> = ({ signal }) => listNotices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNotices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNoticesQueryResult = NonNullable<Awaited<ReturnType<typeof listNotices>>>
+export type ListNoticesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Avisos vigentes que le afectan al vecino (por su privada)
+ */
+
+export function useListNotices<TData = Awaited<ReturnType<typeof listNotices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNoticesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReportNoticeUrl = () => {
+
+
+
+
+  return `/api/notices/reports`
+}
+
+/**
+ * @summary Un vecino reporta algo (corte de agua, apagón...). Llega al creador; con 3 vecinos se publica solo
+ */
+export const reportNotice = async (noticeReportRequest: NoticeReportRequest, options?: Parameters<typeof customFetch>[1]): Promise<NoticeReportResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<NoticeReportResult>(getReportNoticeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(noticeReportRequest)
+  }
+);}
+
+
+
+
+
+export const getReportNoticeMutationKey = () => ['reportNotice'] as const;
+
+export const getReportNoticeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportNotice>>, TError,ReportNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportNotice>>, TError,ReportNoticeMutationVariables, TContext> => {
+
+const mutationKey = getReportNoticeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportNotice>>, ReportNoticeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportNotice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportNoticeMutationResult = NonNullable<Awaited<ReturnType<typeof reportNotice>>>
+    export type ReportNoticeMutationBody = BodyType<NoticeReportRequest>
+    export type ReportNoticeMutationError = ErrorType<unknown>
+    export type ReportNoticeMutationVariables = {data: BodyType<NoticeReportRequest>}
+
+    /**
+ * @summary Un vecino reporta algo (corte de agua, apagón...). Llega al creador; con 3 vecinos se publica solo
+ */
+export const useReportNotice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportNotice>>, TError,ReportNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportNotice>>,
+        TError,
+        ReportNoticeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportNoticeMutationOptions(options));
+    }
+
+export const getRecordNoticeEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/notices/${id}/events`
+}
+
+/**
+ * @summary Registrar que el vecino vio o compartió un aviso
+ */
+export const recordNoticeEvent = async (id: string,
+    noticeEventRequest: NoticeEventRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getRecordNoticeEventUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(noticeEventRequest)
+  }
+);}
+
+
+
+
+
+export const getRecordNoticeEventMutationKey = () => ['recordNoticeEvent'] as const;
+
+export const getRecordNoticeEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordNoticeEvent>>, TError,RecordNoticeEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordNoticeEvent>>, TError,RecordNoticeEventMutationVariables, TContext> => {
+
+const mutationKey = getRecordNoticeEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordNoticeEvent>>, RecordNoticeEventMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordNoticeEvent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordNoticeEventMutationResult = NonNullable<Awaited<ReturnType<typeof recordNoticeEvent>>>
+    export type RecordNoticeEventMutationBody = BodyType<NoticeEventRequest>
+    export type RecordNoticeEventMutationError = ErrorType<unknown>
+    export type RecordNoticeEventMutationVariables = {id: string;data: BodyType<NoticeEventRequest>}
+
+    /**
+ * @summary Registrar que el vecino vio o compartió un aviso
+ */
+export const useRecordNoticeEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordNoticeEvent>>, TError,RecordNoticeEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordNoticeEvent>>,
+        TError,
+        RecordNoticeEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordNoticeEventMutationOptions(options));
+    }
+
+export const getAdminListNoticesUrl = () => {
+
+
+
+
+  return `/api/admin/notices`
+}
+
+/**
+ * @summary Avisos activos y reportes por confirmar
+ */
+export const adminListNotices = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminNotices> => {
+
+  return customFetch<AdminNotices>(getAdminListNoticesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListNoticesQueryKey = () => {
+    return [
+    `/api/admin/notices`
+    ] as const;
+    }
+
+
+export const getAdminListNoticesQueryOptions = <TData = Awaited<ReturnType<typeof adminListNotices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListNoticesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListNotices>>> = ({ signal }) => adminListNotices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListNotices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListNoticesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListNotices>>>
+export type AdminListNoticesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Avisos activos y reportes por confirmar
+ */
+
+export function useAdminListNotices<TData = Awaited<ReturnType<typeof adminListNotices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListNotices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListNoticesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateNoticeUrl = () => {
+
+
+
+
+  return `/api/admin/notices`
+}
+
+/**
+ * @summary Publicar un aviso (nuevo o a partir de reportes de vecinos)
+ */
+export const adminCreateNotice = async (adminNoticeInput: AdminNoticeInput, options?: Parameters<typeof customFetch>[1]): Promise<Notice> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Notice>(getAdminCreateNoticeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminNoticeInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateNoticeMutationKey = () => ['adminCreateNotice'] as const;
+
+export const getAdminCreateNoticeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateNotice>>, TError,AdminCreateNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateNotice>>, TError,AdminCreateNoticeMutationVariables, TContext> => {
+
+const mutationKey = getAdminCreateNoticeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateNotice>>, AdminCreateNoticeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateNotice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateNoticeMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateNotice>>>
+    export type AdminCreateNoticeMutationBody = BodyType<AdminNoticeInput>
+    export type AdminCreateNoticeMutationError = ErrorType<unknown>
+    export type AdminCreateNoticeMutationVariables = {data: BodyType<AdminNoticeInput>}
+
+    /**
+ * @summary Publicar un aviso (nuevo o a partir de reportes de vecinos)
+ */
+export const useAdminCreateNotice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateNotice>>, TError,AdminCreateNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateNotice>>,
+        TError,
+        AdminCreateNoticeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminCreateNoticeMutationOptions(options));
+    }
+
+export const getAdminUpdateNoticeUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/notices/${id}`
+}
+
+/**
+ * @summary Confirmar un aviso auto-publicado o cerrarlo antes de tiempo
+ */
+export const adminUpdateNotice = async (id: string,
+    adminNoticeUpdate: AdminNoticeUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminUpdateNoticeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminNoticeUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateNoticeMutationKey = () => ['adminUpdateNotice'] as const;
+
+export const getAdminUpdateNoticeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateNotice>>, TError,AdminUpdateNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateNotice>>, TError,AdminUpdateNoticeMutationVariables, TContext> => {
+
+const mutationKey = getAdminUpdateNoticeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateNotice>>, AdminUpdateNoticeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateNotice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateNoticeMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateNotice>>>
+    export type AdminUpdateNoticeMutationBody = BodyType<AdminNoticeUpdate>
+    export type AdminUpdateNoticeMutationError = ErrorType<unknown>
+    export type AdminUpdateNoticeMutationVariables = {id: string;data: BodyType<AdminNoticeUpdate>}
+
+    /**
+ * @summary Confirmar un aviso auto-publicado o cerrarlo antes de tiempo
+ */
+export const useAdminUpdateNotice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateNotice>>, TError,AdminUpdateNoticeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateNotice>>,
+        TError,
+        AdminUpdateNoticeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminUpdateNoticeMutationOptions(options));
+    }
+
+export const getAdminDismissNoticeReportsUrl = () => {
+
+
+
+
+  return `/api/admin/notice-reports/dismiss`
+}
+
+/**
+ * @summary Descartar reportes de vecinos
+ */
+export const adminDismissNoticeReports = async (idsRequest: IdsRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getAdminDismissNoticeReportsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(idsRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminDismissNoticeReportsMutationKey = () => ['adminDismissNoticeReports'] as const;
+
+export const getAdminDismissNoticeReportsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDismissNoticeReports>>, TError,AdminDismissNoticeReportsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDismissNoticeReports>>, TError,AdminDismissNoticeReportsMutationVariables, TContext> => {
+
+const mutationKey = getAdminDismissNoticeReportsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDismissNoticeReports>>, AdminDismissNoticeReportsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminDismissNoticeReports(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDismissNoticeReportsMutationResult = NonNullable<Awaited<ReturnType<typeof adminDismissNoticeReports>>>
+    export type AdminDismissNoticeReportsMutationBody = BodyType<IdsRequest>
+    export type AdminDismissNoticeReportsMutationError = ErrorType<unknown>
+    export type AdminDismissNoticeReportsMutationVariables = {data: BodyType<IdsRequest>}
+
+    /**
+ * @summary Descartar reportes de vecinos
+ */
+export const useAdminDismissNoticeReports = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDismissNoticeReports>>, TError,AdminDismissNoticeReportsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDismissNoticeReports>>,
+        TError,
+        AdminDismissNoticeReportsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDismissNoticeReportsMutationOptions(options));
+    }
 
 export const getAdminKpisUrl = () => {
 

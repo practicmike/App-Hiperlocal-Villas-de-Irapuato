@@ -20,11 +20,18 @@ import { config, aiEnabled } from "../lib/config";
 
 const router: IRouter = Router();
 
-const me = (r: { id: string; name: string; role: "resident" | "admin"; showNameOnEndorsements: boolean }) => ({
+const me = (r: {
+  id: string;
+  name: string;
+  role: "resident" | "admin";
+  showNameOnEndorsements: boolean;
+  zone: string | null;
+}) => ({
   id: r.id,
   name: r.name,
   role: r.role,
   showNameOnEndorsements: r.showNameOnEndorsements,
+  zone: r.zone,
 });
 
 router.get("/creator", (_req, res) => {

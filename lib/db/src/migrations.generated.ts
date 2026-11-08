@@ -164,5 +164,20 @@ export const MIGRATIONS: ReadonlyArray<{ tag: string; statements: readonly strin
       "ALTER TABLE \"contact_events\" ADD CONSTRAINT \"contact_events_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE set null ON UPDATE no action;",
       "CREATE INDEX \"contact_events_created_idx\" ON \"contact_events\" USING btree (\"created_at\");"
     ]
+  },
+  {
+    "tag": "0014_avisos",
+    "statements": [
+      "CREATE TABLE \"notice_events\" (\n\t\"notice_id\" uuid NOT NULL,\n\t\"resident_id\" uuid NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\tCONSTRAINT \"notice_events_once\" UNIQUE(\"notice_id\",\"resident_id\",\"kind\")\n);",
+      "CREATE TABLE \"notice_reports\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"resident_id\" uuid NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"zone\" text,\n\t\"text\" text NOT NULL,\n\t\"status\" text DEFAULT 'pending' NOT NULL,\n\t\"notice_id\" uuid,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE TABLE \"notices\" (\n\t\"id\" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"title\" text NOT NULL,\n\t\"body\" text,\n\t\"zone\" text,\n\t\"source\" text NOT NULL,\n\t\"confirmed\" boolean DEFAULT true NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"closed_at\" timestamp with time zone,\n\t\"created_by_id\" uuid,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"notice_events\" ADD CONSTRAINT \"notice_events_notice_id_notices_id_fk\" FOREIGN KEY (\"notice_id\") REFERENCES \"public\".\"notices\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"notice_events\" ADD CONSTRAINT \"notice_events_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"notice_reports\" ADD CONSTRAINT \"notice_reports_resident_id_residents_id_fk\" FOREIGN KEY (\"resident_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"notice_reports\" ADD CONSTRAINT \"notice_reports_notice_id_notices_id_fk\" FOREIGN KEY (\"notice_id\") REFERENCES \"public\".\"notices\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"notices\" ADD CONSTRAINT \"notices_created_by_id_residents_id_fk\" FOREIGN KEY (\"created_by_id\") REFERENCES \"public\".\"residents\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE INDEX \"notice_reports_created_idx\" ON \"notice_reports\" USING btree (\"created_at\");",
+      "CREATE INDEX \"notices_expires_idx\" ON \"notices\" USING btree (\"expires_at\");"
+    ]
   }
 ];
