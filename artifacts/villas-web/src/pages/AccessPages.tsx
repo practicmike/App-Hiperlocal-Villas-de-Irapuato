@@ -62,7 +62,7 @@ export function LandingPage({ creator }: { creator: Creator }) {
       </h1>
       <p className="mb-8 text-ink/85">
         Encuentra casas, gente de confianza y comercios de Villas, muchas veces con el nombre del vecino que los recomienda.
-        Sin scroll infinito: preguntas qué necesitas y ves qué te queda cerca.
+        Preguntas qué necesitas y ves qué te queda cerca.
       </p>
 
       <div className="mb-8 flex items-center gap-4 rounded-2xl border border-white/10 bg-panel/70 p-4">

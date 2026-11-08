@@ -30,7 +30,7 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
     {
       art: <img src={`${import.meta.env.BASE_URL}icon-512.png`} alt="" className="h-32 w-32 rounded-[28px] shadow-[0_0_60px_#6eb5ff55]" />,
       title: "Bienvenido a OrbiTú Villas",
-      text: "Comercios, oficios y casas de Villas que un vecino conoce en persona. Sin anuncios de fuera, sin scroll infinito.",
+      text: "Comercios, oficios y casas de Villas que un vecino conoce en persona. Lo hicimos para la comunidad, para que nos encontremos más fácil.",
       since: 1,
     },
     {
@@ -52,7 +52,7 @@ export function Intro({ creator, guest, onDone }: { creator: Creator; guest: boo
       title: "Avisos de tu colonia",
       text: guest
         ? "Los vecinos ven arriba del inicio los cortes de agua, apagones y calles cerradas que les tocan, con su fuente. Y pueden reportar lo que ven."
-        : "¿Sin agua o sin luz? Arriba del inicio verás los avisos que le tocan a tu privada, con su fuente. Si ves algo, repórtalo: cuando 3 vecinos reportan lo mismo, se publica solo.",
+        : "¿Sin agua o sin luz? Arriba del inicio verás los avisos que le tocan a tu privada, con su fuente. Si ves algo, repórtalo.",
       since: 2,
     },
     {

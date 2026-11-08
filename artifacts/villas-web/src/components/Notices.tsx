@@ -197,9 +197,6 @@ function ReportForm({ myZone, creatorFirst, onCancel }: { myZone: string | null;
           <Check size={18} className="text-confianza" />
           {report.data.published ? "Listo, ya está publicado arriba." : `Gracias. ${creatorFirst} lo revisa.`}
         </p>
-        {!report.data.published && (
-          <p className="mt-1 text-xs text-muted">Si otros vecinos reportan lo mismo en tu zona, se publica solo.</p>
-        )}
       </div>
     );
   }
