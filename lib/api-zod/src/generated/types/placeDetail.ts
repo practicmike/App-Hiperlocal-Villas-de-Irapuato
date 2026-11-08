@@ -10,6 +10,7 @@ import type { NewsItem } from './newsItem';
 import type { PhotoRef } from './photoRef';
 import type { PlaceDetailOperation } from './placeDetailOperation';
 import type { PlaceKind } from './placeKind';
+import type { PlacePass } from './placePass';
 import type { WeekHours } from './weekHours';
 
 export interface PlaceDetail {
@@ -56,6 +57,8 @@ export interface PlaceDetail {
   viaCreator?: boolean;
   /** Vecinos distintos con visita registrada */
   neighborsServed: number;
+  /** Pase vivo del vecino hacia este lugar */
+  myPass: PlacePass | null;
   myVisits: number;
   kind: PlaceKind;
   delivers: boolean;

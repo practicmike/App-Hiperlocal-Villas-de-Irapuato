@@ -856,6 +856,12 @@ function PlaceRow({ p, color, onEdit }: { p: AdminPlace; color: string; onEdit: 
             {p.isDemo && <span className="font-bold text-casas">Ejemplo · </span>}
             {p.category} · {p.visitCount} visitas · {p.whatsappClicks} contactos · {p.endorsementCount} ♥{!p.active && " · oculta"}
             {p.welcomeOffer && <span className="text-[#E6C882]"> · regalo</span>}
+            {(p.passesSent > 0 || p.passesReceived > 0) && (
+              <span className="text-confianza">
+                {" "}
+                · mandó {p.passesSent} · recibió {p.passesReceived}
+              </span>
+            )}
             {p.hasMerchantKey && <span className="text-confianza"> · comercio</span>}
             {p.leadCount > 0 && <span className="text-[#25D366]"> · {p.leadCount} interesados</span>}
             {p.hasEmbedding && <span className="text-ai"> · IA</span>}
@@ -1398,6 +1404,7 @@ function Visits() {
                 </p>
                 <p className="text-xs text-muted">{fmtDate(v.at)}</p>
                 {v.welcomeApplied && <p className="mt-1 text-xs font-bold text-[#E6C882]">Regalo: {v.welcomeOffer}</p>}
+                {v.referredBy && <p className="mt-1 text-xs font-bold text-confianza">De parte de {v.referredBy}</p>}
               </div>
               <button
                 aria-label="Borrar visita"

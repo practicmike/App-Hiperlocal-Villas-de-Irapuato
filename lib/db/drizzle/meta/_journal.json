@@ -85,6 +85,13 @@
       "when": 1793557989105,
       "tag": "0011_fuera_de_villas",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794149567300,
+      "tag": "0012_pases",
+      "breakpoints": true
     }
   ]
 }

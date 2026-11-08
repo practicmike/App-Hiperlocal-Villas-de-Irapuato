@@ -29,6 +29,7 @@ import type {
   AdminResident,
   AdminSearch,
   AdminVisit,
+  ChangePassRequest,
   ClearVisitsRequest,
   ClearVisitsResult,
   ComplaintRequest,
@@ -50,6 +51,7 @@ import type {
   MemberLookup,
   MerchantKey,
   MerchantMe,
+  MerchantPass,
   NewsInput,
   NewsItem,
   PhotoRef,
@@ -1353,6 +1355,95 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getMerchantRecordVisitMutationOptions(options));
+    }
+
+export const getMerchantChangePassUrl = (id: string,) => {
+
+
+
+
+  return `/api/merchant/passes/${id}`
+}
+
+/**
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
+ */
+export const merchantChangePass = async (id: string,
+    changePassRequest: ChangePassRequest, options?: Parameters<typeof customFetch>[1]): Promise<MerchantPass> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MerchantPass>(getMerchantChangePassUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(changePassRequest)
+  }
+);}
+
+
+
+
+
+export const getMerchantChangePassMutationKey = () => ['merchantChangePass'] as const;
+
+export const getMerchantChangePassMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof merchantChangePass>>, TError,MerchantChangePassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof merchantChangePass>>, TError,MerchantChangePassMutationVariables, TContext> => {
+
+const mutationKey = getMerchantChangePassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof merchantChangePass>>, MerchantChangePassMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  merchantChangePass(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MerchantChangePassMutationResult = NonNullable<Awaited<ReturnType<typeof merchantChangePass>>>
+    export type MerchantChangePassMutationBody = BodyType<ChangePassRequest>
+    export type MerchantChangePassMutationError = ErrorType<ErrorResponse>
+    export type MerchantChangePassMutationVariables = {id: string;data: BodyType<ChangePassRequest>}
+
+    /**
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
+ */
+export const useMerchantChangePass = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof merchantChangePass>>, TError,MerchantChangePassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof merchantChangePass>>,
+        TError,
+        MerchantChangePassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMerchantChangePassMutationOptions(options));
     }
 
 export const getGetUniverseUrl = () => {

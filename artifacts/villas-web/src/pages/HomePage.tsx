@@ -15,10 +15,11 @@ import {
   type PlaceSummary,
   type SearchResult,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Bell, Bookmark, Check, Heart, Sparkles, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home, MapPinned } from "lucide-react";
+import { ArrowLeft, Bell, Bookmark, Gift, Check, Heart, Sparkles, ChevronDown, ChevronUp, History, KeyRound, LocateFixed, Lightbulb, QrCode, RotateCcw, Search, Settings2, X, Home, MapPinned } from "lucide-react";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { CreatorAvatar, CreatorSheet } from "@/components/CreatorSheet";
 import { MeSheet } from "@/components/MeSheet";
+import { expiresLabel } from "@/lib/passes";
 import { Intro, introSeen } from "@/components/Intro";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { VoiceButton, voiceAvailable } from "@/components/VoiceButton";
@@ -59,10 +60,8 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
   const sky = useGetMySky({
     query: { queryKey: getGetMySkyQueryKey(), enabled: !guest, refetchOnWindowFocus: true, staleTime: 20_000 },
   });
-  const litCount = useMemo(() => {
-    const lit = new Set((sky.data?.visits ?? []).map((v) => v.placeId));
-    return places.filter((p) => lit.has(p.id)).length;
-  }, [sky.data, places]);
+  /** «Te lo paso»: regalos vivos, del que vence primero. */
+  const passes = sky.data?.passes ?? [];
   const frequent = useGetFrequentSearches({
     query: { queryKey: getGetFrequentSearchesQueryKey(), staleTime: 5 * 60_000 },
   }).data;
@@ -454,6 +453,33 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
                     aria-label={`Ver ${news.length - 1} novedades más`}
                   >
                     +{news.length - 1}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {passes[0] && !noResults && !result && (
+              <div className="mt-3 flex items-stretch gap-2">
+                <button
+                  onClick={() => setSelectedId(passes[0]!.toPlaceId)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[#E6C882]/50 bg-[#E6C882]/10 p-3 text-left"
+                >
+                  <Gift size={22} className="shrink-0 text-[#E6C882]" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 block text-[15px] font-bold leading-snug text-[#E6C882]">
+                      {passes[0].offer} en {passes[0].toPlaceName}
+                    </span>
+                    {/* Lo urgente es la fecha; «de parte de» va en la tarjeta y en tu cuenta. */}
+                    <span className="block text-xs text-muted">Regalo · {expiresLabel(passes[0].expiresAt)}</span>
+                  </span>
+                </button>
+                {passes.length > 1 && (
+                  <button
+                    onClick={() => setMeOpen(true)}
+                    className="shrink-0 rounded-2xl border border-white/10 bg-panel/80 px-3 text-sm font-bold text-[#E6C882]"
+                    aria-label={`Ver ${passes.length - 1} regalos más`}
+                  >
+                    +{passes.length - 1}
                   </button>
                 )}
               </div>
@@ -908,8 +934,11 @@ export function HomePage({ me, creator }: { me: Me | null; creator: Creator }) {
           me={me}
           creatorFirstName={firstName}
           memberCode={sky.data?.memberCode ?? null}
-          litCount={litCount}
-          total={places.length}
+          passes={passes}
+          onOpenPlace={(id) => {
+            setMeOpen(false);
+            setSelectedId(id);
+          }}
           onClose={() => setMeOpen(false)}
         />
       )}

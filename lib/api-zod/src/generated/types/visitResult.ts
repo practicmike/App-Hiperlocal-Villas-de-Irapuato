@@ -5,6 +5,8 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { MerchantPass } from './merchantPass';
+import type { PartnerRef } from './partnerRef';
 
 export interface VisitResult {
   firstName: string;
@@ -13,4 +15,13 @@ export interface VisitResult {
   /** @nullable */
   welcomeOffer: string | null;
   duplicate: boolean;
+  /**
+     * El vecino llegó con pase de este comercio (se canjeó)
+     * @nullable
+     */
+  referredBy: string | null;
+  /** Pase que se le dio al vecino hacia un socio */
+  pass: MerchantPass | null;
+  /** Otro comercio al que se puede cambiar el pase (elegido por el sistema) */
+  passOptions: PartnerRef[];
 }

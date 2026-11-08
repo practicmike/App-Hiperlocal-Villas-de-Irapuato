@@ -22,4 +22,8 @@ export interface MerchantMe {
   news: NewsItem | null;
   /** @nullable */
   slug: string | null;
+  /** Vecinos que mandó y que ya llegaron, este mes */
+  sentThisMonth: number;
+  /** Vecinos que le mandaron otros comercios, este mes */
+  receivedThisMonth: number;
 }

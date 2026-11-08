@@ -20,4 +20,8 @@ export type AdminPlace = PlaceInput & ({
   leadCount: number;
   /** @nullable */
   slug: string | null;
+  /** Vecinos que mandó y llegaron, últimos 30 días */
+  passesSent: number;
+  /** Vecinos que le mandaron y llegaron, últimos 30 días */
+  passesReceived: number;
 });

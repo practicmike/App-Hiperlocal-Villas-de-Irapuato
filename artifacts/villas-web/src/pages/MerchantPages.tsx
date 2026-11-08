@@ -13,6 +13,8 @@ import {
   useMerchantLookupMember,
   getMerchantLookupMemberQueryKey,
   useMerchantRecordVisit,
+  useMerchantChangePass,
+  type MerchantPass,
   merchantPublishNews,
   merchantRemoveNews,
   getListNewsQueryKey,
@@ -21,7 +23,7 @@ import {
 } from "@workspace/api-client-react";
 import { NewsComposer } from "@/components/NewsComposer";
 import { ShareButton } from "@/components/PlaceSheet";
-import { Camera, Check, Gift, Store, Star } from "lucide-react";
+import { ArrowRightLeft, Camera, Check, Gift, Handshake, Store, Star } from "lucide-react";
 import { Shell, errorMessage } from "@/pages/AccessPages";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
@@ -148,6 +150,8 @@ export function MerchantHomePage() {
         </p>
       )}
 
+      <TeLoPaso sent={m.sentThisMonth} received={m.receivedThisMonth} />
+
       <div className="mb-4 grid grid-cols-3 gap-2 text-center">
         <Stat label="Hoy" value={m.todayVisits} />
         <Stat label={m.kind === "oficio" ? "Chambas" : "Visitas"} value={m.totalVisits} />
@@ -163,6 +167,7 @@ export function MerchantHomePage() {
                 <span>
                   {v.firstName}
                   {v.welcomeApplied && <span className="text-[#E6C882]"> · regalo</span>}
+                  {v.referredBy && <span className="text-confianza"> · de parte de {v.referredBy}</span>}
                 </span>
                 <span className="text-muted">{fmtTime(v.at)}</span>
               </li>
@@ -174,6 +179,35 @@ export function MerchantHomePage() {
         <InstallPrompt reason="Abre el modo comercio a un toque desde la caja." />
       </div>
     </Shell>
+  );
+}
+
+/**
+ * «Te lo paso»: el marcador del mes. El sistema elige a quién pasar a cada vecino,
+ * repartiendo parejo entre los comercios de Villas que tienen regalo.
+ */
+function TeLoPaso({ sent, received }: { sent: number; received: number }) {
+  return (
+    <div className="mb-4 rounded-3xl border border-confianza/30 bg-panel p-4">
+      <p className="flex items-center gap-2 font-black">
+        <Handshake size={20} className="text-confianza" /> Te lo paso
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+        <div className="rounded-2xl bg-space-2/60 p-2">
+          <p className="text-2xl font-black">{sent}</p>
+          <p className="text-[11px] text-muted">Mandaste</p>
+        </div>
+        <div className="rounded-2xl bg-space-2/60 p-2">
+          <p className="text-2xl font-black">{received}</p>
+          <p className="text-[11px] text-muted">Te mandaron</p>
+        </div>
+      </div>
+      <p className="mt-1 text-xs text-muted">Vecinos que llegaron con pase este mes.</p>
+      <p className="mt-2 text-sm text-ink/80">
+        Cada visita que registras le pasa el vecino a otro comercio de Villas que aún no conoce, con su regalo de bienvenida.
+        Otros comercios te mandan vecinos igual. Quien más vecinos manda, sale más arriba en las búsquedas.
+      </p>
+    </div>
   );
 }
 
@@ -225,6 +259,50 @@ export function MemberPassPage({ code }: { code: string }) {
   return <ConfirmVisit code={code} placeName={merchant.data.placeName} chamba={merchant.data.kind === "oficio"} />;
 }
 
+/** Al cambiar de comercio, el anterior pasa a ser la opción y el nuevo sale de la lista. */
+function swapOption(done: VisitResult, next: MerchantPass) {
+  const prev = done.pass;
+  const rest = done.passOptions.filter((o) => o.placeId !== next.toPlaceId);
+  return prev ? [{ placeId: prev.toPlaceId, name: prev.toPlaceName, offer: prev.offer }, ...rest] : rest;
+}
+
+/** «Te lo paso»: el vecino ya va con pase a otro comercio; un toque lo cambia a la alternativa. */
+function PassGiven({
+  firstName,
+  pass,
+  options,
+  onChange,
+}: {
+  firstName: string;
+  pass: MerchantPass;
+  options: { placeId: string; name: string; offer?: string | null }[];
+  onChange: (p: MerchantPass) => void;
+}) {
+  const change = useMerchantChangePass({ mutation: { onSuccess: onChange } });
+  return (
+    <div className="mb-6 rounded-2xl border border-confianza/40 bg-panel p-4 text-left">
+      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-confianza">
+        <Handshake size={16} /> Te lo paso
+      </p>
+      <p className="mt-1 text-lg font-black leading-snug">
+        Le pasaste a {firstName} a {pass.toPlaceName}
+      </p>
+      <p className="text-sm text-ink/80">Le llega a su cuenta: {pass.offer}. Vale 7 días.</p>
+      {options.map((o) => (
+        <button
+          key={o.placeId}
+          onClick={() => change.mutate({ id: pass.id, data: { toPlaceId: o.placeId } })}
+          disabled={change.isPending}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 py-2.5 text-sm font-bold disabled:opacity-60"
+        >
+          <ArrowRightLeft size={16} /> Mejor a {o.name}
+        </button>
+      ))}
+      {change.isError && <p className="mt-2 text-xs text-alert">{errorMessage(change.error, "No se pudo cambiar.")}</p>}
+    </div>
+  );
+}
+
 function ConfirmVisit({ code, placeName, chamba }: { code: string; placeName: string; chamba: boolean }) {
   const noun = chamba ? "chamba" : "visita";
   const qc = useQueryClient();
@@ -266,9 +344,20 @@ function ConfirmVisit({ code, placeName, chamba }: { code: string; placeName: st
                     : `Lleva ${done.visitsHere} visitas en ${placeName}.`}
               </p>
               {done.welcomeApplied && done.welcomeOffer && (
-                <p className="mb-6 flex items-center justify-center gap-2 rounded-2xl bg-[#E6C882]/15 p-4 text-lg font-black text-[#E6C882]">
+                <p className="mb-4 flex items-center justify-center gap-2 rounded-2xl bg-[#E6C882]/15 p-4 text-lg font-black text-[#E6C882]">
                   <Gift size={22} className="shrink-0" /> <span>Aplica: {done.welcomeOffer}</span>
                 </p>
+              )}
+              {done.referredBy && (
+                <p className="mb-4 text-sm font-bold text-confianza">Llegó de parte de {done.referredBy}.</p>
+              )}
+              {done.pass && (
+                <PassGiven
+                  firstName={done.firstName}
+                  pass={done.pass}
+                  options={done.passOptions}
+                  onChange={(pass) => setDone({ ...done, pass, passOptions: swapOption(done, pass) })}
+                />
               )}
             </>
           )}
@@ -307,6 +396,11 @@ function ConfirmVisit({ code, placeName, chamba }: { code: string; placeName: st
             ? "Primera visita a tu comercio."
             : `Ha venido ${m.visitsHere} ${m.visitsHere === 1 ? "vez" : "veces"}.`}
       </p>
+      {m.referredBy && (
+        <p className="mb-3 flex items-center gap-2 rounded-2xl bg-confianza/15 p-3 font-bold text-confianza">
+          <Handshake size={20} className="shrink-0" /> <span>Viene de parte de {m.referredBy}</span>
+        </p>
+      )}
       {m.welcomeOffer && (
         <p className="mb-5 flex items-center gap-2 rounded-2xl bg-[#E6C882]/15 p-4 font-black text-[#E6C882]">
           <Gift size={20} className="shrink-0" /> <span>Al confirmar, aplica: {m.welcomeOffer}</span>

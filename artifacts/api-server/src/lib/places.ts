@@ -7,6 +7,7 @@ import { photosByPlace } from "./photos";
 import { activeNews } from "./news";
 import { placeEmbeddingText } from "./search-core";
 import { logger } from "./logger";
+import { livePassTo } from "./passes";
 
 /** Conteo de recomendaciones por lugar, en una sola consulta. */
 export async function endorsementCounts(): Promise<Map<string, number>> {
@@ -80,6 +81,7 @@ export async function placeDetail(place: Place, viewerId: string | null, opts: {
     viaCreator: false,
     neighborsServed: v?.neighbors ?? 0,
     myVisits: Number(v?.mine ?? 0),
+    myPass: viewerId ? await viewerPass(viewerId, place.id) : null,
     kind: place.kind,
     delivers: place.delivers,
     pickup: place.pickup,
@@ -138,4 +140,9 @@ export function refreshEmbedding(place: Place) {
     await db.update(placesTable).set({ embedding: vector }).where(eq(placesTable.id, place.id));
   })().catch((err) => logger.warn({ err, placeId: place.id }, "refreshEmbedding failed"));
   waitUntil(job);
+}
+
+async function viewerPass(residentId: string, placeId: string) {
+  const p = await livePassTo(residentId, placeId);
+  return p ? { fromPlaceName: p.fromPlaceName, expiresAt: p.expiresAt.toISOString() } : null;
 }

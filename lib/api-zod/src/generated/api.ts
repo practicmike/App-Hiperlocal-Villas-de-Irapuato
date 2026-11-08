@@ -170,7 +170,15 @@ export const GetMySkyResponse = zod.object({
   "placeId": zod.string(),
   "count": zod.number().int(),
   "lastAt": zod.coerce.date()
-}))
+})),
+  "passes": zod.array(zod.object({
+  "id": zod.string(),
+  "toPlaceId": zod.string(),
+  "toPlaceName": zod.string(),
+  "fromPlaceName": zod.string(),
+  "offer": zod.string(),
+  "expiresAt": zod.coerce.date()
+})).describe('Pases vivos («Te lo paso»), del que vence primero al último')
 })
 
 
@@ -193,7 +201,8 @@ export const MerchantLoginResponse = zod.object({
   "recent": zod.array(zod.object({
   "firstName": zod.string(),
   "at": zod.coerce.date(),
-  "welcomeApplied": zod.boolean()
+  "welcomeApplied": zod.boolean(),
+  "referredBy": zod.string().nullable().describe('Comercio que mandó al vecino, si llegó con pase')
 })),
   "kind": zod.enum(['comercio', 'oficio']),
   "news": zod.union([zod.object({
@@ -206,7 +215,9 @@ export const MerchantLoginResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date()
 }),zod.null()]),
-  "slug": zod.string().nullable()
+  "slug": zod.string().nullable(),
+  "sentThisMonth": zod.number().int().describe('Vecinos que mandó y que ya llegaron, este mes'),
+  "receivedThisMonth": zod.number().int().describe('Vecinos que le mandaron otros comercios, este mes')
 })
 
 
@@ -223,7 +234,8 @@ export const GetMerchantMeResponse = zod.object({
   "recent": zod.array(zod.object({
   "firstName": zod.string(),
   "at": zod.coerce.date(),
-  "welcomeApplied": zod.boolean()
+  "welcomeApplied": zod.boolean(),
+  "referredBy": zod.string().nullable().describe('Comercio que mandó al vecino, si llegó con pase')
 })),
   "kind": zod.enum(['comercio', 'oficio']),
   "news": zod.union([zod.object({
@@ -236,7 +248,9 @@ export const GetMerchantMeResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date()
 }),zod.null()]),
-  "slug": zod.string().nullable()
+  "slug": zod.string().nullable(),
+  "sentThisMonth": zod.number().int().describe('Vecinos que mandó y que ya llegaron, este mes'),
+  "receivedThisMonth": zod.number().int().describe('Vecinos que le mandaron otros comercios, este mes')
 })
 
 
@@ -248,7 +262,8 @@ export const MerchantLookupMemberResponse = zod.object({
   "firstName": zod.string(),
   "visitsHere": zod.number().int(),
   "welcomeOffer": zod.string().nullable().describe('Solo si es su primera visita y el comercio tiene beneficio'),
-  "recentlyRecorded": zod.boolean().describe('Ya se registró una visita en las últimas 2 horas')
+  "recentlyRecorded": zod.boolean().describe('Ya se registró una visita en las últimas 2 horas'),
+  "referredBy": zod.string().nullable().describe('Comercio que le pasó a este vecino con un pase vivo')
 })
 
 
@@ -266,7 +281,38 @@ export const MerchantRecordVisitResponse = zod.object({
   "visitsHere": zod.number().int(),
   "welcomeApplied": zod.boolean(),
   "welcomeOffer": zod.string().nullable(),
-  "duplicate": zod.boolean()
+  "duplicate": zod.boolean(),
+  "referredBy": zod.string().nullable().describe('El vecino llegó con pase de este comercio (se canjeó)'),
+  "pass": zod.union([zod.object({
+  "id": zod.string(),
+  "toPlaceId": zod.string(),
+  "toPlaceName": zod.string(),
+  "offer": zod.string()
+}),zod.null()]).describe('Pase que se le dio al vecino hacia un socio'),
+  "passOptions": zod.array(zod.object({
+  "placeId": zod.string(),
+  "name": zod.string(),
+  "offer": zod.string().nullable()
+})).describe('Otro comercio al que se puede cambiar el pase (elegido por el sistema)')
+})
+
+
+/**
+ * @summary Cambia el pase recién dado a la alternativa que ofreció el sistema
+ */
+export const MerchantChangePassParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const MerchantChangePassBody = zod.object({
+  "toPlaceId": zod.string().uuid()
+})
+
+export const MerchantChangePassResponse = zod.object({
+  "id": zod.string(),
+  "toPlaceId": zod.string(),
+  "toPlaceName": zod.string(),
+  "offer": zod.string()
 })
 
 
@@ -498,6 +544,10 @@ export const GetSharedPlaceResponse = zod.object({
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myPass": zod.union([zod.object({
+  "fromPlaceName": zod.string(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]).describe('Pase vivo del vecino hacia este lugar'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
@@ -629,6 +679,10 @@ export const GetPlaceResponse = zod.object({
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myPass": zod.union([zod.object({
+  "fromPlaceName": zod.string(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]).describe('Pase vivo del vecino hacia este lugar'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
@@ -720,6 +774,10 @@ export const EndorsePlaceResponse = zod.object({
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myPass": zod.union([zod.object({
+  "fromPlaceName": zod.string(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]).describe('Pase vivo del vecino hacia este lugar'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
@@ -804,6 +862,10 @@ export const RemoveEndorsementResponse = zod.object({
   "leadForm": zod.boolean().optional().describe('Visitante en una casa o link público; se le pide su nombre antes de escribir'),
   "viaCreator": zod.boolean().optional().describe('Visitante en una casa sin contacto directo; escribe al creador, que lo presenta'),
   "neighborsServed": zod.number().int().describe('Vecinos distintos con visita registrada'),
+  "myPass": zod.union([zod.object({
+  "fromPlaceName": zod.string(),
+  "expiresAt": zod.coerce.date()
+}),zod.null()]).describe('Pase vivo del vecino hacia este lugar'),
   "myVisits": zod.number().int(),
   "kind": zod.enum(['comercio', 'oficio']),
   "delivers": zod.boolean(),
@@ -1029,7 +1091,8 @@ export const AdminListVisitsResponseItem = zod.object({
   "placeId": zod.string(),
   "placeName": zod.string(),
   "welcomeApplied": zod.boolean(),
-  "welcomeOffer": zod.string().nullable()
+  "welcomeOffer": zod.string().nullable(),
+  "referredBy": zod.string().nullable().describe('Comercio que mandó al vecino con pase')
 })
 export const AdminListVisitsResponse = zod.array(AdminListVisitsResponseItem)
 
@@ -1208,7 +1271,9 @@ export const AdminListPlacesResponseItem = zod.object({
   "height": zod.number().int()
 })),
   "leadCount": zod.number().int(),
-  "slug": zod.string().nullable()
+  "slug": zod.string().nullable(),
+  "passesSent": zod.number().int().describe('Vecinos que mandó y llegaron, últimos 30 días'),
+  "passesReceived": zod.number().int().describe('Vecinos que le mandaron y llegaron, últimos 30 días')
 }))
 export const AdminListPlacesResponse = zod.array(AdminListPlacesResponseItem)
 
@@ -1388,7 +1453,9 @@ export const AdminCreatePlaceResponse = zod.object({
   "height": zod.number().int()
 })),
   "leadCount": zod.number().int(),
-  "slug": zod.string().nullable()
+  "slug": zod.string().nullable(),
+  "passesSent": zod.number().int().describe('Vecinos que mandó y llegaron, últimos 30 días'),
+  "passesReceived": zod.number().int().describe('Vecinos que le mandaron y llegaron, últimos 30 días')
 }))
 
 
@@ -1571,7 +1638,9 @@ export const AdminUpdatePlaceResponse = zod.object({
   "height": zod.number().int()
 })),
   "leadCount": zod.number().int(),
-  "slug": zod.string().nullable()
+  "slug": zod.string().nullable(),
+  "passesSent": zod.number().int().describe('Vecinos que mandó y llegaron, últimos 30 días'),
+  "passesReceived": zod.number().int().describe('Vecinos que le mandaron y llegaron, últimos 30 días')
 }))
 
 

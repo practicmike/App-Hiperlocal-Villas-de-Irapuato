@@ -1,3 +1,4 @@
+import { referralCounts } from "../lib/passes";
 import crypto from "node:crypto";
 import express, { Router, type IRouter } from "express";
 import { alias } from "drizzle-orm/pg-core";
@@ -356,13 +357,14 @@ router.get("/admin/visits", async (_req, res) => {
       placeName: placesTable.name,
       welcomeApplied: visitsTable.welcomeApplied,
       welcomeOffer: visitsTable.welcomeOffer,
+      referredBy: sql<string | null>`(select p."name" from "passes" x join "places" p on p."id" = x."from_place_id" where x."redeemed_visit_id" = ${visitsTable.id} limit 1)`,
     })
     .from(visitsTable)
     .innerJoin(residentsTable, eq(visitsTable.residentId, residentsTable.id))
     .innerJoin(placesTable, eq(visitsTable.placeId, placesTable.id))
     .orderBy(desc(visitsTable.createdAt))
     .limit(500);
-  res.json(rows.map((r) => ({ ...r, at: r.at.toISOString() })));
+  res.json(rows.map((r) => ({ ...r, at: r.at.toISOString(), referredBy: r.referredBy ?? null })));
 });
 
 router.delete("/admin/visits/:id", async (req, res) => {
@@ -409,6 +411,7 @@ const toAdminPlace = (
   visits: Map<string, number> = new Map(),
   photos: Map<string, PhotoRef[]> = new Map(),
   leads: Map<string, number> = new Map(),
+  referrals: { sent: Map<string, number>; received: Map<string, number> } = { sent: new Map(), received: new Map() },
 ) => ({
   id: p.id,
   constellation: p.constellation,
@@ -446,6 +449,8 @@ const toAdminPlace = (
   photos: photos.get(p.id) ?? [],
   leadCount: leads.get(p.id) ?? 0,
   slug: p.slug,
+  passesSent: referrals.sent.get(p.id) ?? 0,
+  passesReceived: referrals.received.get(p.id) ?? 0,
 });
 
 async function constellationById(id: string) {
@@ -493,18 +498,19 @@ function cleanPlaceInput(body: ReturnType<typeof AdminCreatePlaceBody.parse>, is
 }
 
 router.get("/admin/places", async (_req, res) => {
-  const [rows0, counts, visits, leads] = await Promise.all([
+  const [rows0, counts, visits, leads, referrals] = await Promise.all([
     db.select().from(placesTable).orderBy(desc(placesTable.updatedAt)),
     endorsementCounts(),
     visitCounts(),
     leadCounts(),
+    referralCounts(),
   ]);
   // Cada estrella recibe su link público la primera vez que se lista.
   const rows = await Promise.all(
     rows0.map(async (p) => (p.slug ? p : { ...p, slug: await ensureSlug(p).catch(() => null) })),
   );
   const photos = await photosByPlace(rows.map((p) => p.id));
-  res.json(rows.map((p) => toAdminPlace(p, counts, visits, photos, leads)));
+  res.json(rows.map((p) => toAdminPlace(p, counts, visits, photos, leads, referrals)));
 });
 
 router.post("/admin/places", async (req, res) => {
@@ -530,7 +536,11 @@ router.put("/admin/places/:id", async (req, res) => {
   }
   const [place] = await db
     .update(placesTable)
-    .set({ ...cleanPlaceInput(body, c.isProperty), embedding: null, updatedAt: new Date() })
+    .set({
+      ...cleanPlaceInput(body, c.isProperty),
+      embedding: null,
+      updatedAt: new Date(),
+    })
     .where(eq(placesTable.id, id))
     .returning();
   if (!place) {
@@ -538,7 +548,16 @@ router.put("/admin/places/:id", async (req, res) => {
     return;
   }
   refreshEmbedding(place);
-  res.json(toAdminPlace(place, await endorsementCounts(), await visitCounts(), await photosByPlace([place.id]), await leadCounts()));
+  res.json(
+    toAdminPlace(
+      place,
+      await endorsementCounts(),
+      await visitCounts(),
+      await photosByPlace([place.id]),
+      await leadCounts(),
+      await referralCounts(),
+    ),
+  );
 });
 
 router.delete("/admin/places/:id", async (req, res) => {

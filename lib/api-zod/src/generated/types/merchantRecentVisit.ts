@@ -10,4 +10,9 @@ export interface MerchantRecentVisit {
   firstName: string;
   at: Date;
   welcomeApplied: boolean;
+  /**
+     * Comercio que mandó al vecino, si llegó con pase
+     * @nullable
+     */
+  referredBy: string | null;
 }

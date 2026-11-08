@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { useLogout, getGetMeQueryKey, type Me } from "@workspace/api-client-react";
-import { LogOut, X } from "lucide-react";
+import { useLogout, getGetMeQueryKey, type Me, type SkyPass } from "@workspace/api-client-react";
+import { ChevronRight, Gift, LogOut, X } from "lucide-react";
+import { expiresLabel } from "@/lib/passes";
 
 /** Link que va dentro del QR: el comercio lo abre con la cámara normal de su celular. */
 export const memberLink = (code: string) => `${window.location.origin}${import.meta.env.BASE_URL}v/${code}`;
@@ -49,15 +50,15 @@ export function MeSheet({
   me,
   creatorFirstName,
   memberCode,
-  litCount,
-  total,
+  passes,
+  onOpenPlace,
   onClose,
 }: {
   me: Me;
   creatorFirstName: string;
   memberCode: string | null;
-  litCount: number;
-  total: number;
+  passes: SkyPass[];
+  onOpenPlace: (placeId: string) => void;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
@@ -91,17 +92,7 @@ export function MeSheet({
           </div>
         </div>
         {memberCode ? <Credential code={memberCode} name={me.name} /> : <p className="mb-5 text-sm text-muted">Cargando tu credencial…</p>}
-        <div className="mb-6 rounded-2xl bg-space-2/60 p-4">
-          <p className="text-sm font-bold">
-            Lugares visitados: {litCount} de {total}
-          </p>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-me" style={{ width: `${total ? (litCount / total) * 100 : 0}%` }} />
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            Cada lugar donde enseñas tu credencial cuenta como visitado. Muchos te dan un regalo en tu primera visita.
-          </p>
-        </div>
+        <Gifts passes={passes} onOpenPlace={onOpenPlace} />
         {!confirming ? (
           <button onClick={() => setConfirming(true)} className="mb-2 flex items-center gap-2 text-sm text-muted">
             <LogOut size={16} /> Cerrar sesión en este teléfono
@@ -124,6 +115,51 @@ export function MeSheet({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * «Te lo paso»: regalos que otros comercios te pasaron. Dicen qué hacer hoy
+ * y cuándo vencen; tocarlos abre el lugar.
+ */
+function Gifts({ passes, onOpenPlace }: { passes: SkyPass[]; onOpenPlace: (placeId: string) => void }) {
+  if (passes.length === 0) {
+    return (
+      <div className="mb-6 rounded-2xl bg-space-2/60 p-4 text-sm">
+        <p className="font-bold">Regalos esperándote</p>
+        <p className="mt-1 text-xs text-muted">
+          Cuando pagues con tu credencial, el comercio te puede pasar a otro de Villas con regalo de bienvenida. Aquí lo verás.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-6">
+      <p className="mb-2 text-sm font-bold">
+        {passes.length === 1 ? "Tienes un regalo esperándote" : `Tienes ${passes.length} regalos esperándote`}
+      </p>
+      <ul className="space-y-2">
+        {passes.map((p) => (
+          <li key={p.id}>
+            <button
+              onClick={() => onOpenPlace(p.toPlaceId)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-[#E6C882]/50 bg-[#E6C882]/10 p-3 text-left"
+            >
+              <Gift size={20} className="shrink-0 text-[#E6C882]" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold text-[#E6C882]">
+                  {p.offer} en {p.toPlaceName}
+                </span>
+                <span className="block text-xs text-muted">
+                  De parte de {p.fromPlaceName} · {expiresLabel(p.expiresAt)}
+                </span>
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-muted" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

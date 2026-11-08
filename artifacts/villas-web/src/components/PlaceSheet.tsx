@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { expiresLabel } from "@/lib/passes";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetPlace,
@@ -156,6 +157,11 @@ export function Card({
           <Gift size={20} className="mt-0.5 shrink-0 text-[#E6C882]" />
           <div className="text-sm">
             <p className="font-bold text-[#E6C882]">Tu primera visita: {place.welcomeOffer}</p>
+            {place.myPass && (
+              <p className="text-xs font-bold text-ink/90">
+                De parte de {place.myPass.fromPlaceName} · {expiresLabel(place.myPass.expiresAt)}
+              </p>
+            )}
             <p className="text-xs text-muted">
               {place.locked || guest ? "Para vecinos de Villas con credencial." : "Enseña tu credencial al pagar y se aplica solo."}
             </p>
