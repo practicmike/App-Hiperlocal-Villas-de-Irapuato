@@ -23,6 +23,7 @@ import type {
   AccessKey,
   AdminComplaint,
   AdminConstellation,
+  AdminKpis,
   AdminLead,
   AdminOverview,
   AdminPlace,
@@ -3354,6 +3355,83 @@ export function useAdminOverview<TData = Awaited<ReturnType<typeof adminOverview
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminKpisUrl = () => {
+
+
+
+
+  return `/api/admin/kpis`
+}
+
+/**
+ * @summary Indicadores de impacto (últimos 30 días contra los 30 anteriores)
+ */
+export const adminKpis = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminKpis> => {
+
+  return customFetch<AdminKpis>(getAdminKpisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminKpisQueryKey = () => {
+    return [
+    `/api/admin/kpis`
+    ] as const;
+    }
+
+
+export const getAdminKpisQueryOptions = <TData = Awaited<ReturnType<typeof adminKpis>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminKpis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminKpisQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminKpis>>> = ({ signal }) => adminKpis({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminKpis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminKpisQueryResult = NonNullable<Awaited<ReturnType<typeof adminKpis>>>
+export type AdminKpisQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Indicadores de impacto (últimos 30 días contra los 30 anteriores)
+ */
+
+export function useAdminKpis<TData = Awaited<ReturnType<typeof adminKpis>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminKpis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminKpisQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

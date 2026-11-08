@@ -18,6 +18,13 @@ export const config = {
     transcribeModel: env["OPENAI_TRANSCRIBE_MODEL"] ?? "gpt-4o-mini-transcribe",
   },
   sessionDays: 180,
+  /** Supuestos de los KPIs. Se cambian en Vercel sin tocar código. */
+  kpis: {
+    /** Hogares en Villas (estimado). Base de la penetración. */
+    households: Math.max(1, Number(env["HOGARES_VILLAS"]) || 1600),
+    /** Ticket promedio en MXN para estimar venta por visita. */
+    avgTicket: Math.max(0, Number(env["TICKET_PROMEDIO"]) || 250),
+  },
 };
 
 export const aiEnabled = () => config.openai.apiKey.length > 0;

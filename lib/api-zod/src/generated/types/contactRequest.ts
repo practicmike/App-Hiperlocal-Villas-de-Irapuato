@@ -5,8 +5,11 @@
  * App Hiperlocal Villas de Irapuato
  * OpenAPI spec version: 0.2.0
  */
+import type { ContactRequestKind } from './contactRequestKind';
 
 export interface ContactRequest {
   /** @nullable */
   searchId: string | null;
+  /** Qué tocó el vecino. Sin valor = whatsapp. */
+  kind?: ContactRequestKind;
 }

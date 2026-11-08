@@ -66,11 +66,13 @@ import { ArrowLeft, Copy, MessageCircle, UserPlus } from "lucide-react";
 import { FALLBACK, PALETTE, whatsappLink } from "@/lib/constellations";
 import { shrinkPhoto, uploadPhoto } from "@/lib/photo";
 import { NewsComposer } from "@/components/NewsComposer";
+import { KpiPanel } from "@/components/KpiPanel";
 import { ShareButton } from "@/components/PlaceSheet";
 
-type Tab = "resumen" | "vecinos" | "lugares" | "visitas" | "interesados" | "constelaciones" | "busquedas" | "quejas";
+type Tab = "resumen" | "kpis" | "vecinos" | "lugares" | "visitas" | "interesados" | "constelaciones" | "busquedas" | "quejas";
 const TABS: Array<[Tab, string]> = [
   ["resumen", "Resumen"],
+  ["kpis", "KPIs"],
   ["vecinos", "Vecinos"],
   ["lugares", "Lugares"],
   ["visitas", "Visitas"],
@@ -114,6 +116,7 @@ export function AdminPage({ creator }: { creator: Creator }) {
       </header>
       <main className="mx-auto max-w-3xl px-4 py-5 pb-24">
         {tab === "resumen" && <Overview />}
+        {tab === "kpis" && <KpiPanel />}
         {tab === "vecinos" && <Residents me={me} />}
         {tab === "lugares" && <Places editId={editId} />}
         {tab === "visitas" && <Visits />}

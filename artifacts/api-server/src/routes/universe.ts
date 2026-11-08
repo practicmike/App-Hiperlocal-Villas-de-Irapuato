@@ -5,6 +5,7 @@ import {
   db,
   constellationsTable,
   placesTable,
+  contactEventsTable,
   endorsementsTable,
   searchesTable,
   complaintsTable,
@@ -318,7 +319,18 @@ router.delete("/places/:id/save", requireResident, async (req, res) => {
 /** Base del KPI "búsquedas que terminan en WhatsApp" (idea del contador de TiendApp). */
 router.post("/places/:id/contact", requireResident, async (req, res) => {
   const { id } = RecordContactParams.parse(req.params);
-  const { searchId } = RecordContactBody.parse(req.body);
+  const { searchId, kind = "whatsapp" } = RecordContactBody.parse(req.body);
+  const [place] = await db.select({ id: placesTable.id }).from(placesTable).where(eq(placesTable.id, id)).limit(1);
+  if (!place) {
+    res.status(404).json({ message: "No encontramos ese lugar." });
+    return;
+  }
+  // Evento con fecha para los KPIs (conversión por periodo).
+  await db.insert(contactEventsTable).values({ placeId: id, residentId: req.resident!.id, kind });
+  if (kind === "directions") {
+    res.status(204).end();
+    return;
+  }
   await db
     .update(placesTable)
     .set({ whatsappClicks: sql`${placesTable.whatsappClicks} + 1` })

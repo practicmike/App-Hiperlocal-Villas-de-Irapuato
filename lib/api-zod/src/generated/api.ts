@@ -931,7 +931,8 @@ export const RecordContactParams = zod.object({
 })
 
 export const RecordContactBody = zod.object({
-  "searchId": zod.string().uuid().nullable()
+  "searchId": zod.string().uuid().nullable(),
+  "kind": zod.enum(['whatsapp', 'directions']).optional().describe('Qué tocó el vecino. Sin valor = whatsapp.')
 })
 
 export const RecordContactResponse = zod.void()
@@ -991,6 +992,34 @@ export const AdminOverviewResponse = zod.object({
   "openComplaints": zod.number().int(),
   "guestSearches30d": zod.number().int(),
   "visits30d": zod.number().int()
+})
+
+
+/**
+ * @summary Indicadores de impacto (últimos 30 días contra los 30 anteriores)
+ */
+export const AdminKpisResponse = zod.object({
+  "households": zod.number().int(),
+  "avgTicket": zod.number().int(),
+  "sections": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "question": zod.string(),
+  "kpis": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "display": zod.string().describe('Valor ya formateado para mostrar'),
+  "detail": zod.string().nullable().describe('Cómo se calculó (ej. "12 de 40")'),
+  "targetLabel": zod.string().nullable(),
+  "status": zod.enum(['good', 'warn', 'bad', 'none']),
+  "trend": zod.enum(['up', 'down', 'flat', 'none']),
+  "trendGood": zod.boolean().nullable().describe('Si el cambio contra el periodo anterior es bueno'),
+  "previousDisplay": zod.string().nullable(),
+  "why": zod.string()
+})),
+  "note": zod.string().nullable()
+})),
+  "idlePlaces": zod.array(zod.string()).describe('Comercios sin contactos ni visitas en 30 días')
 })
 
 

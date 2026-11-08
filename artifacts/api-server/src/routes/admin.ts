@@ -70,6 +70,7 @@ import { DEMO_PLACES, DEMO_WHATSAPP_PREFIX } from "../lib/demo-places";
 import { embedMany, suggestConstellation } from "../lib/ai";
 import { placeEmbeddingText } from "../lib/search-core";
 import { logger } from "../lib/logger";
+import { buildKpis } from "../lib/kpis";
 
 const router: IRouter = Router();
 router.use("/admin", requireAdmin);
@@ -120,6 +121,11 @@ router.get("/admin/overview", async (_req, res) => {
     guestSearches30d: s!.guests,
     visits30d: v!.n,
   });
+});
+
+/** Indicadores de impacto: 30 días contra los 30 anteriores. */
+router.get("/admin/kpis", async (_req, res) => {
+  res.json(await buildKpis());
 });
 
 // ---------------------------------------------------------------- vecinos

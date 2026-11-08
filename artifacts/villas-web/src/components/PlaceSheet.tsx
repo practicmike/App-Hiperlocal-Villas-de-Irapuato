@@ -147,7 +147,13 @@ export function Card({
 
       <Facts place={place} color={info.color} />
 
-      {!info.isProperty && <Where place={place} onShowOnMap={onShowOnMap} />}
+      {!info.isProperty && (
+        <Where
+          place={place}
+          onShowOnMap={onShowOnMap}
+          onDirections={guest ? undefined : () => contact.mutate({ id: place.id, data: { searchId, kind: "directions" } })}
+        />
+      )}
 
       {place.news && <TodayNews news={place.news} />}
 
@@ -351,7 +357,16 @@ function Photos({ photos, name }: { photos: PlaceDetail["photos"]; name: string 
  * Dónde está: «Ver en el mapa» (el radar de OrbiTú) y «Cómo llegar» (Google Maps).
  * Oficios no (van a tu casa). Casas y depas tampoco: ni radar ni ruta.
  */
-function Where({ place, onShowOnMap }: { place: PlaceDetail; onShowOnMap?: (id: string) => void }) {
+function Where({
+  place,
+  onShowOnMap,
+  onDirections,
+}: {
+  place: PlaceDetail;
+  onShowOnMap?: (id: string) => void;
+  /** Cuenta el toque para los KPIs (solo vecinos). */
+  onDirections?: () => void;
+}) {
   if (place.lat == null || place.lng == null || place.kind === "oficio" || place.viaCreator) return null;
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
   const btn = "flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/15 py-3 text-sm font-bold text-primary active:scale-[0.98]";
@@ -362,7 +377,7 @@ function Where({ place, onShowOnMap }: { place: PlaceDetail; onShowOnMap?: (id: 
           <MapPinned size={18} /> Ver en el mapa
         </button>
       )}
-      <a href={directions} target="_blank" rel="noopener noreferrer" className={btn}>
+      <a href={directions} target="_blank" rel="noopener noreferrer" onClick={onDirections} className={btn}>
         <Navigation size={18} /> Cómo llegar
       </a>
     </div>
